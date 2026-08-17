@@ -34,3 +34,22 @@ func (s *authService) Register(ctx context.Context, req *dto.RegisterRequest) (*
 		User: *s.userToResponse(user),
 	}, nil
 }
+
+func (s *authService) Login(ctx context.Context, req *dto.LoginRequest, deviceInfo dto.DeviceInfo) (*dto.AuthResponse, error) {
+	user, err := s.userRepo.GetUserByEmail(ctx, req.Email)
+	if err != nil {
+		if serrors.Is(err, userrepo.ErrUserNotFound) {
+			return nil, ErrInvalidCredentials
+		}
+
+		logger.Error("failed to get user by email", logger.Err(err))
+
+		return nil, err
+	}
+
+	if !ComparePassword(user.Password, req.Password) {
+		return nil, ErrInvalidCredentials
+	}
+
+	return s.issueSession(ctx, user, deviceInfo)
+}

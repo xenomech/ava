@@ -9,4 +9,5 @@ import (
 
 func authRoutes(router fiber.Router, controller *authctrl.Controller, authMiddleware *middleware.Middleware) {
 	router.Post("/register", controller.Register)
+	router.Post("/login", controller.Login)
 }
