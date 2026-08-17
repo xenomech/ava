@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tenant Invitation</title>
+</head>
+<body>
+    <h1>You have been invited to {{.TenantName}}</h1>
+    <p>Hi {{.Name}}, you have been invited to join {{.TenantName}} as {{.Role}}.</p>
+    <a href="{{.InviteURL}}">Accept Invitation</a>
+    <p>Or copy and paste this link in your browser:</p>
+    <p>{{.InviteURL}}</p>
+    <p>This invitation will expire in 7 days.</p>
+</body>
+</html>

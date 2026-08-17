@@ -17,6 +17,7 @@ RUN apk add --no-cache ca-certificates tzdata && \
 WORKDIR /app
 
 COPY --from=build /app/bin/ava /app/bin/ava
+COPY --from=build /app/templates /app/templates
 
 RUN chown -R ava:ava /app
 
