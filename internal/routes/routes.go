@@ -8,6 +8,8 @@ import (
 )
 
 func AddRoutes(app *fiber.App, ctrl *controller.Controller, mw *middleware.Middleware) {
+	app.Use(middleware.GlobalRateLimit())
+
 	api := app.Group("/api/v1")
 
 	healthRoutes(api.Group("/health"), ctrl.Health)

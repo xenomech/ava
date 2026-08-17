@@ -8,14 +8,16 @@ import (
 )
 
 func authRoutes(router fiber.Router, controller *authctrl.Controller, authMiddleware *middleware.Middleware) {
-	router.Post("/register", controller.Register)
+	authRL := middleware.AuthRateLimit()
+
+	router.Post("/register", authRL, controller.Register)
 	router.Post("/verify-email", controller.VerifyEmail)
-	router.Post("/resend-verification", controller.ResendVerification)
-	router.Post("/login", controller.Login)
+	router.Post("/resend-verification", authRL, controller.ResendVerification)
+	router.Post("/login", authRL, controller.Login)
 	router.Post("/refresh", controller.RefreshToken)
-	router.Post("/forgot-password", controller.ForgotPassword)
-	router.Post("/reset-password", controller.ResetPassword)
-	router.Post("/accept-invite", controller.AcceptInvite)
+	router.Post("/forgot-password", authRL, controller.ForgotPassword)
+	router.Post("/reset-password", authRL, controller.ResetPassword)
+	router.Post("/accept-invite", authRL, controller.AcceptInvite)
 
 	router.Get("/me", authMiddleware.ValidateAccessToken, controller.Me)
 	router.Post("/switch-tenant", authMiddleware.ValidateAccessToken, controller.SwitchTenant)
