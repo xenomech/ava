@@ -4,15 +4,20 @@ import (
 	"context"
 
 	"ava/internal/dto"
+	"ava/internal/model"
 	sessionrepo "ava/internal/repository/session"
 	userrepo "ava/internal/repository/user"
 	"ava/internal/services/auth/jwt"
+
+	"github.com/google/uuid"
 )
 
 type Service interface {
 	Register(ctx context.Context, req *dto.RegisterRequest) (*dto.RegisterResponse, error)
 	Login(ctx context.Context, req *dto.LoginRequest, deviceInfo dto.DeviceInfo) (*dto.AuthResponse, error)
 	RefreshToken(ctx context.Context, refreshTokenString string) (*dto.TokenResponse, error)
+	ValidateSession(ctx context.Context, sessionID uuid.UUID) (*model.Session, error)
+	GetUserByID(ctx context.Context, userID uuid.UUID) (*model.User, error)
 }
 
 type authService struct {

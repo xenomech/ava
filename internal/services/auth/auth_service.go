@@ -112,3 +112,37 @@ func (s *authService) RefreshToken(ctx context.Context, refreshTokenString strin
 
 	return s.issueTokens(user, session.ID, newRID)
 }
+
+func (s *authService) ValidateSession(ctx context.Context, sessionID uuid.UUID) (*model.Session, error) {
+	session, err := s.sessionRepo.GetSessionByID(ctx, sessionID)
+	if err != nil {
+		if serrors.Is(err, sessionrepo.ErrSessionNotFound) {
+			return nil, ErrSessionNotFound
+		}
+
+		return nil, err
+	}
+
+	if session.Revoked {
+		return nil, ErrSessionRevoked
+	}
+
+	if time.Now().After(session.ExpiresAt) {
+		return nil, ErrSessionExpired
+	}
+
+	return session, nil
+}
+
+func (s *authService) GetUserByID(ctx context.Context, userID uuid.UUID) (*model.User, error) {
+	user, err := s.userRepo.GetUserByID(ctx, userID)
+	if err != nil {
+		if serrors.Is(err, userrepo.ErrUserNotFound) {
+			return nil, ErrUserNotFound
+		}
+
+		return nil, err
+	}
+
+	return user, nil
+}

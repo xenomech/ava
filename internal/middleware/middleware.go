@@ -1,9 +1,17 @@
 package middleware
 
-import "ava/internal/services"
+import (
+	"ava/internal/services"
 
-type Middleware struct{}
+	"github.com/gofiber/fiber/v2"
+)
+
+type Middleware struct {
+	ValidateAccessToken fiber.Handler
+}
 
 func NewMiddleware(service *services.Service) *Middleware {
-	return &Middleware{}
+	return &Middleware{
+		ValidateAccessToken: ValidateAccessToken(service.Auth),
+	}
 }
