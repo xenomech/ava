@@ -1,6 +1,7 @@
 package repository
 
 import (
+	flowrepo "ava/internal/repository/flow"
 	membershiprepo "ava/internal/repository/membership"
 	sessionrepo "ava/internal/repository/session"
 	tenantrepo "ava/internal/repository/tenant"
@@ -16,6 +17,7 @@ type Repository struct {
 	Membership membershiprepo.Repository
 	Session    sessionrepo.Repository
 	Token      tokenrepo.Repository
+	Flow       flowrepo.Repository
 }
 
 func NewRepository(db *gorm.DB) *Repository {
@@ -25,5 +27,6 @@ func NewRepository(db *gorm.DB) *Repository {
 		Membership: membershiprepo.NewRepository(db),
 		Session:    sessionrepo.NewRepository(db),
 		Token:      tokenrepo.NewRepository(db),
+		Flow:       flowrepo.NewRepository(db),
 	}
 }
