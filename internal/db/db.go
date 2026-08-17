@@ -27,6 +27,8 @@ func Migrate(database *gorm.DB) error {
 
 	if err := database.AutoMigrate(
 		&model.User{},
+		&model.Tenant{},
+		&model.TenantMembership{},
 		&model.Session{},
 	); err != nil {
 		logger.Error("DB_MIGRATION_ERROR", logger.Err(err))
