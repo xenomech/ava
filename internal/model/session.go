@@ -10,7 +10,9 @@ import (
 type Session struct {
 	BaseModel
 	TenantID   uuid.UUID `gorm:"type:uuid;not null;index:idx_session_tenant_user" json:"tenant_id"`
+	Tenant     *Tenant   `gorm:"foreignKey:TenantID;constraint:OnDelete:CASCADE" json:"-"`
 	UserID     uuid.UUID `gorm:"type:uuid;not null;index;index:idx_session_tenant_user" json:"user_id"`
+	User       *User     `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE" json:"-"`
 	DeviceName string    `gorm:"not null" json:"device_name"`
 	IPAddress  string    `gorm:"not null" json:"ip_address"`
 	UserAgent  string    `gorm:"not null" json:"user_agent"`

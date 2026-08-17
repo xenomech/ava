@@ -17,7 +17,9 @@ const (
 type TenantMembership struct {
 	BaseModel
 	TenantID        uuid.UUID        `gorm:"type:uuid;not null;uniqueIndex:idx_membership_tenant_user" json:"tenant_id"`
+	Tenant          *Tenant          `gorm:"foreignKey:TenantID;constraint:OnDelete:CASCADE" json:"-"`
 	UserID          uuid.UUID        `gorm:"type:uuid;not null;uniqueIndex:idx_membership_tenant_user;index:idx_membership_user" json:"user_id"`
+	User            *User            `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE" json:"-"`
 	Role            TenantRole       `gorm:"type:varchar(20);not null" json:"role"`
 	Status          MembershipStatus `gorm:"type:varchar(20);not null;default:'active';index" json:"status"`
 	InviteToken     string           `gorm:"type:varchar(64);index" json:"-"`

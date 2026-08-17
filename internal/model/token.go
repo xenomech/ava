@@ -17,6 +17,7 @@ const (
 type Token struct {
 	BaseModel
 	UserID    uuid.UUID  `gorm:"type:uuid;not null;index" json:"user_id"`
+	User      *User      `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE" json:"-"`
 	Token     string     `gorm:"uniqueIndex;not null" json:"token"`
 	Type      TokenType  `gorm:"type:varchar(50);not null;index" json:"type"`
 	ExpiresAt time.Time  `gorm:"not null;index" json:"expires_at"`
