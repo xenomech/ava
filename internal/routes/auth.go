@@ -13,6 +13,7 @@ func authRoutes(router fiber.Router, controller *authctrl.Controller, authMiddle
 	router.Post("/refresh", controller.RefreshToken)
 
 	router.Get("/me", authMiddleware.ValidateAccessToken, controller.Me)
+	router.Post("/switch-tenant", authMiddleware.ValidateAccessToken, controller.SwitchTenant)
 	router.Post("/logout", authMiddleware.ValidateAccessToken, controller.Logout)
 	router.Post("/logout-all", authMiddleware.ValidateAccessToken, controller.LogoutAll)
 }

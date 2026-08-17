@@ -153,3 +153,49 @@ func (c *Controller) LogoutAll(ctx *fiber.Ctx) error {
 
 	return response.Send(ctx, fiber.StatusOK, nil, "")
 }
+
+func (c *Controller) SwitchTenant(ctx *fiber.Ctx) error {
+	userID, ok := ctx.Locals("userID").(uuid.UUID)
+	if !ok {
+		return response.Send(ctx, fiber.StatusUnauthorized, nil, "Unauthorized")
+	}
+
+	tenantID, ok := ctx.Locals("tenantID").(uuid.UUID)
+	if !ok {
+		return response.Send(ctx, fiber.StatusUnauthorized, nil, "Unauthorized")
+	}
+
+	sessionID, ok := ctx.Locals("sessionID").(uuid.UUID)
+	if !ok {
+		return response.Send(ctx, fiber.StatusUnauthorized, nil, "Unauthorized")
+	}
+
+	var req dto.SwitchTenantRequest
+	if err := ctx.BodyParser(&req); err != nil {
+		return response.Send(ctx, fiber.StatusBadRequest, nil, "Invalid request body")
+	}
+
+	if err := validator.ValidateStruct(&req); err != nil {
+		return response.SendValidation(ctx, validator.FirstError(err), validator.FieldErrors(err))
+	}
+
+	deviceInfo := dto.DeviceInfo{
+		DeviceName: ctx.Get("X-Device-Name", "Unknown"),
+		IPAddress:  ctx.IP(),
+		UserAgent:  ctx.Get("User-Agent"),
+	}
+
+	authResponse, err := c.authService.SwitchTenant(ctx.Context(), tenantID, userID, sessionID, req.TenantSlug, deviceInfo)
+	if err != nil {
+		switch {
+		case serrors.Is(err, authsvc.ErrAccessDenied):
+			return response.SendError(ctx, fiber.StatusForbidden, err)
+		case serrors.Is(err, authsvc.ErrUserNotFound):
+			return response.SendError(ctx, fiber.StatusNotFound, err)
+		}
+
+		return response.Send(ctx, fiber.StatusInternalServerError, nil, "Failed to switch tenant")
+	}
+
+	return response.Send(ctx, fiber.StatusOK, authResponse, "")
+}

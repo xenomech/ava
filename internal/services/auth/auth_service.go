@@ -271,3 +271,39 @@ func (s *authService) LogoutAll(ctx context.Context, tenantID, userID uuid.UUID)
 
 	return nil
 }
+
+func (s *authService) SwitchTenant(ctx context.Context, tenantID, userID, sessionID uuid.UUID, tenantSlug string, deviceInfo dto.DeviceInfo) (*dto.AuthResponse, error) {
+	user, err := s.userRepo.GetUserByID(ctx, userID)
+	if err != nil {
+		if serrors.Is(err, userrepo.ErrUserNotFound) {
+			return nil, ErrUserNotFound
+		}
+
+		logger.Error("failed to get user by ID", logger.Err(err))
+
+		return nil, err
+	}
+
+	memberships, err := s.activeMemberships(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	membership, err := s.selectMembership(ctx, memberships, tenantSlug)
+	if err != nil {
+		if serrors.Is(err, ErrTenantSelectionRequired) {
+			return nil, ErrAccessDenied
+		}
+
+		return nil, err
+	}
+
+	if err := s.sessionRepo.RevokeSession(ctx, tenantID, sessionID); err != nil &&
+		!serrors.Is(err, sessionrepo.ErrSessionNotFound) {
+		logger.Error("failed to revoke session on tenant switch", logger.Err(err))
+
+		return nil, err
+	}
+
+	return s.issueSession(ctx, user, membership, deviceInfo)
+}

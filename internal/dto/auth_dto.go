@@ -24,6 +24,10 @@ type LoginRequest struct {
 	TenantSlug string `json:"tenant_slug,omitempty"`
 }
 
+type SwitchTenantRequest struct {
+	TenantSlug string `json:"tenant_slug" validate:"required"`
+}
+
 type RefreshTokenRequest struct {
 	RefreshToken string `json:"refresh_token" validate:"required"`
 }
