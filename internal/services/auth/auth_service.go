@@ -455,3 +455,120 @@ func (s *authService) ResendVerification(ctx context.Context, emailAddr string) 
 
 	return nil
 }
+
+func (s *authService) ForgotPassword(ctx context.Context, emailAddr string) error {
+	user, err := s.userRepo.GetUserByEmail(ctx, emailAddr)
+	if err != nil {
+		if serrors.Is(err, userrepo.ErrUserNotFound) {
+			return nil
+		}
+
+		logger.Error("failed to get user by email", logger.Err(err))
+
+		return err
+	}
+
+	token, err := s.generateRandomToken()
+	if err != nil {
+		logger.Error("failed to generate reset token", logger.Err(err))
+
+		return err
+	}
+
+	resetToken := model.NewToken(
+		user.ID,
+		token,
+		model.TokenTypePasswordReset,
+		time.Now().Add(1*time.Hour),
+	)
+
+	if err := s.tokenRepo.CreateToken(ctx, resetToken); err != nil {
+		logger.Error("failed to create reset token", logger.Err(err))
+
+		return err
+	}
+
+	emailSvc := email.NewService()
+	emailData := map[string]any{
+		"Name":     user.Name,
+		"ResetURL": fmt.Sprintf("%s/reset-password?token=%s", config.GetConfig().AppURL, token),
+	}
+
+	if err := emailSvc.Send(ctx, user.Email, "Reset your password", "password_reset.html", emailData); err != nil {
+		logger.Warn("failed to send password reset email", logger.String("email", user.Email), logger.Err(err))
+	}
+
+	return nil
+}
+
+func (s *authService) ResetPassword(ctx context.Context, tokenString, newPassword string) error {
+	token, err := s.tokenRepo.GetValidToken(ctx, tokenString, model.TokenTypePasswordReset)
+	if err != nil {
+		if serrors.Is(err, tokenrepo.ErrTokenNotFound) {
+			return ErrInvalidToken
+		}
+
+		logger.Error("failed to get valid token", logger.Err(err))
+
+		return err
+	}
+
+	hashedPassword, err := HashPassword(newPassword)
+	if err != nil {
+		logger.Error("failed to hash password", logger.Err(err))
+
+		return err
+	}
+
+	if err := s.userRepo.UpdatePassword(ctx, token.UserID, hashedPassword); err != nil {
+		logger.Error("failed to update password", logger.Err(err))
+
+		return err
+	}
+
+	if err := s.tokenRepo.MarkTokenUsed(ctx, token.ID); err != nil {
+		logger.Error("failed to mark token as used", logger.Err(err))
+
+		return err
+	}
+
+	if err := s.sessionRepo.RevokeAllUserSessionsGlobal(ctx, token.UserID); err != nil {
+		logger.Error("failed to revoke all sessions after password reset", logger.Err(err))
+
+		return err
+	}
+
+	return nil
+}
+
+func (s *authService) ChangePassword(ctx context.Context, userID uuid.UUID, oldPassword, newPassword string) error {
+	user, err := s.userRepo.GetUserByID(ctx, userID)
+	if err != nil {
+		if serrors.Is(err, userrepo.ErrUserNotFound) {
+			return ErrUserNotFound
+		}
+
+		logger.Error("failed to get user by ID", logger.Err(err))
+
+		return err
+	}
+
+	if !ComparePassword(user.Password, oldPassword) {
+		return ErrPasswordMismatch
+	}
+
+	hashedPassword, err := HashPassword(newPassword)
+	if err != nil {
+		logger.Error("failed to hash password", logger.Err(err))
+
+		return err
+	}
+
+	if err := s.userRepo.UpdatePassword(ctx, userID, hashedPassword); err != nil {
+		logger.Error("failed to update password", logger.Err(err))
+
+		return err
+	}
+
+	return nil
+}

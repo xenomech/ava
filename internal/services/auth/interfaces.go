@@ -21,6 +21,9 @@ type Service interface {
 	ResendVerification(ctx context.Context, emailAddr string) error
 	Login(ctx context.Context, req *dto.LoginRequest, deviceInfo dto.DeviceInfo) (*dto.AuthResponse, error)
 	RefreshToken(ctx context.Context, refreshTokenString string) (*dto.TokenResponse, error)
+	ForgotPassword(ctx context.Context, emailAddr string) error
+	ResetPassword(ctx context.Context, tokenString, newPassword string) error
+	ChangePassword(ctx context.Context, userID uuid.UUID, oldPassword, newPassword string) error
 	AcceptInvite(ctx context.Context, inviteToken string) (*dto.TenantSummary, error)
 	SwitchTenant(ctx context.Context, tenantID, userID, sessionID uuid.UUID, tenantSlug string, deviceInfo dto.DeviceInfo) (*dto.AuthResponse, error)
 	Logout(ctx context.Context, tenantID, sessionID uuid.UUID) error

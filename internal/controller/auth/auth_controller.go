@@ -261,3 +261,70 @@ func (c *Controller) ResendVerification(ctx *fiber.Ctx) error {
 
 	return response.Send(ctx, fiber.StatusOK, nil, "")
 }
+
+func (c *Controller) ForgotPassword(ctx *fiber.Ctx) error {
+	var req dto.ForgotPasswordRequest
+	if err := ctx.BodyParser(&req); err != nil {
+		return response.Send(ctx, fiber.StatusBadRequest, nil, "Invalid request body")
+	}
+
+	if err := validator.ValidateStruct(&req); err != nil {
+		return response.SendValidation(ctx, validator.FirstError(err), validator.FieldErrors(err))
+	}
+
+	if err := c.authService.ForgotPassword(ctx.Context(), req.Email); err != nil {
+		return response.Send(ctx, fiber.StatusInternalServerError, nil, "Failed to process request")
+	}
+
+	return response.Send(ctx, fiber.StatusOK, nil, "")
+}
+
+func (c *Controller) ResetPassword(ctx *fiber.Ctx) error {
+	var req dto.ResetPasswordRequest
+	if err := ctx.BodyParser(&req); err != nil {
+		return response.Send(ctx, fiber.StatusBadRequest, nil, "Invalid request body")
+	}
+
+	if err := validator.ValidateStruct(&req); err != nil {
+		return response.SendValidation(ctx, validator.FirstError(err), validator.FieldErrors(err))
+	}
+
+	if err := c.authService.ResetPassword(ctx.Context(), req.Token, req.NewPassword); err != nil {
+		if serrors.Is(err, authsvc.ErrInvalidToken) {
+			return response.SendError(ctx, fiber.StatusBadRequest, err)
+		}
+
+		return response.Send(ctx, fiber.StatusInternalServerError, nil, "Failed to reset password")
+	}
+
+	return response.Send(ctx, fiber.StatusOK, nil, "")
+}
+
+func (c *Controller) ChangePassword(ctx *fiber.Ctx) error {
+	userID, ok := ctx.Locals("userID").(uuid.UUID)
+	if !ok {
+		return response.Send(ctx, fiber.StatusUnauthorized, nil, "Unauthorized")
+	}
+
+	var req dto.ChangePasswordRequest
+	if err := ctx.BodyParser(&req); err != nil {
+		return response.Send(ctx, fiber.StatusBadRequest, nil, "Invalid request body")
+	}
+
+	if err := validator.ValidateStruct(&req); err != nil {
+		return response.SendValidation(ctx, validator.FirstError(err), validator.FieldErrors(err))
+	}
+
+	if err := c.authService.ChangePassword(ctx.Context(), userID, req.OldPassword, req.NewPassword); err != nil {
+		switch {
+		case serrors.Is(err, authsvc.ErrPasswordMismatch):
+			return response.SendError(ctx, fiber.StatusBadRequest, err)
+		case serrors.Is(err, authsvc.ErrUserNotFound):
+			return response.SendError(ctx, fiber.StatusNotFound, err)
+		}
+
+		return response.Send(ctx, fiber.StatusInternalServerError, nil, "Failed to change password")
+	}
+
+	return response.Send(ctx, fiber.StatusOK, nil, "")
+}
