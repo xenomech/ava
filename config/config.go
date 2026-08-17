@@ -17,6 +17,12 @@ var (
 type Config struct {
 	Port      string
 	ServerEnv string
+
+	DBHost     string
+	DBPort     string
+	DBUser     string
+	DBPassword string
+	DBDatabase string
 }
 
 func GetConfig() *Config {
@@ -44,12 +50,21 @@ func load() *Config {
 	return &Config{
 		Port:      v.GetString("PORT"),
 		ServerEnv: v.GetString("SERVER_ENV"),
+
+		DBHost:     v.GetString("DB_HOST"),
+		DBPort:     v.GetString("DB_PORT"),
+		DBUser:     v.GetString("DB_USER"),
+		DBPassword: v.GetString("DB_PASSWORD"),
+		DBDatabase: v.GetString("DB_DATABASE"),
 	}
 }
 
 func setDefaults(v *viper.Viper) {
 	v.SetDefault("PORT", "8000")
 	v.SetDefault("SERVER_ENV", "local")
+
+	v.SetDefault("DB_HOST", "localhost")
+	v.SetDefault("DB_PORT", "5432")
 }
 
 func isMissingConfigFile(err error) bool {
