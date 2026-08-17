@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"time"
 
+	"ava/config"
 	"ava/internal/controller"
 	"ava/internal/middleware"
 	"ava/internal/repository"
@@ -18,10 +19,7 @@ import (
 )
 
 func main() {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8000"
-	}
+	cfg := config.GetConfig()
 
 	app := fiber.New(fiber.Config{
 		ReadTimeout:  10 * time.Second,
@@ -41,8 +39,8 @@ func main() {
 	defer stop()
 
 	go func() {
-		log.Printf("SERVER_STARTED port=%s", port)
-		if err := app.Listen(":" + port); err != nil {
+		log.Printf("SERVER_STARTED port=%s", cfg.Port)
+		if err := app.Listen(":" + cfg.Port); err != nil {
 			log.Printf("SERVER_START_ERROR error=%v", err)
 		}
 	}()
