@@ -22,4 +22,5 @@ func authRoutes(router fiber.Router, controller *authctrl.Controller, authMiddle
 	router.Post("/logout", authMiddleware.ValidateAccessToken, controller.Logout)
 	router.Post("/logout-all", authMiddleware.ValidateAccessToken, controller.LogoutAll)
 	router.Post("/change-password", authMiddleware.ValidateAccessToken, controller.ChangePassword)
+	router.Get("/sessions", authMiddleware.ValidateAccessToken, controller.GetSessions)
 }

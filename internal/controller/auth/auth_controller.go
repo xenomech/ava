@@ -328,3 +328,27 @@ func (c *Controller) ChangePassword(ctx *fiber.Ctx) error {
 
 	return response.Send(ctx, fiber.StatusOK, nil, "")
 }
+
+func (c *Controller) GetSessions(ctx *fiber.Ctx) error {
+	userID, ok := ctx.Locals("userID").(uuid.UUID)
+	if !ok {
+		return response.Send(ctx, fiber.StatusUnauthorized, nil, "Unauthorized")
+	}
+
+	tenantID, ok := ctx.Locals("tenantID").(uuid.UUID)
+	if !ok {
+		return response.Send(ctx, fiber.StatusUnauthorized, nil, "Unauthorized")
+	}
+
+	sessionID, ok := ctx.Locals("sessionID").(uuid.UUID)
+	if !ok {
+		return response.Send(ctx, fiber.StatusUnauthorized, nil, "Unauthorized")
+	}
+
+	sessions, err := c.authService.GetUserSessions(ctx.Context(), tenantID, userID, sessionID)
+	if err != nil {
+		return response.Send(ctx, fiber.StatusInternalServerError, nil, "Failed to load sessions")
+	}
+
+	return response.Send(ctx, fiber.StatusOK, sessions, "")
+}

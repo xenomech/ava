@@ -572,3 +572,28 @@ func (s *authService) ChangePassword(ctx context.Context, userID uuid.UUID, oldP
 
 	return nil
 }
+
+func (s *authService) GetUserSessions(ctx context.Context, tenantID, userID, currentSessionID uuid.UUID) ([]*dto.SessionResponse, error) {
+	sessions, err := s.sessionRepo.GetUserSessions(ctx, tenantID, userID)
+	if err != nil {
+		logger.Error("failed to get user sessions", logger.Err(err))
+
+		return nil, err
+	}
+
+	responses := make([]*dto.SessionResponse, 0, len(sessions))
+
+	for _, session := range sessions {
+		responses = append(responses, &dto.SessionResponse{
+			ID:         session.ID,
+			DeviceName: session.DeviceName,
+			IPAddress:  session.IPAddress,
+			UserAgent:  session.UserAgent,
+			CreatedAt:  session.CreatedAt,
+			ExpiresAt:  session.ExpiresAt,
+			Current:    session.ID == currentSessionID,
+		})
+	}
+
+	return responses, nil
+}

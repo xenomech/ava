@@ -28,6 +28,7 @@ type Service interface {
 	SwitchTenant(ctx context.Context, tenantID, userID, sessionID uuid.UUID, tenantSlug string, deviceInfo dto.DeviceInfo) (*dto.AuthResponse, error)
 	Logout(ctx context.Context, tenantID, sessionID uuid.UUID) error
 	LogoutAll(ctx context.Context, tenantID, userID uuid.UUID) error
+	GetUserSessions(ctx context.Context, tenantID, userID, currentSessionID uuid.UUID) ([]*dto.SessionResponse, error)
 	CurrentSession(ctx context.Context, tenantID, userID uuid.UUID) (*dto.AuthResponse, error)
 	ValidateSession(ctx context.Context, tenantID, sessionID uuid.UUID) (*model.Session, error)
 	GetUserByID(ctx context.Context, userID uuid.UUID) (*model.User, error)
