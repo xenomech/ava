@@ -66,6 +66,7 @@ func main() {
 	mw := middleware.NewMiddleware(service)
 	ctrl := controller.NewController(service)
 
+	app.Use(mw.RequestTrace)
 	app.Use(middleware.SecurityHeaders(cfg.ServerEnv))
 
 	routes.AddRoutes(app, ctrl, mw)
