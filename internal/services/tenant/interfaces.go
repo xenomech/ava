@@ -18,7 +18,7 @@ type Service interface {
 	Get(ctx context.Context, tenantID uuid.UUID) (*dto.TenantResponse, error)
 	Update(ctx context.Context, tenantID uuid.UUID, req *dto.UpdateTenantRequest) (*dto.TenantResponse, error)
 	ListMembers(ctx context.Context, tenantID uuid.UUID) ([]*dto.MemberResponse, error)
-	Invite(ctx context.Context, tenantID, invitedByID uuid.UUID, req *dto.InviteMemberRequest) (*dto.InviteResponse, error)
+	Invite(ctx context.Context, tenantID, invitedByID uuid.UUID, req *dto.InviteMemberRequest) (*dto.MemberResponse, error)
 	UpdateMemberRole(ctx context.Context, tenantID, userID uuid.UUID, req *dto.UpdateMemberRoleRequest) error
 	RemoveMember(ctx context.Context, tenantID, userID uuid.UUID) error
 }

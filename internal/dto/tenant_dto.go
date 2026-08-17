@@ -33,11 +33,6 @@ type TenantResponse struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-type InviteResponse struct {
-	Member      MemberResponse `json:"member"`
-	InviteToken string         `json:"invite_token"`
-}
-
 type MemberResponse struct {
 	UserID   uuid.UUID              `json:"user_id"`
 	Email    string                 `json:"email"`

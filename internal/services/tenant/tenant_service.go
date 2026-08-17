@@ -2,13 +2,16 @@ package tenant
 
 import (
 	"context"
+	"fmt"
 	"time"
 
+	"ava/config"
 	"ava/internal/dto"
 	"ava/internal/model"
 	membershiprepo "ava/internal/repository/membership"
 	tenantrepo "ava/internal/repository/tenant"
 	userrepo "ava/internal/repository/user"
+	"ava/pkg/email"
 	"ava/pkg/logger"
 	"ava/pkg/serrors"
 
@@ -154,7 +157,7 @@ func (s *tenantService) ListMembers(ctx context.Context, tenantID uuid.UUID) ([]
 	return responses, nil
 }
 
-func (s *tenantService) Invite(ctx context.Context, tenantID, invitedByID uuid.UUID, req *dto.InviteMemberRequest) (*dto.InviteResponse, error) {
+func (s *tenantService) Invite(ctx context.Context, tenantID, invitedByID uuid.UUID, req *dto.InviteMemberRequest) (*dto.MemberResponse, error) {
 	if !req.Role.IsValid() || req.Role == model.TenantRoleOwner {
 		return nil, ErrInvalidRole
 	}
@@ -204,10 +207,26 @@ func (s *tenantService) Invite(ctx context.Context, tenantID, invitedByID uuid.U
 		return nil, err
 	}
 
-	return &dto.InviteResponse{
-		Member:      *toMemberResponse(membership, invitee),
-		InviteToken: inviteToken,
-	}, nil
+	invitingTenant, err := s.tenantRepo.GetByID(ctx, tenantID)
+	if err != nil {
+		logger.Error("tenant.Invite", logger.Err(err))
+
+		return nil, err
+	}
+
+	emailSvc := email.NewService()
+	emailData := map[string]any{
+		"Name":       invitee.Name,
+		"TenantName": invitingTenant.Name,
+		"Role":       string(req.Role),
+		"InviteURL":  fmt.Sprintf("%s/accept-invite?token=%s", config.GetConfig().AppURL, inviteToken),
+	}
+
+	if err := emailSvc.Send(ctx, invitee.Email, "You have been invited to "+invitingTenant.Name, "tenant_invite.html", emailData); err != nil {
+		logger.Warn("failed to send invitation email", logger.String("email", invitee.Email), logger.Err(err))
+	}
+
+	return toMemberResponse(membership, invitee), nil
 }
 
 func (s *tenantService) UpdateMemberRole(ctx context.Context, tenantID, userID uuid.UUID, req *dto.UpdateMemberRoleRequest) error {
