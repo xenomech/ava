@@ -109,6 +109,10 @@ func (s *authService) Login(ctx context.Context, req *dto.LoginRequest, deviceIn
 		return nil, ErrInvalidCredentials
 	}
 
+	if !user.EmailVerified {
+		return nil, ErrEmailNotVerified
+	}
+
 	memberships, err := s.activeMemberships(ctx, user.ID)
 	if err != nil {
 		return nil, err

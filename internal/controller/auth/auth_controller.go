@@ -57,7 +57,9 @@ func (c *Controller) Login(ctx *fiber.Ctx) error {
 		switch {
 		case serrors.Is(err, authsvc.ErrInvalidCredentials):
 			return response.SendError(ctx, fiber.StatusUnauthorized, err)
-		case serrors.Is(err, authsvc.ErrNoTenantMembership), serrors.Is(err, authsvc.ErrAccessDenied):
+		case serrors.Is(err, authsvc.ErrEmailNotVerified),
+			serrors.Is(err, authsvc.ErrNoTenantMembership),
+			serrors.Is(err, authsvc.ErrAccessDenied):
 			return response.SendError(ctx, fiber.StatusForbidden, err)
 		}
 
