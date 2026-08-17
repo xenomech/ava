@@ -29,6 +29,11 @@ type Config struct {
 	DBPassword string
 	DBDatabase string
 
+	CORSAllowedOrigins string
+	CORSAllowedMethods string
+	CORSAllowedHeaders string
+	CORSMaxAge         int
+
 	ResendAPIKey    string
 	ResendFromEmail string
 	ResendFromName  string
@@ -71,6 +76,11 @@ func load() *Config {
 		DBPassword: v.GetString("DB_PASSWORD"),
 		DBDatabase: v.GetString("DB_DATABASE"),
 
+		CORSAllowedOrigins: v.GetString("CORS_ALLOWED_ORIGINS"),
+		CORSAllowedMethods: v.GetString("CORS_ALLOWED_METHODS"),
+		CORSAllowedHeaders: v.GetString("CORS_ALLOWED_HEADERS"),
+		CORSMaxAge:         v.GetInt("CORS_MAX_AGE"),
+
 		ResendAPIKey:    v.GetString("RESEND_API_KEY"),
 		ResendFromEmail: v.GetString("RESEND_FROM_EMAIL"),
 		ResendFromName:  v.GetString("RESEND_FROM_NAME"),
@@ -87,6 +97,11 @@ func setDefaults(v *viper.Viper) {
 
 	v.SetDefault("DB_HOST", "localhost")
 	v.SetDefault("DB_PORT", "5432")
+
+	v.SetDefault("CORS_ALLOWED_ORIGINS", "http://localhost:3000")
+	v.SetDefault("CORS_ALLOWED_METHODS", "GET,POST,PUT,DELETE,PATCH,OPTIONS")
+	v.SetDefault("CORS_ALLOWED_HEADERS", "Content-Type,Authorization,X-Requested-With,X-User-ID,X-Tenant-ID,X-REQUEST-ID,X-TIME,X-Device-Name")
+	v.SetDefault("CORS_MAX_AGE", 86400)
 
 	v.SetDefault("RESEND_FROM_EMAIL", "noreply@example.com")
 	v.SetDefault("RESEND_FROM_NAME", "Ava")

@@ -17,6 +17,7 @@ import (
 	"ava/pkg/logger"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 )
 
 func main() {
@@ -52,10 +53,20 @@ func main() {
 		BodyLimit:    4 * 1024 * 1024,
 	})
 
+	app.Use(cors.New(cors.Config{
+		AllowOrigins:     cfg.CORSAllowedOrigins,
+		AllowMethods:     cfg.CORSAllowedMethods,
+		AllowHeaders:     cfg.CORSAllowedHeaders,
+		AllowCredentials: true,
+		MaxAge:           cfg.CORSMaxAge,
+	}))
+
 	repo := repository.NewRepository(database)
 	service := services.NewService(repo)
 	mw := middleware.NewMiddleware(service)
 	ctrl := controller.NewController(service)
+
+	app.Use(middleware.SecurityHeaders(cfg.ServerEnv))
 
 	routes.AddRoutes(app, ctrl, mw)
 
