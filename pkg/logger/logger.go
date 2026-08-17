@@ -38,6 +38,10 @@ func Any(key string, value any) Field {
 	return zap.Any(key, value)
 }
 
+func Float32(key string, val float32) Field {
+	return zap.Float32(key, val)
+}
+
 func Err(err error) Field {
 	return zap.Error(err)
 }
