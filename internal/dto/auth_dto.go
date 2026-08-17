@@ -28,6 +28,14 @@ type SwitchTenantRequest struct {
 	TenantSlug string `json:"tenant_slug" validate:"required"`
 }
 
+type VerifyEmailRequest struct {
+	Token string `json:"token" validate:"required"`
+}
+
+type ResendVerificationRequest struct {
+	Email string `json:"email" validate:"required,email"`
+}
+
 type AcceptInviteRequest struct {
 	Token string `json:"token" validate:"required"`
 }

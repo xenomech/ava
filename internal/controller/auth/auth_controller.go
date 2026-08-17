@@ -221,3 +221,41 @@ func (c *Controller) AcceptInvite(ctx *fiber.Ctx) error {
 
 	return response.Send(ctx, fiber.StatusOK, tenant, "")
 }
+
+func (c *Controller) VerifyEmail(ctx *fiber.Ctx) error {
+	var req dto.VerifyEmailRequest
+	if err := ctx.BodyParser(&req); err != nil {
+		return response.Send(ctx, fiber.StatusBadRequest, nil, "Invalid request body")
+	}
+
+	if err := validator.ValidateStruct(&req); err != nil {
+		return response.SendValidation(ctx, validator.FirstError(err), validator.FieldErrors(err))
+	}
+
+	if err := c.authService.VerifyEmail(ctx.Context(), req.Token); err != nil {
+		if serrors.Is(err, authsvc.ErrInvalidToken) {
+			return response.SendError(ctx, fiber.StatusBadRequest, err)
+		}
+
+		return response.Send(ctx, fiber.StatusInternalServerError, nil, "Failed to verify email")
+	}
+
+	return response.Send(ctx, fiber.StatusOK, nil, "")
+}
+
+func (c *Controller) ResendVerification(ctx *fiber.Ctx) error {
+	var req dto.ResendVerificationRequest
+	if err := ctx.BodyParser(&req); err != nil {
+		return response.Send(ctx, fiber.StatusBadRequest, nil, "Invalid request body")
+	}
+
+	if err := validator.ValidateStruct(&req); err != nil {
+		return response.SendValidation(ctx, validator.FirstError(err), validator.FieldErrors(err))
+	}
+
+	if err := c.authService.ResendVerification(ctx.Context(), req.Email); err != nil {
+		return response.Send(ctx, fiber.StatusInternalServerError, nil, "Failed to resend verification email")
+	}
+
+	return response.Send(ctx, fiber.StatusOK, nil, "")
+}

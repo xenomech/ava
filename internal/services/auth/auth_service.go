@@ -2,15 +2,20 @@ package auth
 
 import (
 	"context"
+	"fmt"
 	"time"
+
+	"ava/config"
 
 	"ava/internal/dto"
 	"ava/internal/model"
 	membershiprepo "ava/internal/repository/membership"
 	sessionrepo "ava/internal/repository/session"
 	tenantrepo "ava/internal/repository/tenant"
+	tokenrepo "ava/internal/repository/token"
 	userrepo "ava/internal/repository/user"
 	"ava/internal/services/auth/jwt"
+	"ava/pkg/email"
 	"ava/pkg/logger"
 	"ava/pkg/serrors"
 
@@ -45,6 +50,36 @@ func (s *authService) Register(ctx context.Context, req *dto.RegisterRequest) (*
 		logger.Error("failed to create user and tenant", logger.Err(err))
 
 		return nil, err
+	}
+
+	token, err := s.generateRandomToken()
+	if err != nil {
+		logger.Error("failed to generate verification token", logger.Err(err))
+
+		return nil, err
+	}
+
+	verificationToken := model.NewToken(
+		user.ID,
+		token,
+		model.TokenTypeEmailVerification,
+		time.Now().Add(24*time.Hour),
+	)
+
+	if err := s.tokenRepo.CreateToken(ctx, verificationToken); err != nil {
+		logger.Error("failed to create verification token", logger.Err(err))
+
+		return nil, err
+	}
+
+	emailSvc := email.NewService()
+	emailData := map[string]any{
+		"Name":            user.Name,
+		"VerificationURL": fmt.Sprintf("%s/verify?token=%s", config.GetConfig().AppURL, token),
+	}
+
+	if err := emailSvc.Send(ctx, user.Email, "Verify your email address", "verify_email.html", emailData); err != nil {
+		logger.Warn("failed to send verification email", logger.String("email", user.Email), logger.Err(err))
 	}
 
 	return &dto.RegisterResponse{
@@ -339,4 +374,80 @@ func (s *authService) AcceptInvite(ctx context.Context, inviteToken string) (*dt
 		Slug: tenant.Slug,
 		Role: membership.Role,
 	}, nil
+}
+
+func (s *authService) VerifyEmail(ctx context.Context, tokenString string) error {
+	token, err := s.tokenRepo.GetValidToken(ctx, tokenString, model.TokenTypeEmailVerification)
+	if err != nil {
+		if serrors.Is(err, tokenrepo.ErrTokenNotFound) {
+			return ErrInvalidToken
+		}
+
+		logger.Error("failed to get valid token", logger.Err(err))
+
+		return err
+	}
+
+	if err := s.userRepo.VerifyEmail(ctx, token.UserID); err != nil {
+		logger.Error("failed to verify email", logger.Err(err))
+
+		return err
+	}
+
+	if err := s.tokenRepo.MarkTokenUsed(ctx, token.ID); err != nil {
+		logger.Error("failed to mark token as used", logger.Err(err))
+
+		return err
+	}
+
+	return nil
+}
+
+func (s *authService) ResendVerification(ctx context.Context, emailAddr string) error {
+	user, err := s.userRepo.GetUserByEmail(ctx, emailAddr)
+	if err != nil {
+		if serrors.Is(err, userrepo.ErrUserNotFound) {
+			return nil
+		}
+
+		logger.Error("failed to get user by email", logger.Err(err))
+
+		return err
+	}
+
+	if user.EmailVerified {
+		return nil
+	}
+
+	token, err := s.generateRandomToken()
+	if err != nil {
+		logger.Error("failed to generate verification token", logger.Err(err))
+
+		return err
+	}
+
+	verificationToken := model.NewToken(
+		user.ID,
+		token,
+		model.TokenTypeEmailVerification,
+		time.Now().Add(24*time.Hour),
+	)
+
+	if err := s.tokenRepo.CreateToken(ctx, verificationToken); err != nil {
+		logger.Error("failed to create verification token", logger.Err(err))
+
+		return err
+	}
+
+	emailSvc := email.NewService()
+	emailData := map[string]any{
+		"Name":            user.Name,
+		"VerificationURL": fmt.Sprintf("%s/verify?token=%s", config.GetConfig().AppURL, token),
+	}
+
+	if err := emailSvc.Send(ctx, user.Email, "Verify your email address", "verify_email.html", emailData); err != nil {
+		logger.Warn("failed to send verification email", logger.String("email", user.Email), logger.Err(err))
+	}
+
+	return nil
 }

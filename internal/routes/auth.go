@@ -9,6 +9,8 @@ import (
 
 func authRoutes(router fiber.Router, controller *authctrl.Controller, authMiddleware *middleware.Middleware) {
 	router.Post("/register", controller.Register)
+	router.Post("/verify-email", controller.VerifyEmail)
+	router.Post("/resend-verification", controller.ResendVerification)
 	router.Post("/login", controller.Login)
 	router.Post("/refresh", controller.RefreshToken)
 	router.Post("/accept-invite", controller.AcceptInvite)

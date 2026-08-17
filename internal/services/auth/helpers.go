@@ -2,6 +2,9 @@ package auth
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
+	"fmt"
 	"time"
 
 	"ava/internal/dto"
@@ -168,4 +171,13 @@ func (s *authService) userToResponse(user *model.User) *dto.UserResponse {
 		EmailVerifiedAt: user.EmailVerifiedAt,
 		CreatedAt:       user.CreatedAt,
 	}
+}
+
+func (s *authService) generateRandomToken() (string, error) {
+	bytes := make([]byte, 32)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", fmt.Errorf("generate random token: %w", err)
+	}
+
+	return hex.EncodeToString(bytes), nil
 }

@@ -15,7 +15,7 @@ type Service struct {
 
 func NewService(repo *repository.Repository) *Service {
 	return &Service{
-		Auth:   authsvc.NewService(repo.User, repo.Tenant, repo.Membership, repo.Session),
+		Auth:   authsvc.NewService(repo.User, repo.Tenant, repo.Membership, repo.Session, repo.Token),
 		Tenant: tenantsvc.NewService(repo.Tenant, repo.Membership, repo.User, repo.Session),
 		Health: healthsvc.NewService(),
 	}
