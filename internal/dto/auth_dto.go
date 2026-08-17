@@ -19,8 +19,9 @@ type RegisterRequest struct {
 }
 
 type LoginRequest struct {
-	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required"`
+	Email      string `json:"email" validate:"required,email"`
+	Password   string `json:"password" validate:"required"`
+	TenantSlug string `json:"tenant_slug,omitempty"`
 }
 
 type RefreshTokenRequest struct {
@@ -45,8 +46,11 @@ type UserResponse struct {
 }
 
 type AuthResponse struct {
-	User   UserResponse   `json:"user"`
-	Tokens *TokenResponse `json:"tokens,omitempty"`
+	User                 UserResponse    `json:"user"`
+	Tenant               *TenantSummary  `json:"tenant,omitempty"`
+	Tokens               *TokenResponse  `json:"tokens,omitempty"`
+	NeedsTenantSelection bool            `json:"needs_tenant_selection,omitempty"`
+	Tenants              []TenantSummary `json:"tenants,omitempty"`
 }
 
 type TenantSummary struct {

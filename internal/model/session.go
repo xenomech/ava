@@ -9,7 +9,8 @@ import (
 
 type Session struct {
 	BaseModel
-	UserID     uuid.UUID `gorm:"type:uuid;not null;index" json:"user_id"`
+	TenantID   uuid.UUID `gorm:"type:uuid;not null;index:idx_session_tenant_user" json:"tenant_id"`
+	UserID     uuid.UUID `gorm:"type:uuid;not null;index;index:idx_session_tenant_user" json:"user_id"`
 	DeviceName string    `gorm:"not null" json:"device_name"`
 	IPAddress  string    `gorm:"not null" json:"ip_address"`
 	UserAgent  string    `gorm:"not null" json:"user_agent"`
@@ -22,11 +23,12 @@ func (session *Session) BeforeCreate(tx *gorm.DB) error {
 	return session.BaseModel.BeforeCreate(tx)
 }
 
-func NewSession(userID uuid.UUID, deviceName, ipAddress, userAgent, rid string, expiresAt time.Time) *Session {
+func NewSession(tenantID, userID uuid.UUID, deviceName, ipAddress, userAgent, rid string, expiresAt time.Time) *Session {
 	id, _ := uuid.NewV7()
 
 	return &Session{
 		BaseModel:  BaseModel{ID: id},
+		TenantID:   tenantID,
 		UserID:     userID,
 		DeviceName: deviceName,
 		IPAddress:  ipAddress,

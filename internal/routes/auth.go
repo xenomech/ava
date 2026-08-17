@@ -14,4 +14,5 @@ func authRoutes(router fiber.Router, controller *authctrl.Controller, authMiddle
 
 	router.Get("/me", authMiddleware.ValidateAccessToken, controller.Me)
 	router.Post("/logout", authMiddleware.ValidateAccessToken, controller.Logout)
+	router.Post("/logout-all", authMiddleware.ValidateAccessToken, controller.LogoutAll)
 }

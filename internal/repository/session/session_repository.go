@@ -15,10 +15,10 @@ func (r *sessionRepository) CreateSession(ctx context.Context, session *model.Se
 	return r.db.WithContext(ctx).Create(session).Error
 }
 
-func (r *sessionRepository) GetSessionByID(ctx context.Context, id uuid.UUID) (*model.Session, error) {
+func (r *sessionRepository) GetSessionByID(ctx context.Context, tenantID, id uuid.UUID) (*model.Session, error) {
 	var session model.Session
 
-	err := r.db.WithContext(ctx).Where("id = ?", id).First(&session).Error
+	err := r.db.WithContext(ctx).Where("tenant_id = ? AND id = ?", tenantID, id).First(&session).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, ErrSessionNotFound
 	}
@@ -30,10 +30,10 @@ func (r *sessionRepository) GetSessionByID(ctx context.Context, id uuid.UUID) (*
 	return &session, nil
 }
 
-func (r *sessionRepository) GetSessionByRID(ctx context.Context, rid string) (*model.Session, error) {
+func (r *sessionRepository) GetSessionByRID(ctx context.Context, tenantID uuid.UUID, rid string) (*model.Session, error) {
 	var session model.Session
 
-	err := r.db.WithContext(ctx).Where("rid = ?", rid).First(&session).Error
+	err := r.db.WithContext(ctx).Where("tenant_id = ? AND rid = ?", tenantID, rid).First(&session).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, ErrSessionNotFound
 	}
@@ -45,8 +45,8 @@ func (r *sessionRepository) GetSessionByRID(ctx context.Context, rid string) (*m
 	return &session, nil
 }
 
-func (r *sessionRepository) RevokeSession(ctx context.Context, sessionID uuid.UUID) error {
-	result := r.db.WithContext(ctx).Model(&model.Session{}).Where("id = ?", sessionID).Updates(map[string]any{
+func (r *sessionRepository) RevokeSession(ctx context.Context, tenantID, sessionID uuid.UUID) error {
+	result := r.db.WithContext(ctx).Model(&model.Session{}).Where("tenant_id = ? AND id = ?", tenantID, sessionID).Updates(map[string]any{
 		"revoked":    true,
 		"updated_at": time.Now(),
 	})
@@ -61,17 +61,24 @@ func (r *sessionRepository) RevokeSession(ctx context.Context, sessionID uuid.UU
 	return nil
 }
 
-func (r *sessionRepository) RevokeAllUserSessions(ctx context.Context, userID uuid.UUID) error {
+func (r *sessionRepository) RevokeAllUserSessions(ctx context.Context, tenantID, userID uuid.UUID) error {
+	return r.db.WithContext(ctx).Model(&model.Session{}).Where("tenant_id = ? AND user_id = ? AND revoked = ?", tenantID, userID, false).Updates(map[string]any{
+		"revoked":    true,
+		"updated_at": time.Now(),
+	}).Error
+}
+
+func (r *sessionRepository) RevokeAllUserSessionsGlobal(ctx context.Context, userID uuid.UUID) error {
 	return r.db.WithContext(ctx).Model(&model.Session{}).Where("user_id = ? AND revoked = ?", userID, false).Updates(map[string]any{
 		"revoked":    true,
 		"updated_at": time.Now(),
 	}).Error
 }
 
-func (r *sessionRepository) GetUserSessions(ctx context.Context, userID uuid.UUID) ([]*model.Session, error) {
+func (r *sessionRepository) GetUserSessions(ctx context.Context, tenantID, userID uuid.UUID) ([]*model.Session, error) {
 	var sessions []*model.Session
 
-	err := r.db.WithContext(ctx).Where("user_id = ? AND revoked = ? AND expires_at > ?", userID, false, time.Now()).Find(&sessions).Error
+	err := r.db.WithContext(ctx).Where("tenant_id = ? AND user_id = ? AND revoked = ? AND expires_at > ?", tenantID, userID, false, time.Now()).Find(&sessions).Error
 	if err != nil {
 		return nil, err
 	}
@@ -79,8 +86,8 @@ func (r *sessionRepository) GetUserSessions(ctx context.Context, userID uuid.UUI
 	return sessions, nil
 }
 
-func (r *sessionRepository) UpdateSessionRID(ctx context.Context, sessionID uuid.UUID, rid string) error {
-	result := r.db.WithContext(ctx).Model(&model.Session{}).Where("id = ?", sessionID).Updates(map[string]any{
+func (r *sessionRepository) UpdateSessionRID(ctx context.Context, tenantID, sessionID uuid.UUID, rid string) error {
+	result := r.db.WithContext(ctx).Model(&model.Session{}).Where("tenant_id = ? AND id = ?", tenantID, sessionID).Updates(map[string]any{
 		"rid":        rid,
 		"updated_at": time.Now(),
 	})

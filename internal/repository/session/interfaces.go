@@ -11,12 +11,13 @@ import (
 
 type Repository interface {
 	CreateSession(ctx context.Context, session *model.Session) error
-	GetSessionByID(ctx context.Context, id uuid.UUID) (*model.Session, error)
-	GetSessionByRID(ctx context.Context, rid string) (*model.Session, error)
-	RevokeSession(ctx context.Context, sessionID uuid.UUID) error
-	RevokeAllUserSessions(ctx context.Context, userID uuid.UUID) error
-	GetUserSessions(ctx context.Context, userID uuid.UUID) ([]*model.Session, error)
-	UpdateSessionRID(ctx context.Context, sessionID uuid.UUID, rid string) error
+	GetSessionByID(ctx context.Context, tenantID, id uuid.UUID) (*model.Session, error)
+	GetSessionByRID(ctx context.Context, tenantID uuid.UUID, rid string) (*model.Session, error)
+	RevokeSession(ctx context.Context, tenantID, sessionID uuid.UUID) error
+	RevokeAllUserSessions(ctx context.Context, tenantID, userID uuid.UUID) error
+	RevokeAllUserSessionsGlobal(ctx context.Context, userID uuid.UUID) error
+	GetUserSessions(ctx context.Context, tenantID, userID uuid.UUID) ([]*model.Session, error)
+	UpdateSessionRID(ctx context.Context, tenantID, sessionID uuid.UUID, rid string) error
 }
 
 type sessionRepository struct {

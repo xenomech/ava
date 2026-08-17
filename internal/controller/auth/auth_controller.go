@@ -54,8 +54,11 @@ func (c *Controller) Login(ctx *fiber.Ctx) error {
 
 	authResponse, err := c.authService.Login(ctx.Context(), &req, deviceInfo)
 	if err != nil {
-		if serrors.Is(err, authsvc.ErrInvalidCredentials) {
+		switch {
+		case serrors.Is(err, authsvc.ErrInvalidCredentials):
 			return response.SendError(ctx, fiber.StatusUnauthorized, err)
+		case serrors.Is(err, authsvc.ErrNoTenantMembership), serrors.Is(err, authsvc.ErrAccessDenied):
+			return response.SendError(ctx, fiber.StatusForbidden, err)
 		}
 
 		return response.Send(ctx, fiber.StatusInternalServerError, nil, "Failed to login")
@@ -95,7 +98,12 @@ func (c *Controller) Logout(ctx *fiber.Ctx) error {
 		return response.Send(ctx, fiber.StatusUnauthorized, nil, "Unauthorized")
 	}
 
-	if err := c.authService.Logout(ctx.Context(), sessionID); err != nil {
+	tenantID, ok := ctx.Locals("tenantID").(uuid.UUID)
+	if !ok {
+		return response.Send(ctx, fiber.StatusUnauthorized, nil, "Unauthorized")
+	}
+
+	if err := c.authService.Logout(ctx.Context(), tenantID, sessionID); err != nil {
 		return response.Send(ctx, fiber.StatusInternalServerError, nil, "Failed to logout")
 	}
 
@@ -108,9 +116,17 @@ func (c *Controller) Me(ctx *fiber.Ctx) error {
 		return response.Send(ctx, fiber.StatusUnauthorized, nil, "Unauthorized")
 	}
 
-	session, err := c.authService.CurrentSession(ctx.Context(), userID)
+	tenantID, ok := ctx.Locals("tenantID").(uuid.UUID)
+	if !ok {
+		return response.Send(ctx, fiber.StatusUnauthorized, nil, "Unauthorized")
+	}
+
+	session, err := c.authService.CurrentSession(ctx.Context(), tenantID, userID)
 	if err != nil {
-		if serrors.Is(err, authsvc.ErrUserNotFound) {
+		switch {
+		case serrors.Is(err, authsvc.ErrAccessDenied):
+			return response.SendError(ctx, fiber.StatusForbidden, err)
+		case serrors.Is(err, authsvc.ErrUserNotFound):
 			return response.SendError(ctx, fiber.StatusNotFound, err)
 		}
 
@@ -118,4 +134,22 @@ func (c *Controller) Me(ctx *fiber.Ctx) error {
 	}
 
 	return response.Send(ctx, fiber.StatusOK, session, "")
+}
+
+func (c *Controller) LogoutAll(ctx *fiber.Ctx) error {
+	userID, ok := ctx.Locals("userID").(uuid.UUID)
+	if !ok {
+		return response.Send(ctx, fiber.StatusUnauthorized, nil, "Unauthorized")
+	}
+
+	tenantID, ok := ctx.Locals("tenantID").(uuid.UUID)
+	if !ok {
+		return response.Send(ctx, fiber.StatusUnauthorized, nil, "Unauthorized")
+	}
+
+	if err := c.authService.LogoutAll(ctx.Context(), tenantID, userID); err != nil {
+		return response.Send(ctx, fiber.StatusInternalServerError, nil, "Failed to logout")
+	}
+
+	return response.Send(ctx, fiber.StatusOK, nil, "")
 }

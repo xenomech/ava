@@ -24,13 +24,15 @@ var (
 
 type Claims struct {
 	jwt.RegisteredClaims
-	UserID    uuid.UUID `json:"user_id"`
-	SessionID uuid.UUID `json:"session_id"`
-	Email     string    `json:"email"`
-	TokenType TokenType `json:"type"`
+	UserID    uuid.UUID        `json:"user_id"`
+	TenantID  uuid.UUID        `json:"tenant_id"`
+	Role      model.TenantRole `json:"role"`
+	SessionID uuid.UUID        `json:"session_id"`
+	Email     string           `json:"email"`
+	TokenType TokenType        `json:"type"`
 }
 
-func (tm *jwtTokenManager) GenerateToken(user *model.User, sessionID uuid.UUID, tokenType TokenType, rid string) (string, error) {
+func (tm *jwtTokenManager) GenerateToken(user *model.User, tenantID uuid.UUID, role model.TenantRole, sessionID uuid.UUID, tokenType TokenType, rid string) (string, error) {
 	var expiry time.Duration
 
 	switch tokenType {
@@ -51,6 +53,8 @@ func (tm *jwtTokenManager) GenerateToken(user *model.User, sessionID uuid.UUID, 
 			Subject:   user.ID.String(),
 		},
 		UserID:    user.ID,
+		TenantID:  tenantID,
+		Role:      role,
 		SessionID: sessionID,
 		Email:     user.Email,
 		TokenType: tokenType,

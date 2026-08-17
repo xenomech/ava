@@ -9,6 +9,7 @@ import (
 	"ava/pkg/response"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 )
 
 func ValidateAccessToken(authService authsvc.Service) fiber.Handler {
@@ -30,7 +31,11 @@ func ValidateAccessToken(authService authsvc.Service) fiber.Handler {
 			return response.Send(c, fiber.StatusUnauthorized, nil, "Invalid token type")
 		}
 
-		session, err := authService.ValidateSession(ctx, claims.SessionID)
+		if claims.TenantID == uuid.Nil {
+			return response.Send(c, fiber.StatusUnauthorized, nil, "Token is not scoped to a tenant")
+		}
+
+		session, err := authService.ValidateSession(ctx, claims.TenantID, claims.SessionID)
 		if err != nil {
 			return response.Send(c, fiber.StatusUnauthorized, nil, "Session has been revoked or expired")
 		}
@@ -45,6 +50,8 @@ func ValidateAccessToken(authService authsvc.Service) fiber.Handler {
 		}
 
 		c.Locals("userID", claims.UserID)
+		c.Locals("tenantID", claims.TenantID)
+		c.Locals("role", claims.Role)
 		c.Locals("sessionID", claims.SessionID)
 		c.Locals("user", user)
 		c.Locals("session", session)

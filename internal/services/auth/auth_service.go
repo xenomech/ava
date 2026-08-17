@@ -6,6 +6,7 @@ import (
 
 	"ava/internal/dto"
 	"ava/internal/model"
+	membershiprepo "ava/internal/repository/membership"
 	sessionrepo "ava/internal/repository/session"
 	tenantrepo "ava/internal/repository/tenant"
 	userrepo "ava/internal/repository/user"
@@ -73,7 +74,34 @@ func (s *authService) Login(ctx context.Context, req *dto.LoginRequest, deviceIn
 		return nil, ErrInvalidCredentials
 	}
 
-	return s.issueSession(ctx, user, deviceInfo)
+	memberships, err := s.activeMemberships(ctx, user.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(memberships) == 0 {
+		return nil, ErrNoTenantMembership
+	}
+
+	membership, err := s.selectMembership(ctx, memberships, req.TenantSlug)
+	if err != nil {
+		if !serrors.Is(err, ErrTenantSelectionRequired) {
+			return nil, err
+		}
+
+		tenants, err := s.tenantSummaries(ctx, memberships)
+		if err != nil {
+			return nil, err
+		}
+
+		return &dto.AuthResponse{
+			User:                 *s.userToResponse(user),
+			NeedsTenantSelection: true,
+			Tenants:              tenants,
+		}, nil
+	}
+
+	return s.issueSession(ctx, user, membership, deviceInfo)
 }
 
 func (s *authService) RefreshToken(ctx context.Context, refreshTokenString string) (*dto.TokenResponse, error) {
@@ -90,7 +118,7 @@ func (s *authService) RefreshToken(ctx context.Context, refreshTokenString strin
 		return nil, ErrInvalidToken
 	}
 
-	session, err := s.sessionRepo.GetSessionByRID(ctx, claims.ID)
+	session, err := s.sessionRepo.GetSessionByRID(ctx, claims.TenantID, claims.ID)
 	if err != nil {
 		if serrors.Is(err, sessionrepo.ErrSessionNotFound) {
 			return nil, ErrSessionNotFound
@@ -120,18 +148,33 @@ func (s *authService) RefreshToken(ctx context.Context, refreshTokenString strin
 		return nil, err
 	}
 
+	membership, err := s.membershipRepo.GetByTenantAndUser(ctx, claims.TenantID, claims.UserID)
+	if err != nil {
+		if serrors.Is(err, membershiprepo.ErrMembershipNotFound) {
+			return nil, ErrAccessDenied
+		}
+
+		logger.Error("failed to get membership", logger.Err(err))
+
+		return nil, err
+	}
+
+	if !membership.IsActive() {
+		return nil, ErrAccessDenied
+	}
+
 	newRID := uuid.NewString()
-	if err := s.sessionRepo.UpdateSessionRID(ctx, session.ID, newRID); err != nil {
+	if err := s.sessionRepo.UpdateSessionRID(ctx, claims.TenantID, session.ID, newRID); err != nil {
 		logger.Error("failed to update session RID", logger.Err(err))
 
 		return nil, err
 	}
 
-	return s.issueTokens(user, session.ID, newRID)
+	return s.issueTokens(user, membership, session.ID, newRID)
 }
 
-func (s *authService) ValidateSession(ctx context.Context, sessionID uuid.UUID) (*model.Session, error) {
-	session, err := s.sessionRepo.GetSessionByID(ctx, sessionID)
+func (s *authService) ValidateSession(ctx context.Context, tenantID, sessionID uuid.UUID) (*model.Session, error) {
+	session, err := s.sessionRepo.GetSessionByID(ctx, tenantID, sessionID)
 	if err != nil {
 		if serrors.Is(err, sessionrepo.ErrSessionNotFound) {
 			return nil, ErrSessionNotFound
@@ -164,8 +207,8 @@ func (s *authService) GetUserByID(ctx context.Context, userID uuid.UUID) (*model
 	return user, nil
 }
 
-func (s *authService) Logout(ctx context.Context, sessionID uuid.UUID) error {
-	if err := s.sessionRepo.RevokeSession(ctx, sessionID); err != nil {
+func (s *authService) Logout(ctx context.Context, tenantID, sessionID uuid.UUID) error {
+	if err := s.sessionRepo.RevokeSession(ctx, tenantID, sessionID); err != nil {
 		logger.Error("failed to revoke session", logger.Err(err))
 
 		return err
@@ -174,7 +217,7 @@ func (s *authService) Logout(ctx context.Context, sessionID uuid.UUID) error {
 	return nil
 }
 
-func (s *authService) CurrentSession(ctx context.Context, userID uuid.UUID) (*dto.AuthResponse, error) {
+func (s *authService) CurrentSession(ctx context.Context, tenantID, userID uuid.UUID) (*dto.AuthResponse, error) {
 	user, err := s.userRepo.GetUserByID(ctx, userID)
 	if err != nil {
 		if serrors.Is(err, userrepo.ErrUserNotFound) {
@@ -186,7 +229,45 @@ func (s *authService) CurrentSession(ctx context.Context, userID uuid.UUID) (*dt
 		return nil, err
 	}
 
+	membership, err := s.membershipRepo.GetByTenantAndUser(ctx, tenantID, userID)
+	if err != nil {
+		if serrors.Is(err, membershiprepo.ErrMembershipNotFound) {
+			return nil, ErrAccessDenied
+		}
+
+		logger.Error("failed to get membership", logger.Err(err))
+
+		return nil, err
+	}
+
+	if !membership.IsActive() {
+		return nil, ErrAccessDenied
+	}
+
+	tenant, err := s.tenantRepo.GetByID(ctx, tenantID)
+	if err != nil {
+		logger.Error("failed to get tenant by ID", logger.Err(err))
+
+		return nil, err
+	}
+
 	return &dto.AuthResponse{
 		User: *s.userToResponse(user),
+		Tenant: &dto.TenantSummary{
+			ID:   tenant.ID,
+			Name: tenant.Name,
+			Slug: tenant.Slug,
+			Role: membership.Role,
+		},
 	}, nil
+}
+
+func (s *authService) LogoutAll(ctx context.Context, tenantID, userID uuid.UUID) error {
+	if err := s.sessionRepo.RevokeAllUserSessions(ctx, tenantID, userID); err != nil {
+		logger.Error("failed to revoke user sessions", logger.Err(err))
+
+		return err
+	}
+
+	return nil
 }
