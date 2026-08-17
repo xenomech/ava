@@ -1,0 +1,18 @@
+pre-commit:
+  parallel: true
+  jobs:
+    - name: go-lint
+      glob: "*.go"
+      run: golangci-lint run
+
+    - name: go-fmt
+      glob: "*.go"
+      run: test -z "$(gofumpt -l .)" || (echo "Run 'make fmt' to format code" && exit 1)
+
+    - name: go-vet
+      glob: "*.go"
+      run: go vet ./...
+
+    - name: go-test
+      glob: "*.go"
+      run: go test ./...

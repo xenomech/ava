@@ -4,7 +4,9 @@ setup:
 	go install github.com/air-verse/air@latest
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 	go install mvdan.cc/gofumpt@latest
+	go install github.com/evilmartians/lefthook@latest
 	go mod download
+	lefthook install
 
 dev:
 	air
