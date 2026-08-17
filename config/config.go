@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"sync"
+	"time"
 
 	"github.com/spf13/viper"
 )
@@ -17,6 +18,10 @@ var (
 type Config struct {
 	Port      string
 	ServerEnv string
+
+	JwtSecretKey     string
+	JwtAccessExpiry  time.Duration
+	JwtRefreshExpiry time.Duration
 
 	DBHost     string
 	DBPort     string
@@ -51,6 +56,10 @@ func load() *Config {
 		Port:      v.GetString("PORT"),
 		ServerEnv: v.GetString("SERVER_ENV"),
 
+		JwtSecretKey:     v.GetString("JWT_SECRET"),
+		JwtAccessExpiry:  v.GetDuration("JWT_ACCESS_EXPIRY"),
+		JwtRefreshExpiry: v.GetDuration("JWT_REFRESH_EXPIRY"),
+
 		DBHost:     v.GetString("DB_HOST"),
 		DBPort:     v.GetString("DB_PORT"),
 		DBUser:     v.GetString("DB_USER"),
@@ -62,6 +71,9 @@ func load() *Config {
 func setDefaults(v *viper.Viper) {
 	v.SetDefault("PORT", "8000")
 	v.SetDefault("SERVER_ENV", "local")
+
+	v.SetDefault("JWT_ACCESS_EXPIRY", 15*time.Minute)
+	v.SetDefault("JWT_REFRESH_EXPIRY", 7*24*time.Hour)
 
 	v.SetDefault("DB_HOST", "localhost")
 	v.SetDefault("DB_PORT", "5432")
