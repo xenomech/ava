@@ -1,0 +1,1448 @@
+{
+  "info": {
+    "name": "Ava API",
+    "_postman_id": "8f3d1c42-6a51-4c7e-9a1b-0d2f5e7c9b10",
+    "description": "Multi-tenant Go API \u2014 auth, tenants with roles, and the onboarding flow engine.\n\n## Getting started\n\n1. `docker compose up -d postgres` then `make dev` (or `make run`).\n2. Send **Auth \u203a Register**, then verify the email (see that request's description for how to read the token out of the database locally).\n3. Send **Auth \u203a Login** \u2014 the access and refresh tokens are captured into collection variables automatically, and every protected request inherits them.\n\n## How auth works here\n\nThe collection sends `Authorization: Bearer {{accessToken}}` by default; public endpoints override that to no-auth. A token is scoped to **one tenant**: it carries the tenant id and the caller's role in it. To act in another tenant use **Switch tenant**, which revokes the current session and issues a new one.\n\n## Tokens that arrive by email\n\nEmail verification, password reset, and invitations all send a link. With no `RESEND_API_KEY` set, sending fails (logged as a warning) and the request still succeeds \u2014 read the token from Postgres, as each of those requests describes.\n\n## Rate limits\n\n100 requests/minute per IP globally, 25/minute on auth endpoints. A throttled auth call returns 429 `auth_rate_limited`.\n\n## Response envelope\n\nEvery response is `{ success, data, error: { code, message, details? } }`. Branch on `error.code`, not on the message text.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.test(\"envelope shape\", function () {",
+          "    const body = pm.response.json();",
+          "    pm.expect(body).to.have.property('success');",
+          "    pm.expect(body).to.have.property('data');",
+          "    pm.expect(body).to.have.property('error');",
+          "});"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "tenantSlug",
+      "value": "acme",
+      "type": "string"
+    },
+    {
+      "key": "memberUserId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "flowType",
+      "value": "onboarding",
+      "type": "string"
+    },
+    {
+      "key": "stepId",
+      "value": "profile",
+      "type": "string"
+    },
+    {
+      "key": "verificationToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "resetToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "inviteToken",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Health",
+      "description": "Start here to confirm the API is up.",
+      "item": [
+        {
+          "name": "Health check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "Liveness probe. Returns a static ok \u2014 it does not touch the database.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Sign up and sign in",
+      "description": "Run these in order. Register, verify the email (token comes from the database locally), then log in \u2014 the tokens are captured automatically and everything below inherits them.",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Creates the user, their tenant, and an owner membership in one transaction, then emails a verification link.\n\nThe slug must be lowercase alphanumeric words separated by hyphens. Login is blocked until the email is verified.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ada@example.com\",\n  \"username\": \"ada\",\n  \"name\": \"Ada Lovelace\",\n  \"password\": \"supersecret1\",\n  \"phone\": \"+15550000000\",\n  \"tenant_name\": \"Acme\",\n  \"tenant_slug\": \"acme\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 201 or 409 or 422\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([201, 409, 422]);",
+                  "});",
+                  "(function () {",
+                  "    const d = pm.response.json().data;",
+                  "    if (d && d.tenant) { pm.collectionVariables.set('tenantSlug', d.tenant.slug); }",
+                  "})();"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/verify-email",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "verify-email"
+              ]
+            },
+            "description": "Marks the account verified. Single use \u2014 replaying the token returns 400.\n\nThe token arrives by email. Without a Resend API key nothing is sent, so read it straight from the database:\n\n```\ndocker compose exec -T postgres psql -U ava -d ava_db -tA \\\n  -c \"select token from tokens where type='email_verification' and used_at is null order by created_at desc limit 1\"\n```",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{verificationToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200, 400 or 422\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 400, 422]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Resend verification",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/resend-verification",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "resend-verification"
+              ]
+            },
+            "description": "Always answers 200, whether or not the address exists, and issues no new token for an already-verified account.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ada@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Saves accessToken and refreshToken to collection variables automatically.\n\nA user who belongs to several tenants gets `needs_tenant_selection: true` and a list of choices instead of tokens \u2014 add `\"tenant_slug\": \"{{tenantSlug}}\"` to the body and send again.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ada@example.com\",\n  \"password\": \"supersecret1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200 or 401 or 403\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 401, 403]);",
+                  "});",
+                  "(function () {",
+                  "    const body = pm.response.json();",
+                  "    const data = body.data || {};",
+                  "    if (data.needs_tenant_selection) {",
+                  "        const slugs = (data.tenants || []).map(t => t.slug).join(', ');",
+                  "        console.log('Multiple tenants: ' + slugs + ' \u2014 set tenantSlug and send again.');",
+                  "    } else if (data.tokens) {",
+                  "        pm.collectionVariables.set('accessToken', data.tokens.access_token);",
+                  "        pm.collectionVariables.set('refreshToken', data.tokens.refresh_token);",
+                  "        if (data.tenant) { pm.collectionVariables.set('tenantSlug', data.tenant.slug); }",
+                  "        console.log('Tokens saved.');",
+                  "    }",
+                  "})();"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login (choose tenant)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Signs in to a named tenant. 403 access_denied if the caller is not a member of it.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ada@example.com\",\n  \"password\": \"supersecret1\",\n  \"tenant_slug\": \"{{tenantSlug}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200 or 401 or 403\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 401, 403]);",
+                  "});",
+                  "(function () {",
+                  "    const body = pm.response.json();",
+                  "    const data = body.data || {};",
+                  "    if (data.needs_tenant_selection) {",
+                  "        const slugs = (data.tenants || []).map(t => t.slug).join(', ');",
+                  "        console.log('Multiple tenants: ' + slugs + ' \u2014 set tenantSlug and send again.');",
+                  "    } else if (data.tokens) {",
+                  "        pm.collectionVariables.set('accessToken', data.tokens.access_token);",
+                  "        pm.collectionVariables.set('refreshToken', data.tokens.refresh_token);",
+                  "        if (data.tenant) { pm.collectionVariables.set('tenantSlug', data.tenant.slug); }",
+                  "        console.log('Tokens saved.');",
+                  "    }",
+                  "})();"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refresh token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
+            },
+            "description": "Rotates the pair: the old refresh token dies immediately. Membership is re-read, so a removed member loses access here rather than when the token expires.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refreshToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200 or 401\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 401]);",
+                  "});",
+                  "(function () {",
+                  "    const data = pm.response.json().data || {};",
+                  "    if (data.access_token) {",
+                  "        pm.collectionVariables.set('accessToken', data.access_token);",
+                  "        pm.collectionVariables.set('refreshToken', data.refresh_token);",
+                  "        console.log('Tokens rotated.');",
+                  "    }",
+                  "})();"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Session",
+      "description": "Who am I, where am I, and moving between tenants.",
+      "item": [
+        {
+          "name": "Me",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            },
+            "description": "The caller plus the tenant their token is scoped to."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200 or 401 or 403\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 401, 403]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sessions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/sessions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "sessions"
+              ]
+            },
+            "description": "Live sessions in the current tenant. `current: true` marks the one making this request."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200 or 401\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 401]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Switch tenant",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/switch-tenant",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "switch-tenant"
+              ]
+            },
+            "description": "Revokes the current session and issues a new one scoped to the named tenant. Saves the new tokens.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenant_slug\": \"{{tenantSlug}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200 or 403\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 403]);",
+                  "});",
+                  "(function () {",
+                  "    const body = pm.response.json();",
+                  "    const data = body.data || {};",
+                  "    if (data.needs_tenant_selection) {",
+                  "        const slugs = (data.tenants || []).map(t => t.slug).join(', ');",
+                  "        console.log('Multiple tenants: ' + slugs + ' \u2014 set tenantSlug and send again.');",
+                  "    } else if (data.tokens) {",
+                  "        pm.collectionVariables.set('accessToken', data.tokens.access_token);",
+                  "        pm.collectionVariables.set('refreshToken', data.tokens.refresh_token);",
+                  "        if (data.tenant) { pm.collectionVariables.set('tenantSlug', data.tenant.slug); }",
+                  "        console.log('Tokens saved.');",
+                  "    }",
+                  "})();"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Tenants",
+      "description": "Every route is authenticated and acts on the tenant named in the access token \u2014 the tenant is never addressable through the URL. Invite runs before List members on purpose: listing captures memberUserId for the two requests below it, and you want that to be the invited member rather than the owner (demoting the last owner is a 409).",
+      "item": [
+        {
+          "name": "List my tenants",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tenants",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tenants"
+              ]
+            },
+            "description": "Every tenant the caller is an active member of, with their role in each."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200 or 401\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 401]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create tenant",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tenants",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tenants"
+              ]
+            },
+            "description": "Opens an additional tenant with the caller as owner. Switch to it to get a scoped token.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Globex\",\n  \"slug\": \"globex\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 201 or 400 or 409\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([201, 400, 409]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get current tenant",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tenants/current",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tenants",
+                "current"
+              ]
+            },
+            "description": "The tenant named in the access token. The tenant is never addressable through the URL."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200 or 401\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 401]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update current tenant",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tenants/current",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tenants",
+                "current"
+              ]
+            },
+            "description": "Owner or admin only \u2014 a member gets 403.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Acme Corp\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200 or 401 or 403\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 401, 403]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Invite member",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tenants/current/invitations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tenants",
+                "current",
+                "invitations"
+              ]
+            },
+            "description": "Owner or admin only. The invitee must already have an account. Role must be admin or member \u2014 owner is rejected. The invite link is emailed; see Accept invite for how to read the token locally.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"bob@example.com\",\n  \"role\": \"member\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 201 or 400 or 403 or 404 or 409\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([201, 400, 403, 404, 409]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List members",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tenants/current/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tenants",
+                "current",
+                "members"
+              ]
+            },
+            "description": "Members of the current tenant, including invited-but-not-yet-accepted ones."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200 or 401\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 401]);",
+                  "});",
+                  "(function () {",
+                  "    const d = pm.response.json().data || [];",
+                  "    if (d.length) { pm.collectionVariables.set('memberUserId', d[d.length - 1].user_id); }",
+                  "})();"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update member role",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tenants/current/members/{{memberUserId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tenants",
+                "current",
+                "members",
+                "{{memberUserId}}"
+              ]
+            },
+            "description": "Owner only. Revokes that member's sessions in this tenant, because the role travels inside the access token. Demoting the last owner returns 409.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"admin\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200 or 400 or 403 or 404 or 409\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 400, 403, 404, 409]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Remove member",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tenants/current/members/{{memberUserId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tenants",
+                "current",
+                "members",
+                "{{memberUserId}}"
+              ]
+            },
+            "description": "Owner or admin. Removing the last owner returns 409. The member's other tenants are untouched."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200 or 403 or 404 or 409\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 403, 404, 409]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Flows",
+      "description": "The onboarding flow engine. One endpoint set serves every registered flow type; steps run in order, so submit profile before workspace before invite team.",
+      "item": [
+        {
+          "name": "Get flow state",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/flows/{{flowType}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "flows",
+                "{{flowType}}"
+              ]
+            },
+            "description": "Returns the caller's flow, creating it on first request \u2014 there is no explicit create endpoint. `metadata` carries the registry's static choices, such as the roles the invite step may offer."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200 or 400 or 401\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 400, 401]);",
+                  "});",
+                  "(function () {",
+                  "    const d = pm.response.json().data;",
+                  "    if (d && d.current_step) { pm.collectionVariables.set('stepId', d.current_step); }",
+                  "})();"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit step - profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/flows/{{flowType}}/steps/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "flows",
+                "{{flowType}}",
+                "steps",
+                "profile"
+              ]
+            },
+            "description": "Runs the step's side effect \u2014 this one updates the caller's own name and phone.\n\nA validation failure answers 422 with the per-field errors AND the full flow state in `data`, so the client can render them without a second request.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": {\n    \"name\": \"Ada Lovelace\",\n    \"phone\": \"+15550000000\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200 or 403 or 409 or 422\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 403, 409, 422]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit step - workspace",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/flows/{{flowType}}/steps/workspace",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "flows",
+                "{{flowType}}",
+                "steps",
+                "workspace"
+              ]
+            },
+            "description": "Renames the tenant. Owner or admin only: a member gets 403 step_not_permitted. Because the step is skippable, that member can still finish onboarding by skipping it.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": {\n    \"name\": \"Acme Corp\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200 or 403 or 409 or 422\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 403, 409, 422]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit step - invite team",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/flows/{{flowType}}/steps/invite_team",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "flows",
+                "{{flowType}}",
+                "steps",
+                "invite_team"
+              ]
+            },
+            "description": "Owner or admin only. Every address must already have an account, checked up front rather than failing halfway through the loop. Completing the last step marks the flow completed and empties current_step.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": {\n    \"emails\": [\n      \"bob@example.com\"\n    ],\n    \"role\": \"member\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200 or 403 or 409 or 422\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 403, 409, 422]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Go back",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/flows/{{flowType}}/back",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "flows",
+                "{{flowType}}",
+                "back"
+              ]
+            },
+            "description": "Reopens the previous step. 400 no_previous_step on the first step."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200 or 400 or 409\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 400, 409]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Skip step",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/flows/{{flowType}}/skip",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "flows",
+                "{{flowType}}",
+                "skip"
+              ]
+            },
+            "description": "Skips the current step if its definition allows it, otherwise 400 step_not_skippable."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200 or 400 or 409\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 400, 409]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6. Invitations",
+      "description": "Accepting an invite is unauthenticated \u2014 the token is the credential. Invite someone from folder 4 first, then read the token out of the database.",
+      "item": [
+        {
+          "name": "Accept invite",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/accept-invite",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "accept-invite"
+              ]
+            },
+            "description": "Activates a pending membership.\n\nThe invite token is emailed. Read it from the database with:\n\n```\ndocker compose exec -T postgres psql -U ava -d ava_db -tA \\\n  -c \"select invite_token from tenant_memberships where status='invited' order by created_at desc limit 1\"\n```",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{inviteToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200, 400 or 422\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 400, 422]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "7. Password",
+      "description": "\u26a0\ufe0f Ordered last on purpose. Change password swaps the password used by the Login request above, and Reset password revokes the caller's sessions in EVERY tenant, so anything after it needs a fresh login.",
+      "item": [
+        {
+          "name": "Change password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/change-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "change-password"
+              ]
+            },
+            "description": "Requires the current password. Unlike a reset, this does not revoke sessions.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"old_password\": \"supersecret1\",\n  \"new_password\": \"brandnewpass1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200 or 400 or 401\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 400, 401]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Forgot password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/forgot-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "forgot-password"
+              ]
+            },
+            "description": "Always answers 200 so accounts cannot be enumerated.\n\nThe token arrives by email. Without a Resend API key nothing is sent, so read it straight from the database:\n\n```\ndocker compose exec -T postgres psql -U ava -d ava_db -tA \\\n  -c \"select token from tokens where type='password_reset' and used_at is null order by created_at desc limit 1\"\n```",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ada@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reset password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/reset-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "reset-password"
+              ]
+            },
+            "description": "Consumes the token and revokes the user's sessions in every tenant, not just the current one.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{resetToken}}\",\n  \"new_password\": \"brandnewpass1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200, 400 or 422\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 400, 422]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "8. Sign out",
+      "description": "\u26a0\ufe0f Ordered last on purpose: these revoke the token the rest of the collection depends on.",
+      "item": [
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Revokes this session only. The access token stops working immediately."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200 or 401\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 401]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Logout all",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout-all",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "logout-all"
+              ]
+            },
+            "description": "Revokes every session the caller has in the current tenant. Other tenants are unaffected."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200 or 401\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 401]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
