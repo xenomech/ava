@@ -2,12 +2,17 @@ package auth
 
 import (
 	"context"
+	"time"
 
 	"ava/internal/dto"
 	"ava/internal/model"
+	sessionrepo "ava/internal/repository/session"
 	userrepo "ava/internal/repository/user"
+	"ava/internal/services/auth/jwt"
 	"ava/pkg/logger"
 	"ava/pkg/serrors"
+
+	"github.com/google/uuid"
 )
 
 func (s *authService) Register(ctx context.Context, req *dto.RegisterRequest) (*dto.RegisterResponse, error) {
@@ -52,4 +57,58 @@ func (s *authService) Login(ctx context.Context, req *dto.LoginRequest, deviceIn
 	}
 
 	return s.issueSession(ctx, user, deviceInfo)
+}
+
+func (s *authService) RefreshToken(ctx context.Context, refreshTokenString string) (*dto.TokenResponse, error) {
+	claims, err := s.tokenManager.ValidateToken(refreshTokenString)
+	if err != nil {
+		return nil, ErrInvalidToken
+	}
+
+	if claims.TokenType != jwt.RefreshToken {
+		return nil, ErrInvalidToken
+	}
+
+	if claims.ID == "" {
+		return nil, ErrInvalidToken
+	}
+
+	session, err := s.sessionRepo.GetSessionByRID(ctx, claims.ID)
+	if err != nil {
+		if serrors.Is(err, sessionrepo.ErrSessionNotFound) {
+			return nil, ErrSessionNotFound
+		}
+
+		logger.Error("failed to get session by RID", logger.Err(err))
+
+		return nil, err
+	}
+
+	if session.Revoked {
+		return nil, ErrSessionRevoked
+	}
+
+	if time.Now().After(session.ExpiresAt) {
+		return nil, ErrSessionExpired
+	}
+
+	if session.UserID != claims.UserID {
+		return nil, ErrInvalidToken
+	}
+
+	user, err := s.userRepo.GetUserByID(ctx, claims.UserID)
+	if err != nil {
+		logger.Error("failed to get user by ID", logger.Err(err))
+
+		return nil, err
+	}
+
+	newRID := uuid.NewString()
+	if err := s.sessionRepo.UpdateSessionRID(ctx, session.ID, newRID); err != nil {
+		logger.Error("failed to update session RID", logger.Err(err))
+
+		return nil, err
+	}
+
+	return s.issueTokens(user, session.ID, newRID)
 }

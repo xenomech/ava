@@ -12,6 +12,7 @@ import (
 type Service interface {
 	Register(ctx context.Context, req *dto.RegisterRequest) (*dto.RegisterResponse, error)
 	Login(ctx context.Context, req *dto.LoginRequest, deviceInfo dto.DeviceInfo) (*dto.AuthResponse, error)
+	RefreshToken(ctx context.Context, refreshTokenString string) (*dto.TokenResponse, error)
 }
 
 type authService struct {

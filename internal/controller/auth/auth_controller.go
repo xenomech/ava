@@ -59,3 +59,28 @@ func (c *Controller) Login(ctx *fiber.Ctx) error {
 
 	return response.Send(ctx, fiber.StatusOK, authResponse, "")
 }
+
+func (c *Controller) RefreshToken(ctx *fiber.Ctx) error {
+	var req dto.RefreshTokenRequest
+	if err := ctx.BodyParser(&req); err != nil {
+		return response.Send(ctx, fiber.StatusBadRequest, nil, "Invalid request body")
+	}
+
+	if err := validator.ValidateStruct(&req); err != nil {
+		return response.SendValidation(ctx, validator.FirstError(err), validator.FieldErrors(err))
+	}
+
+	tokens, err := c.authService.RefreshToken(ctx.Context(), req.RefreshToken)
+	if err != nil {
+		if serrors.Is(err, authsvc.ErrInvalidToken) ||
+			serrors.Is(err, authsvc.ErrSessionRevoked) ||
+			serrors.Is(err, authsvc.ErrSessionNotFound) ||
+			serrors.Is(err, authsvc.ErrSessionExpired) {
+			return response.SendError(ctx, fiber.StatusUnauthorized, err)
+		}
+
+		return response.Send(ctx, fiber.StatusInternalServerError, nil, "Failed to refresh token")
+	}
+
+	return response.Send(ctx, fiber.StatusOK, tokens, "")
+}
