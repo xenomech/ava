@@ -31,6 +31,8 @@ func Migrate(database *gorm.DB) error {
 		&model.TenantMembership{},
 		&model.Session{},
 		&model.Token{},
+		&model.Flow{},
+		&model.FlowStep{},
 	); err != nil {
 		logger.Error("DB_MIGRATION_ERROR", logger.Err(err))
 
