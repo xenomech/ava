@@ -1,9 +1,17 @@
 package repository
 
-import "gorm.io/gorm"
+import (
+	userrepo "ava/internal/repository/user"
 
-type Repository struct{}
+	"gorm.io/gorm"
+)
+
+type Repository struct {
+	User userrepo.Repository
+}
 
 func NewRepository(db *gorm.DB) *Repository {
-	return &Repository{}
+	return &Repository{
+		User: userrepo.NewRepository(db),
+	}
 }
