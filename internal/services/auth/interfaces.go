@@ -16,6 +16,8 @@ type Service interface {
 	Register(ctx context.Context, req *dto.RegisterRequest) (*dto.RegisterResponse, error)
 	Login(ctx context.Context, req *dto.LoginRequest, deviceInfo dto.DeviceInfo) (*dto.AuthResponse, error)
 	RefreshToken(ctx context.Context, refreshTokenString string) (*dto.TokenResponse, error)
+	Logout(ctx context.Context, sessionID uuid.UUID) error
+	CurrentSession(ctx context.Context, userID uuid.UUID) (*dto.AuthResponse, error)
 	ValidateSession(ctx context.Context, sessionID uuid.UUID) (*model.Session, error)
 	GetUserByID(ctx context.Context, userID uuid.UUID) (*model.User, error)
 }

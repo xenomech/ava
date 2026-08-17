@@ -146,3 +146,30 @@ func (s *authService) GetUserByID(ctx context.Context, userID uuid.UUID) (*model
 
 	return user, nil
 }
+
+func (s *authService) Logout(ctx context.Context, sessionID uuid.UUID) error {
+	if err := s.sessionRepo.RevokeSession(ctx, sessionID); err != nil {
+		logger.Error("failed to revoke session", logger.Err(err))
+
+		return err
+	}
+
+	return nil
+}
+
+func (s *authService) CurrentSession(ctx context.Context, userID uuid.UUID) (*dto.AuthResponse, error) {
+	user, err := s.userRepo.GetUserByID(ctx, userID)
+	if err != nil {
+		if serrors.Is(err, userrepo.ErrUserNotFound) {
+			return nil, ErrUserNotFound
+		}
+
+		logger.Error("failed to get user by ID", logger.Err(err))
+
+		return nil, err
+	}
+
+	return &dto.AuthResponse{
+		User: *s.userToResponse(user),
+	}, nil
+}

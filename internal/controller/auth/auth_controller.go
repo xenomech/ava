@@ -8,6 +8,7 @@ import (
 	"ava/pkg/validator"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 )
 
 func (c *Controller) Register(ctx *fiber.Ctx) error {
@@ -83,4 +84,35 @@ func (c *Controller) RefreshToken(ctx *fiber.Ctx) error {
 	}
 
 	return response.Send(ctx, fiber.StatusOK, tokens, "")
+}
+
+func (c *Controller) Logout(ctx *fiber.Ctx) error {
+	sessionID, ok := ctx.Locals("sessionID").(uuid.UUID)
+	if !ok {
+		return response.Send(ctx, fiber.StatusUnauthorized, nil, "Unauthorized")
+	}
+
+	if err := c.authService.Logout(ctx.Context(), sessionID); err != nil {
+		return response.Send(ctx, fiber.StatusInternalServerError, nil, "Failed to logout")
+	}
+
+	return response.Send(ctx, fiber.StatusOK, nil, "")
+}
+
+func (c *Controller) Me(ctx *fiber.Ctx) error {
+	userID, ok := ctx.Locals("userID").(uuid.UUID)
+	if !ok {
+		return response.Send(ctx, fiber.StatusUnauthorized, nil, "Unauthorized")
+	}
+
+	session, err := c.authService.CurrentSession(ctx.Context(), userID)
+	if err != nil {
+		if serrors.Is(err, authsvc.ErrUserNotFound) {
+			return response.SendError(ctx, fiber.StatusNotFound, err)
+		}
+
+		return response.Send(ctx, fiber.StatusInternalServerError, nil, "Failed to load session")
+	}
+
+	return response.Send(ctx, fiber.StatusOK, session, "")
 }
