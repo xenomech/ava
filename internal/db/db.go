@@ -25,7 +25,10 @@ func Migrate(database *gorm.DB) error {
 		return nil
 	}
 
-	if err := database.AutoMigrate(&model.User{}); err != nil {
+	if err := database.AutoMigrate(
+		&model.User{},
+		&model.Session{},
+	); err != nil {
 		logger.Error("DB_MIGRATION_ERROR", logger.Err(err))
 
 		return err
