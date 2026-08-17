@@ -28,6 +28,11 @@ type Config struct {
 	DBUser     string
 	DBPassword string
 	DBDatabase string
+
+	ResendAPIKey    string
+	ResendFromEmail string
+	ResendFromName  string
+	AppURL          string
 }
 
 func GetConfig() *Config {
@@ -65,6 +70,11 @@ func load() *Config {
 		DBUser:     v.GetString("DB_USER"),
 		DBPassword: v.GetString("DB_PASSWORD"),
 		DBDatabase: v.GetString("DB_DATABASE"),
+
+		ResendAPIKey:    v.GetString("RESEND_API_KEY"),
+		ResendFromEmail: v.GetString("RESEND_FROM_EMAIL"),
+		ResendFromName:  v.GetString("RESEND_FROM_NAME"),
+		AppURL:          v.GetString("APP_URL"),
 	}
 }
 
@@ -77,6 +87,10 @@ func setDefaults(v *viper.Viper) {
 
 	v.SetDefault("DB_HOST", "localhost")
 	v.SetDefault("DB_PORT", "5432")
+
+	v.SetDefault("RESEND_FROM_EMAIL", "noreply@example.com")
+	v.SetDefault("RESEND_FROM_NAME", "Ava")
+	v.SetDefault("APP_URL", "http://localhost:3000")
 }
 
 func isMissingConfigFile(err error) bool {
