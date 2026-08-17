@@ -6,6 +6,7 @@ CLAUDE.local.md
 
 # Go
 bin/
+tmp/
 *.exe
 *.test
 *.out
@@ -13,6 +14,7 @@ bin/
 # Env
 .env
 .env.*
+!.env.example
 
 # OS / editors
 .DS_Store
