@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -14,6 +13,7 @@ import (
 	"ava/internal/repository"
 	"ava/internal/routes"
 	"ava/internal/services"
+	"ava/pkg/logger"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -39,18 +39,20 @@ func main() {
 	defer stop()
 
 	go func() {
-		log.Printf("SERVER_STARTED port=%s", cfg.Port)
+		logger.Info("SERVER_STARTED", logger.String("port", cfg.Port))
+
 		if err := app.Listen(":" + cfg.Port); err != nil {
-			log.Printf("SERVER_START_ERROR error=%v", err)
+			logger.Error("SERVER_START_ERROR", logger.Err(err))
 		}
 	}()
 
 	<-ctx.Done()
-	log.Print("SHUTDOWN_SIGNAL_RECEIVED")
+	logger.Info("SHUTDOWN_SIGNAL_RECEIVED")
 
 	if err := app.ShutdownWithTimeout(10 * time.Second); err != nil {
-		log.Printf("SERVER_SHUTDOWN_ERROR error=%v", err)
+		logger.Error("SERVER_SHUTDOWN_ERROR", logger.Err(err))
 	}
 
-	log.Print("SERVER_STOPPED")
+	logger.Info("SERVER_STOPPED")
+	logger.Sync()
 }
