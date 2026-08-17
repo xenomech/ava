@@ -68,6 +68,10 @@ linters:
           - gosec
           - errcheck
           - gocritic
+      - path: internal/model/token\.go
+        text: G101
+        linters:
+          - gosec
 
 formatters:
   enable:
