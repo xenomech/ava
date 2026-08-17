@@ -1,0 +1,14 @@
+{
+  "name": "Ava",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspaces/ava",
+  "remoteUser": "vscode",
+  "forwardPorts": [8000, 5432],
+  "postCreateCommand": "git config --global --add safe.directory /workspaces/ava && make setup && cp -n .env.example .env",
+  "customizations": {
+    "vscode": {
+      "extensions": ["golang.go"]
+    }
+  }
+}
