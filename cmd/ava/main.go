@@ -40,6 +40,11 @@ func main() {
 		panic(err)
 	}
 
+	if err := db.Migrate(database); err != nil {
+		logger.Error("DB_MIGRATION_ERROR", logger.Err(err))
+		panic(err)
+	}
+
 	app := fiber.New(fiber.Config{
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,

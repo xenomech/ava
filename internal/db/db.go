@@ -4,6 +4,7 @@ import (
 	"errors"
 	"time"
 
+	"ava/internal/model"
 	"ava/pkg/logger"
 
 	"gorm.io/driver/postgres"
@@ -17,6 +18,22 @@ type PostgresConfig struct {
 	Password string
 	Database string
 	SSLMode  string
+}
+
+func Migrate(database *gorm.DB) error {
+	if database == nil {
+		return nil
+	}
+
+	if err := database.AutoMigrate(&model.User{}); err != nil {
+		logger.Error("DB_MIGRATION_ERROR", logger.Err(err))
+
+		return err
+	}
+
+	logger.Info("DB_MIGRATED")
+
+	return nil
 }
 
 func Connect(pgconfig *PostgresConfig) (*gorm.DB, error) {
