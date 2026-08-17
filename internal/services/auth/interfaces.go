@@ -5,7 +5,9 @@ import (
 
 	"ava/internal/dto"
 	"ava/internal/model"
+	membershiprepo "ava/internal/repository/membership"
 	sessionrepo "ava/internal/repository/session"
+	tenantrepo "ava/internal/repository/tenant"
 	userrepo "ava/internal/repository/user"
 	"ava/internal/services/auth/jwt"
 
@@ -23,18 +25,24 @@ type Service interface {
 }
 
 type authService struct {
-	userRepo     userrepo.Repository
-	sessionRepo  sessionrepo.Repository
-	tokenManager jwt.TokenManager
+	userRepo       userrepo.Repository
+	tenantRepo     tenantrepo.Repository
+	membershipRepo membershiprepo.Repository
+	sessionRepo    sessionrepo.Repository
+	tokenManager   jwt.TokenManager
 }
 
 func NewService(
 	userRepo userrepo.Repository,
+	tenantRepo tenantrepo.Repository,
+	membershipRepo membershiprepo.Repository,
 	sessionRepo sessionrepo.Repository,
 ) Service {
 	return &authService{
-		userRepo:     userRepo,
-		sessionRepo:  sessionRepo,
-		tokenManager: jwt.NewTokenManager(),
+		userRepo:       userRepo,
+		tenantRepo:     tenantRepo,
+		membershipRepo: membershipRepo,
+		sessionRepo:    sessionRepo,
+		tokenManager:   jwt.NewTokenManager(),
 	}
 }

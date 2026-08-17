@@ -7,6 +7,7 @@ import (
 	"ava/internal/dto"
 	"ava/internal/model"
 	sessionrepo "ava/internal/repository/session"
+	tenantrepo "ava/internal/repository/tenant"
 	userrepo "ava/internal/repository/user"
 	"ava/internal/services/auth/jwt"
 	"ava/pkg/logger"
@@ -16,6 +17,10 @@ import (
 )
 
 func (s *authService) Register(ctx context.Context, req *dto.RegisterRequest) (*dto.RegisterResponse, error) {
+	if !model.IsValidSlug(req.TenantSlug) {
+		return nil, ErrInvalidSlug
+	}
+
 	hashedPassword, err := HashPassword(req.Password)
 	if err != nil {
 		logger.Error("failed to hash password", logger.Err(err))
@@ -24,19 +29,31 @@ func (s *authService) Register(ctx context.Context, req *dto.RegisterRequest) (*
 	}
 
 	user := model.NewUser(req.Email, req.Username, req.Name, req.Phone, hashedPassword)
+	tenant := model.NewTenant(req.TenantName, req.TenantSlug)
+	membership := model.NewTenantMembership(tenant.ID, user.ID, model.TenantRoleOwner)
 
-	if err := s.userRepo.CreateUser(ctx, user); err != nil {
-		if serrors.Is(err, userrepo.ErrUserAlreadyExists) {
+	if err := s.tenantRepo.CreateWithOwner(ctx, user, tenant, membership); err != nil {
+		if serrors.Is(err, tenantrepo.ErrUserAlreadyExists) {
 			return nil, ErrUserAlreadyExists
 		}
 
-		logger.Error("failed to create user", logger.Err(err))
+		if serrors.Is(err, tenantrepo.ErrTenantAlreadyExists) {
+			return nil, ErrTenantAlreadyExists
+		}
+
+		logger.Error("failed to create user and tenant", logger.Err(err))
 
 		return nil, err
 	}
 
 	return &dto.RegisterResponse{
 		User: *s.userToResponse(user),
+		Tenant: dto.TenantSummary{
+			ID:   tenant.ID,
+			Name: tenant.Name,
+			Slug: tenant.Slug,
+			Role: membership.Role,
+		},
 	}, nil
 }
 

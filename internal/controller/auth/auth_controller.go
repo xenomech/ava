@@ -23,7 +23,10 @@ func (c *Controller) Register(ctx *fiber.Ctx) error {
 
 	registered, err := c.authService.Register(ctx.Context(), &req)
 	if err != nil {
-		if serrors.Is(err, authsvc.ErrUserAlreadyExists) {
+		switch {
+		case serrors.Is(err, authsvc.ErrInvalidSlug):
+			return response.SendError(ctx, fiber.StatusBadRequest, err)
+		case serrors.Is(err, authsvc.ErrUserAlreadyExists), serrors.Is(err, authsvc.ErrTenantAlreadyExists):
 			return response.SendError(ctx, fiber.StatusConflict, err)
 		}
 

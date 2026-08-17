@@ -13,7 +13,7 @@ type Service struct {
 
 func NewService(repo *repository.Repository) *Service {
 	return &Service{
-		Auth:   authsvc.NewService(repo.User, repo.Session),
+		Auth:   authsvc.NewService(repo.User, repo.Tenant, repo.Membership, repo.Session),
 		Health: healthsvc.NewService(),
 	}
 }

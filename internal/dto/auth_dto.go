@@ -3,15 +3,19 @@ package dto
 import (
 	"time"
 
+	"ava/internal/model"
+
 	"github.com/google/uuid"
 )
 
 type RegisterRequest struct {
-	Email    string `json:"email" validate:"required,email"`
-	Username string `json:"username" validate:"required,min=3,max=30"`
-	Name     string `json:"name" validate:"required"`
-	Password string `json:"password" validate:"required,min=8"`
-	Phone    string `json:"phone,omitempty"`
+	Email      string `json:"email" validate:"required,email"`
+	Username   string `json:"username" validate:"required,min=3,max=30"`
+	Name       string `json:"name" validate:"required"`
+	Password   string `json:"password" validate:"required,min=8"`
+	Phone      string `json:"phone,omitempty"`
+	TenantName string `json:"tenant_name" validate:"required"`
+	TenantSlug string `json:"tenant_slug" validate:"required,min=3,max=40"`
 }
 
 type LoginRequest struct {
@@ -45,8 +49,16 @@ type AuthResponse struct {
 	Tokens *TokenResponse `json:"tokens,omitempty"`
 }
 
+type TenantSummary struct {
+	ID   uuid.UUID        `json:"id"`
+	Name string           `json:"name"`
+	Slug string           `json:"slug"`
+	Role model.TenantRole `json:"role"`
+}
+
 type RegisterResponse struct {
-	User UserResponse `json:"user"`
+	User   UserResponse  `json:"user"`
+	Tenant TenantSummary `json:"tenant"`
 }
 
 type SessionResponse struct {
