@@ -199,3 +199,25 @@ func (c *Controller) SwitchTenant(ctx *fiber.Ctx) error {
 
 	return response.Send(ctx, fiber.StatusOK, authResponse, "")
 }
+
+func (c *Controller) AcceptInvite(ctx *fiber.Ctx) error {
+	var req dto.AcceptInviteRequest
+	if err := ctx.BodyParser(&req); err != nil {
+		return response.Send(ctx, fiber.StatusBadRequest, nil, "Invalid request body")
+	}
+
+	if err := validator.ValidateStruct(&req); err != nil {
+		return response.SendValidation(ctx, validator.FirstError(err), validator.FieldErrors(err))
+	}
+
+	tenant, err := c.authService.AcceptInvite(ctx.Context(), req.Token)
+	if err != nil {
+		if serrors.Is(err, authsvc.ErrInviteInvalid) {
+			return response.SendError(ctx, fiber.StatusBadRequest, err)
+		}
+
+		return response.Send(ctx, fiber.StatusInternalServerError, nil, "Failed to accept invitation")
+	}
+
+	return response.Send(ctx, fiber.StatusOK, tenant, "")
+}

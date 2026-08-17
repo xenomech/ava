@@ -307,3 +307,36 @@ func (s *authService) SwitchTenant(ctx context.Context, tenantID, userID, sessio
 
 	return s.issueSession(ctx, user, membership, deviceInfo)
 }
+
+func (s *authService) AcceptInvite(ctx context.Context, inviteToken string) (*dto.TenantSummary, error) {
+	membership, err := s.membershipRepo.GetByInviteToken(ctx, inviteToken)
+	if err != nil {
+		if serrors.Is(err, membershiprepo.ErrMembershipNotFound) {
+			return nil, ErrInviteInvalid
+		}
+
+		logger.Error("failed to get membership by invite token", logger.Err(err))
+
+		return nil, err
+	}
+
+	if err := s.membershipRepo.Activate(ctx, membership.TenantID, membership.UserID); err != nil {
+		logger.Error("failed to activate membership", logger.Err(err))
+
+		return nil, err
+	}
+
+	tenant, err := s.tenantRepo.GetByID(ctx, membership.TenantID)
+	if err != nil {
+		logger.Error("failed to get tenant by ID", logger.Err(err))
+
+		return nil, err
+	}
+
+	return &dto.TenantSummary{
+		ID:   tenant.ID,
+		Name: tenant.Name,
+		Slug: tenant.Slug,
+		Role: membership.Role,
+	}, nil
+}

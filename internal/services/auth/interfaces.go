@@ -18,6 +18,7 @@ type Service interface {
 	Register(ctx context.Context, req *dto.RegisterRequest) (*dto.RegisterResponse, error)
 	Login(ctx context.Context, req *dto.LoginRequest, deviceInfo dto.DeviceInfo) (*dto.AuthResponse, error)
 	RefreshToken(ctx context.Context, refreshTokenString string) (*dto.TokenResponse, error)
+	AcceptInvite(ctx context.Context, inviteToken string) (*dto.TenantSummary, error)
 	SwitchTenant(ctx context.Context, tenantID, userID, sessionID uuid.UUID, tenantSlug string, deviceInfo dto.DeviceInfo) (*dto.AuthResponse, error)
 	Logout(ctx context.Context, tenantID, sessionID uuid.UUID) error
 	LogoutAll(ctx context.Context, tenantID, userID uuid.UUID) error

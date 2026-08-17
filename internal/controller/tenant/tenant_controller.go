@@ -174,3 +174,35 @@ func (c *Controller) RemoveMember(ctx *fiber.Ctx) error {
 
 	return response.Send(ctx, fiber.StatusOK, nil, "")
 }
+
+func (c *Controller) Invite(ctx *fiber.Ctx) error {
+	tenantID, userID, ok := actor(ctx)
+	if !ok {
+		return response.Send(ctx, fiber.StatusUnauthorized, nil, "Unauthorized")
+	}
+
+	var req dto.InviteMemberRequest
+	if err := ctx.BodyParser(&req); err != nil {
+		return response.Send(ctx, fiber.StatusBadRequest, nil, "Invalid request body")
+	}
+
+	if err := validator.ValidateStruct(&req); err != nil {
+		return response.SendValidation(ctx, validator.FirstError(err), validator.FieldErrors(err))
+	}
+
+	invited, err := c.tenantService.Invite(ctx.Context(), tenantID, userID, &req)
+	if err != nil {
+		switch {
+		case serrors.Is(err, tenantsvc.ErrInvalidRole):
+			return response.SendError(ctx, fiber.StatusBadRequest, err)
+		case serrors.Is(err, tenantsvc.ErrUserNotFound):
+			return response.SendError(ctx, fiber.StatusNotFound, err)
+		case serrors.Is(err, tenantsvc.ErrAlreadyMember), serrors.Is(err, tenantsvc.ErrAlreadyInvited):
+			return response.SendError(ctx, fiber.StatusConflict, err)
+		}
+
+		return response.Send(ctx, fiber.StatusInternalServerError, nil, "Failed to invite member")
+	}
+
+	return response.Send(ctx, fiber.StatusCreated, invited, "")
+}

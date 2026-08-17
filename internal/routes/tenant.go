@@ -18,6 +18,7 @@ func tenantRoutes(router fiber.Router, controller *tenantctrl.Controller, mw *mi
 	router.Patch("/current", middleware.RequireRole(model.TenantRoleOwner, model.TenantRoleAdmin), controller.Update)
 
 	router.Get("/current/members", controller.ListMembers)
+	router.Post("/current/invitations", middleware.RequireRole(model.TenantRoleOwner, model.TenantRoleAdmin), controller.Invite)
 	router.Patch("/current/members/:userID", middleware.RequireRole(model.TenantRoleOwner), controller.UpdateMemberRole)
 	router.Delete("/current/members/:userID", middleware.RequireRole(model.TenantRoleOwner, model.TenantRoleAdmin), controller.RemoveMember)
 }

@@ -11,6 +11,7 @@ func authRoutes(router fiber.Router, controller *authctrl.Controller, authMiddle
 	router.Post("/register", controller.Register)
 	router.Post("/login", controller.Login)
 	router.Post("/refresh", controller.RefreshToken)
+	router.Post("/accept-invite", controller.AcceptInvite)
 
 	router.Get("/me", authMiddleware.ValidateAccessToken, controller.Me)
 	router.Post("/switch-tenant", authMiddleware.ValidateAccessToken, controller.SwitchTenant)

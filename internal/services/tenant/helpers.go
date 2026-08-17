@@ -1,9 +1,22 @@
 package tenant
 
 import (
+	"crypto/rand"
+	"encoding/hex"
+	"fmt"
+
 	"ava/internal/dto"
 	"ava/internal/model"
 )
+
+func generateInviteToken() (string, error) {
+	bytes := make([]byte, 32)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", fmt.Errorf("generate invite token: %w", err)
+	}
+
+	return hex.EncodeToString(bytes), nil
+}
 
 func toTenantResponse(tenant *model.Tenant) *dto.TenantResponse {
 	return &dto.TenantResponse{

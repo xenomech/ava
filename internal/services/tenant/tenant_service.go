@@ -2,16 +2,20 @@ package tenant
 
 import (
 	"context"
+	"time"
 
 	"ava/internal/dto"
 	"ava/internal/model"
 	membershiprepo "ava/internal/repository/membership"
 	tenantrepo "ava/internal/repository/tenant"
+	userrepo "ava/internal/repository/user"
 	"ava/pkg/logger"
 	"ava/pkg/serrors"
 
 	"github.com/google/uuid"
 )
+
+const inviteExpiry = 7 * 24 * time.Hour
 
 func (s *tenantService) Create(ctx context.Context, userID uuid.UUID, req *dto.CreateTenantRequest) (*dto.TenantResponse, error) {
 	if !model.IsValidSlug(req.Slug) {
@@ -148,6 +152,62 @@ func (s *tenantService) ListMembers(ctx context.Context, tenantID uuid.UUID) ([]
 	}
 
 	return responses, nil
+}
+
+func (s *tenantService) Invite(ctx context.Context, tenantID, invitedByID uuid.UUID, req *dto.InviteMemberRequest) (*dto.InviteResponse, error) {
+	if !req.Role.IsValid() || req.Role == model.TenantRoleOwner {
+		return nil, ErrInvalidRole
+	}
+
+	invitee, err := s.userRepo.GetUserByEmail(ctx, req.Email)
+	if err != nil {
+		if serrors.Is(err, userrepo.ErrUserNotFound) {
+			return nil, ErrUserNotFound
+		}
+
+		logger.Error("tenant.Invite", logger.Err(err))
+
+		return nil, err
+	}
+
+	existing, err := s.membershipRepo.GetByTenantAndUser(ctx, tenantID, invitee.ID)
+	if err != nil && !serrors.Is(err, membershiprepo.ErrMembershipNotFound) {
+		logger.Error("tenant.Invite", logger.Err(err))
+
+		return nil, err
+	}
+
+	if existing != nil {
+		if existing.IsActive() {
+			return nil, ErrAlreadyMember
+		}
+
+		return nil, ErrAlreadyInvited
+	}
+
+	inviteToken, err := generateInviteToken()
+	if err != nil {
+		logger.Error("tenant.Invite", logger.Err(err))
+
+		return nil, err
+	}
+
+	membership := model.NewTenantInvite(tenantID, invitee.ID, invitedByID, req.Role, inviteToken, time.Now().Add(inviteExpiry))
+
+	if err := s.membershipRepo.Create(ctx, membership); err != nil {
+		if serrors.Is(err, membershiprepo.ErrMembershipAlreadyExists) {
+			return nil, ErrAlreadyMember
+		}
+
+		logger.Error("tenant.Invite", logger.Err(err))
+
+		return nil, err
+	}
+
+	return &dto.InviteResponse{
+		Member:      *toMemberResponse(membership, invitee),
+		InviteToken: inviteToken,
+	}, nil
 }
 
 func (s *tenantService) UpdateMemberRole(ctx context.Context, tenantID, userID uuid.UUID, req *dto.UpdateMemberRoleRequest) error {
