@@ -12,6 +12,8 @@
 
 hub/
 frontend/
+go.work
+go.work.sum
 
 tmp/
 bin/
