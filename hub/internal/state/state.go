@@ -10,8 +10,8 @@ import (
 )
 
 type State struct {
-	HubID        string `json:"device_id"`
-	HubName      string `json:"device_name"`
+	HubID        string `json:"hub_id"`
+	HubName      string `json:"hub_name"`
 	TenantSlug   string `json:"tenant_slug"`
 	RefreshToken string `json:"refresh_token"`
 }
