@@ -12,12 +12,14 @@ import (
 
 type Middleware struct {
 	ValidateAccessToken fiber.Handler
+	ValidateDeviceToken fiber.Handler
 	RequestTrace        fiber.Handler
 }
 
 func NewMiddleware(service *services.Service) *Middleware {
 	return &Middleware{
 		ValidateAccessToken: ValidateAccessToken(service.Auth),
+		ValidateDeviceToken: ValidateDeviceToken(service.Device),
 		RequestTrace:        requestTrace(),
 	}
 }
