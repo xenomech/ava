@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -55,7 +57,7 @@ func load() *Config {
 
 	setDefaults(v)
 
-	v.SetConfigFile(".env")
+	v.SetConfigFile(envFile())
 	v.SetConfigType("env")
 
 	if err := v.ReadInConfig(); err != nil && !isMissingConfigFile(err) {
@@ -86,6 +88,16 @@ func load() *Config {
 		ResendFromName:  v.GetString("RESEND_FROM_NAME"),
 		AppURL:          v.GetString("APP_URL"),
 	}
+}
+
+func envFile() string {
+	for _, candidate := range []string{".env", filepath.Join("..", ".env")} {
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate
+		}
+	}
+
+	return ".env"
 }
 
 func setDefaults(v *viper.Viper) {

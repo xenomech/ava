@@ -1,30 +1,31 @@
-.PHONY: setup dev run build test lint fmt tidy
+.PHONY: setup dev run build test lint fmt tidy \
+	adapter-run adapter-build adapter-build-dev check-boundary
 
 setup:
 	go install github.com/air-verse/air@latest
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 	go install mvdan.cc/gofumpt@latest
 	go install github.com/evilmartians/lefthook@latest
-	go mod download
+	go work sync
 	lefthook install
 
 dev:
-	air
+	cd api && air
 
 run:
-	go run ./cmd/ava
+	cd api && go run ./cmd/ava
 
 build:
-	go build -ldflags="-s -w" -o ./tmp/main ./cmd/ava
+	cd api && go build -ldflags="-s -w" -o ./tmp/main ./cmd/ava
 
 test:
-	go test ./...
+	cd api && go test ./...
 
 lint:
-	golangci-lint run
+	cd api && golangci-lint run
 
 fmt:
-	gofumpt -w .
+	cd api && gofumpt -w .
 
 tidy:
-	go mod tidy
+	cd api && go mod tidy

@@ -10,6 +10,9 @@
 .air.toml
 .DS_Store
 
+adapter/
+frontend/
+
 tmp/
 bin/
 dist/
