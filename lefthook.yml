@@ -16,3 +16,20 @@ pre-commit:
     - name: api-test
       glob: "api/**/*.go"
       run: cd api && go test ./...
+
+    - name: adapter-lint
+      glob: "adapter/**/*.go"
+      run: cd adapter && golangci-lint run
+
+    - name: adapter-fmt
+      glob: "adapter/**/*.go"
+      run: cd adapter && test -z "$(gofumpt -l .)" || (echo "Run 'make fmt' to format code" && exit 1)
+
+    - name: adapter-vet
+      glob: "adapter/**/*.go"
+      run: cd adapter && go vet ./...
+
+    - name: module-boundary
+      glob: "*.go"
+      run: make check-boundary
+

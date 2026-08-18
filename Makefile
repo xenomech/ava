@@ -20,15 +20,19 @@ build:
 
 test:
 	cd api && go test ./...
+	cd adapter && go test ./...
 
 lint:
 	cd api && golangci-lint run
+	cd adapter && golangci-lint run
 
 fmt:
 	cd api && gofumpt -w .
+	cd adapter && gofumpt -w .
 
 tidy:
 	cd api && go mod tidy
+	cd adapter && go mod tidy
 
 adapter-run:
 	cd adapter && go run ./cmd/adapter

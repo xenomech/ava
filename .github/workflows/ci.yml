@@ -71,3 +71,76 @@ jobs:
           go-version-file: api/go.mod
       - run: go test ./...
         working-directory: api
+
+  boundary:
+    name: Module boundary
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: api/go.mod
+      - name: Adapter builds without the workspace
+        working-directory: adapter
+        run: GOWORK=off go build ./...
+      - name: Adapter does not depend on api
+        working-directory: adapter
+        run: |
+          if go list -deps ./... | grep -q '^ava/api'; then
+            echo "adapter must not import api"
+            exit 1
+          fi
+      - name: Api does not depend on adapter
+        working-directory: api
+        run: |
+          if go list -deps ./... | grep -q '^ava/adapter'; then
+            echo "api must not import adapter"
+            exit 1
+          fi
+
+  adapter:
+    name: Adapter
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: adapter/go.mod
+      - run: go vet ./...
+        working-directory: adapter
+      - run: go test ./...
+        working-directory: adapter
+      - uses: golangci/golangci-lint-action@v9
+        with:
+          version: latest
+          working-directory: adapter
+
+  adapter-build:
+    name: Adapter build
+    needs: adapter
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: arm64
+          - goos: darwin
+            goarch: arm64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: adapter/go.mod
+      - name: Build ${{ matrix.goos }}/${{ matrix.goarch }}
+        working-directory: adapter
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "0"
+        run: go build -ldflags="-s -w" -o dist/adapter-${{ matrix.goos }}-${{ matrix.goarch }} ./cmd/adapter
+      - uses: actions/upload-artifact@v4
+        if: matrix.goos == 'linux'
+        with:
+          name: adapter-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: adapter/dist/adapter-${{ matrix.goos }}-${{ matrix.goarch }}
+
