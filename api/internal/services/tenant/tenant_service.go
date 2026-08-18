@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"ava/api/internal/config"
+	"ava/api/config"
 	"ava/api/internal/dto"
 	"ava/api/internal/model"
 	membershiprepo "ava/api/internal/repository/membership"

@@ -3,7 +3,7 @@ package email
 import (
 	"context"
 
-	"ava/api/internal/config"
+	"ava/api/config"
 
 	"github.com/resend/resend-go/v2"
 )

@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"ava/api/internal/config"
+	"ava/api/config"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"

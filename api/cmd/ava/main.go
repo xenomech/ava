@@ -7,7 +7,7 @@ import (
 	"syscall"
 	"time"
 
-	"ava/api/internal/config"
+	"ava/api/config"
 	"ava/api/internal/controller"
 	"ava/api/internal/db"
 	"ava/api/internal/middleware"

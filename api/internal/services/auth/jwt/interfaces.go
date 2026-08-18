@@ -3,7 +3,7 @@ package jwt
 import (
 	"time"
 
-	"ava/api/internal/config"
+	"ava/api/config"
 	"ava/api/internal/model"
 
 	"github.com/google/uuid"
