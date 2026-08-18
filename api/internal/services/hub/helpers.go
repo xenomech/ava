@@ -1,4 +1,4 @@
-package device
+package hub
 
 import (
 	"crypto/rand"
@@ -45,12 +45,12 @@ func normalizeUserCode(code string) string {
 	return strings.ToUpper(strings.TrimSpace(code))
 }
 
-func toDeviceResponse(device *model.Device) *dto.DeviceResponse {
-	return &dto.DeviceResponse{
-		ID:         device.ID,
-		Name:       device.Name,
-		Status:     string(device.Status),
-		LastSeenAt: device.LastSeenAt,
-		CreatedAt:  device.CreatedAt,
+func toHubResponse(hub *model.Hub) *dto.HubResponse {
+	return &dto.HubResponse{
+		ID:         hub.ID,
+		Name:       hub.Name,
+		Status:     string(hub.Status),
+		LastSeenAt: hub.LastSeenAt,
+		CreatedAt:  hub.CreatedAt,
 	}
 }

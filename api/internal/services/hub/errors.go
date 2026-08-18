@@ -1,4 +1,4 @@
-package device
+package hub
 
 import "ava/api/pkg/serrors"
 
@@ -8,7 +8,7 @@ var (
 	ErrAccessDenied         = serrors.NewCoded("access_denied", "authorization was denied")
 	ErrExpiredCode          = serrors.NewCoded("expired_token", "the code has expired")
 	ErrInvalidCode          = serrors.NewCoded("invalid_code", "unknown or already used code")
-	ErrDeviceNotFound       = serrors.NewCoded("device_not_found", "device not found")
-	ErrDeviceRevoked        = serrors.NewCoded("device_revoked", "device has been revoked")
-	ErrInvalidRefreshToken  = serrors.NewCoded("invalid_refresh_token", "invalid device refresh token")
+	ErrHubNotFound          = serrors.NewCoded("device_not_found", "hub not found")
+	ErrHubRevoked           = serrors.NewCoded("hub_revoked", "hub has been revoked")
+	ErrInvalidRefreshToken  = serrors.NewCoded("invalid_refresh_token", "invalid hub refresh token")
 )

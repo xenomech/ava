@@ -14,7 +14,7 @@ var (
 )
 
 type Config struct {
-	DeviceName        string
+	HubName           string
 	APIBaseURL        string
 	MQTTBrokerURL     string
 	StateFile         string
@@ -32,7 +32,7 @@ func GetConfig() *Config {
 
 func load() *Config {
 	return &Config{
-		DeviceName:        env("DEVICE_NAME", defaultDeviceName()),
+		HubName:           env("HUB_NAME", defaultHubName()),
 		APIBaseURL:        env("API_BASE_URL", "http://localhost:8000/api/v1"),
 		MQTTBrokerURL:     env("MQTT_BROKER_URL", "tcp://localhost:1883"),
 		StateFile:         env("STATE_FILE", "avahub-state.json"),
@@ -49,7 +49,7 @@ func env(key, fallback string) string {
 	return fallback
 }
 
-func defaultDeviceName() string {
+func defaultHubName() string {
 	host, err := os.Hostname()
 	if err != nil || host == "" {
 		return "Ava Hub"

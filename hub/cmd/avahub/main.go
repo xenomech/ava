@@ -31,7 +31,7 @@ func run() error {
 	defer stop()
 
 	slog.Info("HUB_STARTED",
-		slog.String("device_name", cfg.DeviceName),
+		slog.String("device_name", cfg.HubName),
 		slog.String("api_base_url", cfg.APIBaseURL),
 		slog.String("state_file", cfg.StateFile),
 	)

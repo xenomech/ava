@@ -31,8 +31,8 @@ func Migrate(database *gorm.DB) error {
 		&model.TenantMembership{},
 		&model.Session{},
 		&model.Token{},
-		&model.Device{},
-		&model.DeviceAuthorization{},
+		&model.Hub{},
+		&model.HubAuthorization{},
 		&model.Flow{},
 		&model.FlowStep{},
 	); err != nil {

@@ -8,10 +8,10 @@ const (
 	CodeAccessDenied         = "access_denied"
 	CodeExpiredToken         = "expired_token"
 	CodeInvalidRefreshToken  = "invalid_refresh_token"
-	CodeDeviceRevoked        = "device_revoked"
+	CodeHubRevoked           = "hub_revoked"
 )
 
-type DeviceCode struct {
+type ActivationCode struct {
 	DeviceCode      string `json:"device_code"`
 	UserCode        string `json:"user_code"`
 	VerificationURI string `json:"verification_uri"`
@@ -25,47 +25,47 @@ type Tenant struct {
 	Slug string `json:"slug"`
 }
 
-type Device struct {
+type Hub struct {
 	ID     string `json:"id"`
 	Name   string `json:"name"`
 	Status string `json:"status"`
 }
 
-type DeviceTokens struct {
+type HubTokens struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
 	ExpiresIn    int64  `json:"expires_in"`
-	Device       Device `json:"device"`
+	Hub          Hub    `json:"hub"`
 	Tenant       Tenant `json:"tenant"`
 }
 
-func (c *Client) RequestDeviceCode(ctx context.Context, deviceName string) (*DeviceCode, error) {
-	var out DeviceCode
+func (c *Client) RequestActivationCode(ctx context.Context, hubName string) (*ActivationCode, error) {
+	var out ActivationCode
 
-	body := map[string]string{"device_name": deviceName}
-	if err := c.do(ctx, "POST", "/devices/code", body, &out); err != nil {
+	body := map[string]string{"hub_name": hubName}
+	if err := c.do(ctx, "POST", "/hubs/code", body, &out); err != nil {
 		return nil, err
 	}
 
 	return &out, nil
 }
 
-func (c *Client) PollDeviceToken(ctx context.Context, deviceCode string) (*DeviceTokens, error) {
-	var out DeviceTokens
+func (c *Client) PollToken(ctx context.Context, deviceCode string) (*HubTokens, error) {
+	var out HubTokens
 
 	body := map[string]string{"device_code": deviceCode}
-	if err := c.do(ctx, "POST", "/devices/token", body, &out); err != nil {
+	if err := c.do(ctx, "POST", "/hubs/token", body, &out); err != nil {
 		return nil, err
 	}
 
 	return &out, nil
 }
 
-func (c *Client) RefreshDeviceToken(ctx context.Context, refreshToken string) (*DeviceTokens, error) {
-	var out DeviceTokens
+func (c *Client) RefreshToken(ctx context.Context, refreshToken string) (*HubTokens, error) {
+	var out HubTokens
 
 	body := map[string]string{"refresh_token": refreshToken}
-	if err := c.do(ctx, "POST", "/devices/token/refresh", body, &out); err != nil {
+	if err := c.do(ctx, "POST", "/hubs/token/refresh", body, &out); err != nil {
 		return nil, err
 	}
 
@@ -73,7 +73,7 @@ func (c *Client) RefreshDeviceToken(ctx context.Context, refreshToken string) (*
 }
 
 func (c *Client) Heartbeat(ctx context.Context) error {
-	return c.do(ctx, "POST", "/devices/heartbeat", nil, nil)
+	return c.do(ctx, "POST", "/hubs/heartbeat", nil, nil)
 }
 
 func (c *Client) Health(ctx context.Context) error {

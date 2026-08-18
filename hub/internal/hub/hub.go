@@ -40,23 +40,23 @@ func (h *Hub) Run(ctx context.Context) error {
 	h.client.SetToken(tokens.AccessToken)
 
 	slog.Info("HUB_PAIRED",
-		slog.String("device_id", tokens.Device.ID),
-		slog.String("device_name", tokens.Device.Name),
+		slog.String("hub_id", tokens.Hub.ID),
+		slog.String("hub_name", tokens.Hub.Name),
 		slog.String("tenant", tokens.Tenant.Slug),
 	)
 
 	return h.heartbeatLoop(ctx, tokens)
 }
 
-func (h *Hub) authorize(ctx context.Context) (*api.DeviceTokens, error) {
+func (h *Hub) authorize(ctx context.Context) (*api.HubTokens, error) {
 	if h.state.IsPaired() {
-		tokens, err := h.client.RefreshDeviceToken(ctx, h.state.RefreshToken)
+		tokens, err := h.client.RefreshToken(ctx, h.state.RefreshToken)
 		if err == nil {
 			return tokens, h.persist(tokens)
 		}
 
 		code := api.CodeOf(err)
-		if code != api.CodeInvalidRefreshToken && code != api.CodeDeviceRevoked {
+		if code != api.CodeInvalidRefreshToken && code != api.CodeHubRevoked {
 			return nil, err
 		}
 
@@ -72,8 +72,8 @@ func (h *Hub) authorize(ctx context.Context) (*api.DeviceTokens, error) {
 	return h.pair(ctx)
 }
 
-func (h *Hub) pair(ctx context.Context) (*api.DeviceTokens, error) {
-	code, err := h.client.RequestDeviceCode(ctx, h.cfg.DeviceName)
+func (h *Hub) pair(ctx context.Context) (*api.HubTokens, error) {
+	code, err := h.client.RequestActivationCode(ctx, h.cfg.HubName)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +102,7 @@ func (h *Hub) pair(ctx context.Context) (*api.DeviceTokens, error) {
 			return nil, errors.New("activation code expired before it was approved")
 		}
 
-		tokens, err := h.client.PollDeviceToken(ctx, code.DeviceCode)
+		tokens, err := h.client.PollToken(ctx, code.DeviceCode)
 		if err == nil {
 			return tokens, h.persist(tokens)
 		}
@@ -124,10 +124,10 @@ func (h *Hub) pair(ctx context.Context) (*api.DeviceTokens, error) {
 	}
 }
 
-func (h *Hub) persist(tokens *api.DeviceTokens) error {
+func (h *Hub) persist(tokens *api.HubTokens) error {
 	h.state = &state.State{
-		DeviceID:     tokens.Device.ID,
-		DeviceName:   tokens.Device.Name,
+		HubID:        tokens.Hub.ID,
+		HubName:      tokens.Hub.Name,
 		TenantSlug:   tokens.Tenant.Slug,
 		RefreshToken: tokens.RefreshToken,
 	}
@@ -135,7 +135,7 @@ func (h *Hub) persist(tokens *api.DeviceTokens) error {
 	return state.Save(h.cfg.StateFile, h.state)
 }
 
-func (h *Hub) heartbeatLoop(ctx context.Context, tokens *api.DeviceTokens) error {
+func (h *Hub) heartbeatLoop(ctx context.Context, tokens *api.HubTokens) error {
 	renewAt := time.Now().Add(time.Duration(tokens.ExpiresIn) * time.Second / 2)
 
 	ticker := time.NewTicker(h.cfg.HeartbeatInterval)
@@ -153,7 +153,7 @@ func (h *Hub) heartbeatLoop(ctx context.Context, tokens *api.DeviceTokens) error
 		}
 
 		if time.Now().After(renewAt) {
-			refreshed, err := h.client.RefreshDeviceToken(ctx, h.state.RefreshToken)
+			refreshed, err := h.client.RefreshToken(ctx, h.state.RefreshToken)
 			if err != nil {
 				slog.Warn("TOKEN_REFRESH_FAILED", slog.String("error", err.Error()))
 

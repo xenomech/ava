@@ -7,7 +7,7 @@ import (
 )
 
 type DeviceCodeRequest struct {
-	DeviceName string `json:"device_name" validate:"required,max=100"`
+	HubName string `json:"hub_name" validate:"required,max=100"`
 }
 
 type DeviceCodeResponse struct {
@@ -18,27 +18,27 @@ type DeviceCodeResponse struct {
 	Interval        int64  `json:"interval"`
 }
 
-type DevicePollRequest struct {
+type HubPollRequest struct {
 	DeviceCode string `json:"device_code" validate:"required"`
 }
 
-type DeviceRefreshRequest struct {
+type HubRefreshRequest struct {
 	RefreshToken string `json:"refresh_token" validate:"required"`
 }
 
-type ActivateDeviceRequest struct {
+type ActivateHubRequest struct {
 	UserCode string `json:"user_code" validate:"required"`
 }
 
-type DeviceTokenResponse struct {
-	AccessToken  string         `json:"access_token"`
-	RefreshToken string         `json:"refresh_token"`
-	ExpiresIn    int64          `json:"expires_in"`
-	Device       DeviceResponse `json:"device"`
-	Tenant       TenantSummary  `json:"tenant"`
+type HubTokenResponse struct {
+	AccessToken  string        `json:"access_token"`
+	RefreshToken string        `json:"refresh_token"`
+	ExpiresIn    int64         `json:"expires_in"`
+	Hub          HubResponse   `json:"hub"`
+	Tenant       TenantSummary `json:"tenant"`
 }
 
-type DeviceResponse struct {
+type HubResponse struct {
 	ID         uuid.UUID  `json:"id"`
 	Name       string     `json:"name"`
 	Status     string     `json:"status"`

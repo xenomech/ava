@@ -15,7 +15,7 @@ type TokenType string
 const (
 	AccessToken  TokenType = "access"
 	RefreshToken TokenType = "refresh"
-	DeviceToken  TokenType = "device"
+	HubToken     TokenType = "hub"
 )
 
 var (
@@ -26,7 +26,7 @@ var (
 type Claims struct {
 	jwt.RegisteredClaims
 	UserID    uuid.UUID        `json:"user_id"`
-	DeviceID  uuid.UUID        `json:"device_id,omitempty"`
+	HubID     uuid.UUID        `json:"device_id,omitempty"`
 	TenantID  uuid.UUID        `json:"tenant_id"`
 	Role      model.TenantRole `json:"role"`
 	SessionID uuid.UUID        `json:"session_id"`
@@ -42,8 +42,8 @@ func (tm *jwtTokenManager) GenerateToken(user *model.User, tenantID uuid.UUID, r
 		expiry = tm.accessExpiry
 	case RefreshToken:
 		expiry = tm.refreshExpiry
-	case DeviceToken:
-		expiry = tm.deviceExpiry
+	case HubToken:
+		expiry = tm.hubExpiry
 	default:
 		return "", serrors.New("invalid token type")
 	}
@@ -73,18 +73,18 @@ func (tm *jwtTokenManager) GenerateToken(user *model.User, tenantID uuid.UUID, r
 	return token.SignedString([]byte(tm.secretKey))
 }
 
-func (tm *jwtTokenManager) GenerateDeviceToken(device *model.Device) (string, error) {
+func (tm *jwtTokenManager) GenerateHubToken(hub *model.Hub) (string, error) {
 	claims := Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(tm.deviceExpiry)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(tm.hubExpiry)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			NotBefore: jwt.NewNumericDate(time.Now()),
 			Issuer:    "ava",
-			Subject:   device.ID.String(),
+			Subject:   hub.ID.String(),
 		},
-		DeviceID:  device.ID,
-		TenantID:  device.TenantID,
-		TokenType: DeviceToken,
+		HubID:     hub.ID,
+		TenantID:  hub.TenantID,
+		TokenType: HubToken,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -124,6 +124,6 @@ func (tm *jwtTokenManager) GetRefreshExpiry() time.Duration {
 	return tm.refreshExpiry
 }
 
-func (tm *jwtTokenManager) GetDeviceExpiry() time.Duration {
-	return tm.deviceExpiry
+func (tm *jwtTokenManager) GetHubExpiry() time.Duration {
+	return tm.hubExpiry
 }

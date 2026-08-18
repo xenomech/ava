@@ -1,4 +1,4 @@
-package device
+package hub
 
 import (
 	"github.com/gofiber/fiber/v2"
