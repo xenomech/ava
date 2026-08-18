@@ -1,14 +1,127 @@
 <!DOCTYPE html>
-<html>
+<html lang="en" style="margin:0;padding:0;">
 <head>
-    <title>Email Verification</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="x-apple-disable-message-reformatting">
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
+<title>Verify your email</title>
+<style>
+:root { color-scheme: light dark; supported-color-schemes: light dark; }
+a { text-decoration: none; }
+@media (max-width:620px) {
+  .sm-px { padding-left:20px !important; padding-right:20px !important; }
+  .sm-py { padding-top:28px !important; padding-bottom:28px !important; }
+  .sm-h1 { font-size:22px !important; }
+  .sm-block { display:block !important; width:100% !important; }
+}
+@media (prefers-color-scheme: dark) {
+  .canvas { background-color:#101216 !important; }
+  .card { background-color:#1b1e24 !important; border-color:#2b3039 !important; }
+  .ink { color:#eceef2 !important; }
+  .muted { color:#a3abba !important; }
+  .rule { border-color:#2b3039 !important; background-color:#2b3039 !important; }
+  .panel { background-color:#15171d !important; border-color:#2b3039 !important; }
+  .panel-link { color:#9d95f7 !important; }
+  .btn { background-color:#5b50e8 !important; }
+  .mark { background-color:#5b50e8 !important; }
+  .wordmark { color:#eceef2 !important; }
+}
+[data-ogsc] .canvas { background-color:#101216 !important; }
+[data-ogsc] .card { background-color:#1b1e24 !important; border-color:#2b3039 !important; }
+[data-ogsc] .ink { color:#eceef2 !important; }
+[data-ogsc] .muted { color:#a3abba !important; }
+[data-ogsc] .panel { background-color:#15171d !important; border-color:#2b3039 !important; }
+[data-ogsc] .panel-link { color:#9d95f7 !important; }
+[data-ogsc] .btn { background-color:#5b50e8 !important; }
+[data-ogsc] .wordmark { color:#eceef2 !important; }
+</style>
 </head>
-<body>
-    <h1>Verify your email</h1>
-    <p>Click the link below to verify your email address:</p>
-    <a href="{{.VerificationURL}}">Verify Email</a>
-    <p>Or copy and paste this link in your browser:</p>
-    <p>{{.VerificationURL}}</p>
-    <p>This link will expire in 24 hours.</p>
+<body class="canvas" style="margin:0;padding:0;width:100%;background-color:#f4f5f7;-webkit-font-smoothing:antialiased;">
+
+<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:#f4f5f7;opacity:0;">
+Confirm your email address to finish setting up your Ava account. &#8203;&#847; &#8203;&#847; &#8203;&#847; &#8203;&#847; &#8203;&#847; &#8203;&#847; &#8203;&#847; &#8203;&#847;
+</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="canvas" style="background-color:#f4f5f7;">
+<tr>
+<td align="center" style="padding:32px 12px;">
+
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;">
+
+<tr>
+<td class="sm-px" style="padding:0 8px 20px 8px;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0">
+<tr>
+<td style="padding-right:10px;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0">
+<tr>
+<td class="mark" width="28" height="28" align="center" valign="middle" style="width:28px;height:28px;background-color:#4338ca;border-radius:8px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;font-size:15px;font-weight:700;color:#ffffff;line-height:28px;mso-line-height-rule:exactly;">A</td>
+</tr>
+</table>
+</td>
+<td class="wordmark" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;font-size:16px;font-weight:600;letter-spacing:-0.2px;color:#16181d;">Ava</td>
+</tr>
+</table>
+</td>
+</tr>
+
+<tr>
+<td class="card" style="background-color:#ffffff;border:1px solid #e4e7ec;border-radius:14px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+<tr>
+<td class="sm-px sm-py" style="padding:40px 40px 32px 40px;">
+
+<h1 class="ink sm-h1" style="margin:0 0 12px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;font-size:26px;line-height:32px;mso-line-height-rule:exactly;font-weight:700;letter-spacing:-0.4px;color:#16181d;">Verify your email</h1>
+
+<p class="muted" style="margin:0 0 8px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;font-size:15px;line-height:24px;mso-line-height-rule:exactly;color:#5b6472;">Hi {{.Name}},</p>
+
+<p class="muted" style="margin:0 0 28px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;font-size:15px;line-height:24px;mso-line-height-rule:exactly;color:#5b6472;">Thanks for creating an Ava account. Confirm this address to activate your account and sign in.</p>
+
+<table role="presentation" cellpadding="0" cellspacing="0" border="0">
+<tr>
+<td class="btn" align="center" bgcolor="#4338ca" style="background-color:#4338ca;border-radius:10px;mso-padding-alt:14px 28px;">
+<a href="{{.VerificationURL}}" style="display:inline-block;padding:14px 28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;font-size:15px;font-weight:600;line-height:20px;mso-line-height-rule:exactly;color:#ffffff;text-decoration:none;border-radius:10px;">Verify email address</a>
+</td>
+</tr>
+</table>
+
+<p class="muted" style="margin:28px 0 10px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;font-size:13px;line-height:20px;mso-line-height-rule:exactly;color:#5b6472;">Or paste this link into your browser:</p>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+<tr>
+<td class="panel" style="background-color:#f7f8fa;border:1px solid #e4e7ec;border-radius:10px;padding:14px 16px;">
+<a href="{{.VerificationURL}}" class="panel-link" style="font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace;font-size:12px;line-height:20px;mso-line-height-rule:exactly;color:#4338ca;text-decoration:none;word-break:break-all;">{{.VerificationURL}}</a>
+</td>
+</tr>
+</table>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+<tr>
+<td class="rule" style="padding:0;border-top:1px solid #e4e7ec;font-size:0;line-height:0;height:1px;">&nbsp;</td>
+</tr>
+</table>
+
+<p class="muted" style="margin:24px 0 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;font-size:13px;line-height:20px;mso-line-height-rule:exactly;color:#5b6472;">This link expires in 24 hours. If you didn&rsquo;t create an Ava account, you can safely ignore this email.</p>
+
+</td>
+</tr>
+</table>
+</td>
+</tr>
+
+<tr>
+<td class="sm-px" style="padding:20px 8px 0 8px;">
+<p class="muted" style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;font-size:12px;line-height:18px;mso-line-height-rule:exactly;color:#8a93a3;">You received this email because someone signed up for Ava with this address.</p>
+</td>
+</tr>
+
+</table>
+
+</td>
+</tr>
+</table>
+
 </body>
 </html>
