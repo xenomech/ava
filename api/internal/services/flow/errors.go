@@ -1,6 +1,6 @@
 package flow
 
-import "ava/api/internal/serrors"
+import "ava/api/pkg/serrors"
 
 var (
 	ErrInvalidFlowType      = serrors.NewCoded("invalid_flow_type", "invalid flow type")

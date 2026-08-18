@@ -4,9 +4,9 @@ import (
 	"strings"
 	"time"
 
-	"ava/api/internal/response"
 	authsvc "ava/api/internal/services/auth"
 	"ava/api/internal/services/auth/jwt"
+	"ava/api/pkg/response"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"

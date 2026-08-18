@@ -8,11 +8,11 @@ import (
 	"time"
 
 	"ava/api/internal/dto"
-	"ava/api/internal/logger"
 	"ava/api/internal/model"
 	tenantrepo "ava/api/internal/repository/tenant"
-	"ava/api/internal/serrors"
 	"ava/api/internal/services/auth/jwt"
+	"ava/api/pkg/logger"
+	"ava/api/pkg/serrors"
 
 	"github.com/google/uuid"
 )

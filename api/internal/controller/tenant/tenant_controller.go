@@ -2,10 +2,10 @@ package tenant
 
 import (
 	"ava/api/internal/dto"
-	"ava/api/internal/response"
-	"ava/api/internal/serrors"
 	tenantsvc "ava/api/internal/services/tenant"
-	"ava/api/internal/validator"
+	"ava/api/pkg/response"
+	"ava/api/pkg/serrors"
+	"ava/api/pkg/validator"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"

@@ -1,5 +1,5 @@
 package session
 
-import "ava/api/internal/serrors"
+import "ava/api/pkg/serrors"
 
 var ErrSessionNotFound = serrors.New("session not found")

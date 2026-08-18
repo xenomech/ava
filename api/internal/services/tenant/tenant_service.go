@@ -7,13 +7,13 @@ import (
 
 	"ava/api/internal/config"
 	"ava/api/internal/dto"
-	"ava/api/internal/email"
-	"ava/api/internal/logger"
 	"ava/api/internal/model"
 	membershiprepo "ava/api/internal/repository/membership"
 	tenantrepo "ava/api/internal/repository/tenant"
 	userrepo "ava/api/internal/repository/user"
-	"ava/api/internal/serrors"
+	"ava/api/pkg/email"
+	"ava/api/pkg/logger"
+	"ava/api/pkg/serrors"
 
 	"github.com/google/uuid"
 )

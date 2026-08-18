@@ -4,7 +4,7 @@ import (
 	"slices"
 
 	"ava/api/internal/model"
-	"ava/api/internal/response"
+	"ava/api/pkg/response"
 
 	"github.com/gofiber/fiber/v2"
 )

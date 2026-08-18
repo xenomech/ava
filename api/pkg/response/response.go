@@ -1,7 +1,7 @@
 package response
 
 import (
-	"ava/api/internal/serrors"
+	"ava/api/pkg/serrors"
 
 	"github.com/gofiber/fiber/v2"
 )

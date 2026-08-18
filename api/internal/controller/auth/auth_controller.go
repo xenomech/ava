@@ -2,10 +2,10 @@ package auth
 
 import (
 	"ava/api/internal/dto"
-	"ava/api/internal/response"
-	"ava/api/internal/serrors"
 	authsvc "ava/api/internal/services/auth"
-	"ava/api/internal/validator"
+	"ava/api/pkg/response"
+	"ava/api/pkg/serrors"
+	"ava/api/pkg/validator"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"

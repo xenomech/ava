@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"ava/api/internal/model"
-	"ava/api/internal/serrors"
+	"ava/api/pkg/serrors"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"

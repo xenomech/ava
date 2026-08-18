@@ -10,11 +10,11 @@ import (
 	"ava/api/internal/config"
 	"ava/api/internal/controller"
 	"ava/api/internal/db"
-	"ava/api/internal/logger"
 	"ava/api/internal/middleware"
 	"ava/api/internal/repository"
 	"ava/api/internal/routes"
 	"ava/api/internal/services"
+	"ava/api/pkg/logger"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"

@@ -1,6 +1,6 @@
 package auth
 
-import "ava/api/internal/serrors"
+import "ava/api/pkg/serrors"
 
 var (
 	ErrInvalidCredentials      = serrors.NewCoded("invalid_credentials", "invalid credentials")

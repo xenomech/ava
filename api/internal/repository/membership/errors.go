@@ -1,6 +1,6 @@
 package membership
 
-import "ava/api/internal/serrors"
+import "ava/api/pkg/serrors"
 
 var (
 	ErrMembershipNotFound      = serrors.New("membership not found")

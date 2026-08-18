@@ -1,6 +1,6 @@
 package flow
 
-import "ava/api/internal/serrors"
+import "ava/api/pkg/serrors"
 
 var (
 	ErrFlowNotFound      = serrors.New("flow not found")

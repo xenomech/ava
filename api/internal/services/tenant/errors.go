@@ -1,6 +1,6 @@
 package tenant
 
-import "ava/api/internal/serrors"
+import "ava/api/pkg/serrors"
 
 var (
 	ErrTenantNotFound      = serrors.NewCoded("tenant_not_found", "tenant not found")

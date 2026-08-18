@@ -30,6 +30,5 @@ pre-commit:
       run: cd hub && go vet ./...
 
     - name: module-boundary
-      glob: "*.go"
       run: make check-boundary
 

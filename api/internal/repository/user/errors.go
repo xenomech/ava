@@ -1,6 +1,6 @@
 package user
 
-import "ava/api/internal/serrors"
+import "ava/api/pkg/serrors"
 
 var (
 	ErrUserNotFound      = serrors.New("user not found")

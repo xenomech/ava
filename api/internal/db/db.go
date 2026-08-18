@@ -4,8 +4,8 @@ import (
 	"errors"
 	"time"
 
-	"ava/api/internal/logger"
 	"ava/api/internal/model"
+	"ava/api/pkg/logger"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"

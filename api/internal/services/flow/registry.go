@@ -2,7 +2,7 @@ package flow
 
 import (
 	"ava/api/internal/model"
-	"ava/api/internal/serrors"
+	"ava/api/pkg/serrors"
 )
 
 type StepDefinition struct {

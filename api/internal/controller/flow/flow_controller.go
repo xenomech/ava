@@ -2,10 +2,10 @@ package flow
 
 import (
 	"ava/api/internal/dto"
-	"ava/api/internal/response"
-	"ava/api/internal/serrors"
 	flowsvc "ava/api/internal/services/flow"
-	"ava/api/internal/validator"
+	"ava/api/pkg/response"
+	"ava/api/pkg/serrors"
+	"ava/api/pkg/validator"
 
 	"github.com/gofiber/fiber/v2"
 )

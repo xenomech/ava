@@ -3,8 +3,8 @@ package middleware
 import (
 	"time"
 
-	"ava/api/internal/logger"
 	"ava/api/internal/services"
+	"ava/api/pkg/logger"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"

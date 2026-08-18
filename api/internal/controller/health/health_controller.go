@@ -1,7 +1,7 @@
 package health
 
 import (
-	"ava/api/internal/response"
+	"ava/api/pkg/response"
 
 	"github.com/gofiber/fiber/v2"
 )

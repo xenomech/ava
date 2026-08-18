@@ -3,7 +3,7 @@ package middleware
 import (
 	"time"
 
-	"ava/api/internal/response"
+	"ava/api/pkg/response"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
