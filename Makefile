@@ -1,5 +1,5 @@
 .PHONY: setup dev run build test lint fmt tidy \
-	adapter-run adapter-build adapter-build-dev check-boundary
+	hub-run hub-build hub-build-dev check-boundary
 
 setup:
 	go install github.com/air-verse/air@latest
@@ -20,30 +20,30 @@ build:
 
 test:
 	cd api && go test ./...
-	cd adapter && go test ./...
+	cd hub && go test ./...
 
 lint:
 	cd api && golangci-lint run
-	cd adapter && golangci-lint run
+	cd hub && golangci-lint run
 
 fmt:
 	cd api && gofumpt -w .
-	cd adapter && gofumpt -w .
+	cd hub && gofumpt -w .
 
 tidy:
 	cd api && go mod tidy
-	cd adapter && go mod tidy
+	cd hub && go mod tidy
 
-adapter-run:
-	cd adapter && go run ./cmd/adapter
+hub-run:
+	cd hub && go run ./cmd/avahub
 
-adapter-build:
-	cd adapter && GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="-s -w" -o dist/adapter-linux-arm64 ./cmd/adapter
+hub-build:
+	cd hub && GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="-s -w" -o dist/avahub-linux-arm64 ./cmd/avahub
 
-adapter-build-dev:
-	cd adapter && GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="-s -w" -o dist/adapter-darwin-arm64 ./cmd/adapter
+hub-build-dev:
+	cd hub && GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="-s -w" -o dist/avahub-darwin-arm64 ./cmd/avahub
 
 check-boundary:
-	cd adapter && GOWORK=off go build ./...
-	cd adapter && ! go list -deps ./... | grep -q '^ava/api' || (echo "adapter must not import api" && exit 1)
-	cd api && ! go list -deps ./... | grep -q '^ava/adapter' || (echo "api must not import adapter" && exit 1)
+	cd hub && GOWORK=off go build ./...
+	cd hub && ! go list -deps ./... | grep -q '^ava/api' || (echo "hub must not import api" && exit 1)
+	cd api && ! go list -deps ./... | grep -q '^ava/hub' || (echo "api must not import hub" && exit 1)

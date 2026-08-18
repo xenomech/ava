@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"ava/adapter/internal/config"
+	"ava/hub/internal/config"
 )
 
 func main() {
@@ -19,7 +19,7 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	slog.Info("ADAPTER_STARTED",
+	slog.Info("HUB_STARTED",
 		slog.String("device_id", cfg.DeviceID),
 		slog.String("api_base_url", cfg.APIBaseURL),
 		slog.String("mqtt_broker_url", cfg.MQTTBrokerURL),
@@ -28,5 +28,5 @@ func main() {
 	<-ctx.Done()
 
 	slog.Info("SHUTDOWN_SIGNAL_RECEIVED")
-	slog.Info("ADAPTER_STOPPED")
+	slog.Info("HUB_STOPPED")
 }

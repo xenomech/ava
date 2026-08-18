@@ -80,44 +80,44 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: api/go.mod
-      - name: Adapter builds without the workspace
-        working-directory: adapter
+      - name: Hub builds without the workspace
+        working-directory: hub
         run: GOWORK=off go build ./...
-      - name: Adapter does not depend on api
-        working-directory: adapter
+      - name: Hub does not depend on api
+        working-directory: hub
         run: |
           if go list -deps ./... | grep -q '^ava/api'; then
-            echo "adapter must not import api"
+            echo "hub must not import api"
             exit 1
           fi
-      - name: Api does not depend on adapter
+      - name: Api does not depend on hub
         working-directory: api
         run: |
-          if go list -deps ./... | grep -q '^ava/adapter'; then
-            echo "api must not import adapter"
+          if go list -deps ./... | grep -q '^ava/hub'; then
+            echo "api must not import hub"
             exit 1
           fi
 
-  adapter:
-    name: Adapter
+  hub:
+    name: Hub
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version-file: adapter/go.mod
+          go-version-file: hub/go.mod
       - run: go vet ./...
-        working-directory: adapter
+        working-directory: hub
       - run: go test ./...
-        working-directory: adapter
+        working-directory: hub
       - uses: golangci/golangci-lint-action@v9
         with:
           version: latest
-          working-directory: adapter
+          working-directory: hub
 
-  adapter-build:
-    name: Adapter build
-    needs: adapter
+  hub-build:
+    name: Hub build
+    needs: hub
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -130,17 +130,17 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version-file: adapter/go.mod
+          go-version-file: hub/go.mod
       - name: Build ${{ matrix.goos }}/${{ matrix.goarch }}
-        working-directory: adapter
+        working-directory: hub
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: "0"
-        run: go build -ldflags="-s -w" -o dist/adapter-${{ matrix.goos }}-${{ matrix.goarch }} ./cmd/adapter
+        run: go build -ldflags="-s -w" -o dist/avahub-${{ matrix.goos }}-${{ matrix.goarch }} ./cmd/avahub
       - uses: actions/upload-artifact@v4
         if: matrix.goos == 'linux'
         with:
-          name: adapter-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: adapter/dist/adapter-${{ matrix.goos }}-${{ matrix.goarch }}
+          name: avahub-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: hub/dist/avahub-${{ matrix.goos }}-${{ matrix.goarch }}
 
