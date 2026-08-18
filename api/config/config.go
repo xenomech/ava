@@ -25,6 +25,10 @@ type Config struct {
 	JwtAccessExpiry  time.Duration
 	JwtRefreshExpiry time.Duration
 
+	DeviceCodeExpiry   time.Duration
+	DevicePollInterval time.Duration
+	DeviceTokenExpiry  time.Duration
+
 	DBHost     string
 	DBPort     string
 	DBUser     string
@@ -72,6 +76,10 @@ func load() *Config {
 		JwtAccessExpiry:  v.GetDuration("JWT_ACCESS_EXPIRY"),
 		JwtRefreshExpiry: v.GetDuration("JWT_REFRESH_EXPIRY"),
 
+		DeviceCodeExpiry:   v.GetDuration("DEVICE_CODE_EXPIRY"),
+		DevicePollInterval: v.GetDuration("DEVICE_POLL_INTERVAL"),
+		DeviceTokenExpiry:  v.GetDuration("DEVICE_TOKEN_EXPIRY"),
+
 		DBHost:     v.GetString("DB_HOST"),
 		DBPort:     v.GetString("DB_PORT"),
 		DBUser:     v.GetString("DB_USER"),
@@ -106,6 +114,10 @@ func setDefaults(v *viper.Viper) {
 
 	v.SetDefault("JWT_ACCESS_EXPIRY", 15*time.Minute)
 	v.SetDefault("JWT_REFRESH_EXPIRY", 7*24*time.Hour)
+
+	v.SetDefault("DEVICE_CODE_EXPIRY", 10*time.Minute)
+	v.SetDefault("DEVICE_POLL_INTERVAL", 5*time.Second)
+	v.SetDefault("DEVICE_TOKEN_EXPIRY", time.Hour)
 
 	v.SetDefault("DB_HOST", "localhost")
 	v.SetDefault("DB_PORT", "5432")

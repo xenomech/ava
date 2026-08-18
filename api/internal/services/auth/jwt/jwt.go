@@ -15,6 +15,7 @@ type TokenType string
 const (
 	AccessToken  TokenType = "access"
 	RefreshToken TokenType = "refresh"
+	DeviceToken  TokenType = "device"
 )
 
 var (
@@ -25,6 +26,7 @@ var (
 type Claims struct {
 	jwt.RegisteredClaims
 	UserID    uuid.UUID        `json:"user_id"`
+	DeviceID  uuid.UUID        `json:"device_id,omitempty"`
 	TenantID  uuid.UUID        `json:"tenant_id"`
 	Role      model.TenantRole `json:"role"`
 	SessionID uuid.UUID        `json:"session_id"`
@@ -40,6 +42,8 @@ func (tm *jwtTokenManager) GenerateToken(user *model.User, tenantID uuid.UUID, r
 		expiry = tm.accessExpiry
 	case RefreshToken:
 		expiry = tm.refreshExpiry
+	case DeviceToken:
+		expiry = tm.deviceExpiry
 	default:
 		return "", serrors.New("invalid token type")
 	}
@@ -62,6 +66,25 @@ func (tm *jwtTokenManager) GenerateToken(user *model.User, tenantID uuid.UUID, r
 
 	if rid != "" {
 		claims.ID = rid
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	return token.SignedString([]byte(tm.secretKey))
+}
+
+func (tm *jwtTokenManager) GenerateDeviceToken(device *model.Device) (string, error) {
+	claims := Claims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(tm.deviceExpiry)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			NotBefore: jwt.NewNumericDate(time.Now()),
+			Issuer:    "ava",
+			Subject:   device.ID.String(),
+		},
+		DeviceID:  device.ID,
+		TenantID:  device.TenantID,
+		TokenType: DeviceToken,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -99,4 +122,8 @@ func (tm *jwtTokenManager) GetAccessExpiry() time.Duration {
 
 func (tm *jwtTokenManager) GetRefreshExpiry() time.Duration {
 	return tm.refreshExpiry
+}
+
+func (tm *jwtTokenManager) GetDeviceExpiry() time.Duration {
+	return tm.deviceExpiry
 }
