@@ -7,6 +7,7 @@ CLAUDE.local.md
 # Go
 bin/
 tmp/
+dist/
 *.exe
 *.test
 *.out

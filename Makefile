@@ -29,3 +29,17 @@ fmt:
 
 tidy:
 	cd api && go mod tidy
+
+adapter-run:
+	cd adapter && go run ./cmd/adapter
+
+adapter-build:
+	cd adapter && GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="-s -w" -o dist/adapter-linux-arm64 ./cmd/adapter
+
+adapter-build-dev:
+	cd adapter && GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="-s -w" -o dist/adapter-darwin-arm64 ./cmd/adapter
+
+check-boundary:
+	cd adapter && GOWORK=off go build ./...
+	cd adapter && ! go list -deps ./... | grep -q '^ava/api' || (echo "adapter must not import api" && exit 1)
+	cd api && ! go list -deps ./... | grep -q '^ava/adapter' || (echo "api must not import adapter" && exit 1)
