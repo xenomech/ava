@@ -1,0 +1,24 @@
+package routes
+
+import (
+	tenantctrl "ava/api/internal/controller/tenant"
+	"ava/api/internal/middleware"
+	"ava/api/internal/model"
+
+	"github.com/gofiber/fiber/v2"
+)
+
+func tenantRoutes(router fiber.Router, controller *tenantctrl.Controller, mw *middleware.Middleware) {
+	router.Use(mw.ValidateAccessToken)
+
+	router.Get("/", controller.ListMine)
+	router.Post("/", controller.Create)
+
+	router.Get("/current", controller.Get)
+	router.Patch("/current", middleware.RequireRole(model.TenantRoleOwner, model.TenantRoleAdmin), controller.Update)
+
+	router.Get("/current/members", controller.ListMembers)
+	router.Post("/current/invitations", middleware.RequireRole(model.TenantRoleOwner, model.TenantRoleAdmin), controller.Invite)
+	router.Patch("/current/members/:userID", middleware.RequireRole(model.TenantRoleOwner), controller.UpdateMemberRole)
+	router.Delete("/current/members/:userID", middleware.RequireRole(model.TenantRoleOwner, model.TenantRoleAdmin), controller.RemoveMember)
+}
