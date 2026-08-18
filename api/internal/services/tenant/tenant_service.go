@@ -219,7 +219,7 @@ func (s *tenantService) Invite(ctx context.Context, tenantID, invitedByID uuid.U
 		"Name":       invitee.Name,
 		"TenantName": invitingTenant.Name,
 		"Role":       string(req.Role),
-		"InviteURL":  fmt.Sprintf("%s/accept-invite?token=%s", config.GetConfig().AppURL, inviteToken),
+		"InviteURL":  fmt.Sprintf("%s/auth/invite?token=%s", config.GetConfig().AppURL, inviteToken),
 	}
 
 	if err := emailSvc.Send(ctx, invitee.Email, "You have been invited to "+invitingTenant.Name, "tenant_invite.html", emailData); err != nil {

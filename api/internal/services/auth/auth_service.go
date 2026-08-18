@@ -75,7 +75,7 @@ func (s *authService) Register(ctx context.Context, req *dto.RegisterRequest) (*
 	emailSvc := email.NewService()
 	emailData := map[string]any{
 		"Name":            user.Name,
-		"VerificationURL": fmt.Sprintf("%s/verify?token=%s", config.GetConfig().AppURL, token),
+		"VerificationURL": fmt.Sprintf("%s/auth/verify?token=%s", config.GetConfig().AppURL, token),
 	}
 
 	if err := emailSvc.Send(ctx, user.Email, "Verify your email address", "verify_email.html", emailData); err != nil {
@@ -446,7 +446,7 @@ func (s *authService) ResendVerification(ctx context.Context, emailAddr string) 
 	emailSvc := email.NewService()
 	emailData := map[string]any{
 		"Name":            user.Name,
-		"VerificationURL": fmt.Sprintf("%s/verify?token=%s", config.GetConfig().AppURL, token),
+		"VerificationURL": fmt.Sprintf("%s/auth/verify?token=%s", config.GetConfig().AppURL, token),
 	}
 
 	if err := emailSvc.Send(ctx, user.Email, "Verify your email address", "verify_email.html", emailData); err != nil {
@@ -491,7 +491,7 @@ func (s *authService) ForgotPassword(ctx context.Context, emailAddr string) erro
 	emailSvc := email.NewService()
 	emailData := map[string]any{
 		"Name":     user.Name,
-		"ResetURL": fmt.Sprintf("%s/reset-password?token=%s", config.GetConfig().AppURL, token),
+		"ResetURL": fmt.Sprintf("%s/auth/reset-password?token=%s", config.GetConfig().AppURL, token),
 	}
 
 	if err := emailSvc.Send(ctx, user.Email, "Reset your password", "password_reset.html", emailData); err != nil {
