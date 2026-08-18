@@ -16,6 +16,12 @@ tmp/
 .env.*
 !.env.example
 
+# Node / frontend
+node_modules/
+dist/
+.turbo/
+*.tsbuildinfo
+
 # OS / editors
 .DS_Store
 .idea/

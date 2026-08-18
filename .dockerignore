@@ -15,6 +15,11 @@ bin/
 dist/
 logs/
 
+**/node_modules
+**/dist
+**/.turbo
+**/*.tsbuildinfo
+
 *.md
 *.log
 *.test
