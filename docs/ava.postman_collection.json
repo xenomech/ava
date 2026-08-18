@@ -2,7 +2,7 @@
   "info": {
     "name": "Ava API",
     "_postman_id": "8f3d1c42-6a51-4c7e-9a1b-0d2f5e7c9b10",
-    "description": "Multi-tenant Go API \u2014 auth, tenants with roles, and the onboarding flow engine.\n\n## Getting started\n\n1. `docker compose up -d postgres` then `make dev` (or `make run`).\n2. Send **Auth \u203a Register**, then verify the email (see that request's description for how to read the token out of the database locally).\n3. Send **Auth \u203a Login** \u2014 the access and refresh tokens are captured into collection variables automatically, and every protected request inherits them.\n\n## How auth works here\n\nThe collection sends `Authorization: Bearer {{accessToken}}` by default; public endpoints override that to no-auth. A token is scoped to **one tenant**: it carries the tenant id and the caller's role in it. To act in another tenant use **Switch tenant**, which revokes the current session and issues a new one.\n\n## Tokens that arrive by email\n\nEmail verification, password reset, and invitations all send a link. With no `RESEND_API_KEY` set, sending fails (logged as a warning) and the request still succeeds \u2014 read the token from Postgres, as each of those requests describes.\n\n## Rate limits\n\n100 requests/minute per IP globally, 25/minute on auth endpoints. A throttled auth call returns 429 `auth_rate_limited`.\n\n## Response envelope\n\nEvery response is `{ success, data, error: { code, message, details? } }`. Branch on `error.code`, not on the message text.",
+    "description": "Multi-tenant Go API \u2014 auth, tenants with roles, and the onboarding flow engine.\n\n## Getting started\n\n1. `docker compose up -d postgres` then `make dev` (or `make run`).\n2. Send **Auth \u203a Register**, then verify the email (see that request's description for how to read the token out of the database locally).\n3. Send **Auth \u203a Login** \u2014 the access and refresh tokens are captured into collection variables automatically, and every protected request inherits them.\n\n## How auth works here\n\nThe collection sends `Authorization: Bearer {{accessToken}}` by default; public endpoints override that to no-auth. A token is scoped to **one tenant**: it carries the tenant id and the caller's role in it. To act in another tenant use **Switch tenant**, which revokes the current session and issues a new one.\n\n## Tokens that arrive by email\n\nEmail verification, password reset, and invitations all send a link. With no `RESEND_API_KEY` set, sending fails (logged as a warning) and the request still succeeds \u2014 read the token from Postgres, as each of those requests describes.\n\n## Hubs and devices\n\nA **hub** is the box in the home: it authenticates with the API through the RFC 8628 device grant (folder 6) and holds the credentials. **Devices** are what hang off it \u2014 they never authenticate, the hub reports them (folder 7). Requests that act as the hub carry the hub token rather than your user token; the collection tracks both.\n\n## Rate limits\n\n100 requests/minute per IP globally, 25/minute on auth endpoints. A throttled auth call returns 429 `auth_rate_limited`.\n\n## Re-running\n\nFolders 1\u20138 are safe to re-run. Folders 9 and 10 change the password, revoke the hub and log out, so a second full pass needs a fresh account or a reset database.\n\n## Response envelope\n\nEvery response is `{ success, data, error: { code, message, details? } }`. Branch on `error.code`, not on the message text.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -79,6 +79,41 @@
     },
     {
       "key": "inviteToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "hubName",
+      "value": "Living Room Hub",
+      "type": "string"
+    },
+    {
+      "key": "deviceCode",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userCode",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "hubAccessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "hubRefreshToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "hubId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "deviceId",
       "value": "",
       "type": "string"
     }
@@ -1170,7 +1205,487 @@
       ]
     },
     {
-      "name": "6. Invitations",
+      "name": "6. Hubs",
+      "description": "Pairing a hub with a tenant using the RFC 8628 device authorization grant \u2014 the flow a TV app uses. Run these in order: request a code (as the hub), activate it (as the human), then poll (as the hub) to collect tokens.",
+      "item": [
+        {
+          "name": "Request activation code",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/hubs/code",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hubs",
+                "code"
+              ]
+            },
+            "description": "The hub calls this on first boot and shows the user_code on screen. Saves device_code and user_code to collection variables so the next two requests can act as the hub and the human.\n\n`device_code` and `user_code` are RFC 8628 field names \u2014 the protocol's vocabulary, not the domain's. The thing being registered is a hub.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hub_name\": \"Living Room Hub\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 201 or 422\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([201, 422]);",
+                  "});",
+                  "(function () {",
+                  "    const d = pm.response.json().data || {};",
+                  "    if (d.device_code) {",
+                  "        pm.collectionVariables.set('deviceCode', d.device_code);",
+                  "        pm.collectionVariables.set('userCode', d.user_code);",
+                  "        console.log('Activate at ' + d.verification_uri + ' with code ' + d.user_code);",
+                  "    }",
+                  "})();"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Activate hub",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/hubs/activate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hubs",
+                "activate"
+              ]
+            },
+            "description": "What the human does on their phone. Authenticated as a tenant member \u2014 the hub joins **their** tenant, which is why no tenant id appears in the body.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_code\": \"{{userCode}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 201\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([201]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Poll for hub token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/hubs/token",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hubs",
+                "token"
+              ]
+            },
+            "description": "The hub polls this until a human approves. Before approval: 400 `authorization_pending`. Faster than the advertised interval: 429 `slow_down`. Denied: 403. Expired: 400 `expired_token`.\n\nOn success it saves the hub's access and refresh tokens.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"device_code\": \"{{deviceCode}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "(function () {",
+                  "    const d = pm.response.json().data || {};",
+                  "    if (d.access_token) {",
+                  "        pm.collectionVariables.set('hubAccessToken', d.access_token);",
+                  "        pm.collectionVariables.set('hubRefreshToken', d.refresh_token);",
+                  "        pm.collectionVariables.set('hubId', d.hub.id);",
+                  "        console.log('Hub paired to tenant ' + d.tenant.slug);",
+                  "    }",
+                  "})();"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refresh hub token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/hubs/token/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hubs",
+                "token",
+                "refresh"
+              ]
+            },
+            "description": "Rotates the pair. The previous refresh token dies immediately, exactly like the user-side refresh.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{hubRefreshToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "(function () {",
+                  "    const d = pm.response.json().data || {};",
+                  "    if (d.access_token) {",
+                  "        pm.collectionVariables.set('hubAccessToken', d.access_token);",
+                  "        pm.collectionVariables.set('hubRefreshToken', d.refresh_token);",
+                  "    }",
+                  "})();"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Hub heartbeat",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/hubs/heartbeat",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hubs",
+                "heartbeat"
+              ]
+            },
+            "description": "Sent by the hub on a timer, using the **hub** token rather than a user token. Updates last_seen_at.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{hubAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List hubs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/hubs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hubs"
+              ]
+            },
+            "description": "Hubs paired to the caller's tenant."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200 or 401\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 401]);",
+                  "});",
+                  "(function () {",
+                  "    const d = pm.response.json().data || [];",
+                  "    if (d.length) { pm.collectionVariables.set('hubId', d[0].id); }",
+                  "})();"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List devices on a hub",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/hubs/{{hubId}}/devices",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hubs",
+                "{{hubId}}",
+                "devices"
+              ]
+            },
+            "description": "Everything this hub has reported."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200 or 401\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 401]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "7. Devices",
+      "description": "Devices hang off a hub and never authenticate themselves. Two writers: the hub owns kind, status and state; the user owns the name.",
+      "item": [
+        {
+          "name": "Sync devices from hub",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/hubs/devices",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hubs",
+                "devices"
+              ]
+            },
+            "description": "Written by the **hub**, not a user. Full-list reconciliation: anything absent from the payload is marked offline rather than deleted, so ids and history survive a flaky sync.\n\nThe upsert touches kind, status, last_seen_at and state \u2014 never `name`, so a user's rename is not clobbered on the next sync.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"devices\": [\n    {\n      \"external_id\": \"0x00124b0021\",\n      \"name\": \"Ceiling Light\",\n      \"kind\": \"light\",\n      \"status\": \"online\",\n      \"state\": {\n        \"on\": true,\n        \"brightness\": 80\n      }\n    },\n    {\n      \"external_id\": \"0x00124b0022\",\n      \"name\": \"Hall Motion\",\n      \"kind\": \"sensor\",\n      \"status\": \"online\",\n      \"state\": {\n        \"motion\": false\n      }\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{hubAccessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List devices",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/devices",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "devices"
+              ]
+            },
+            "description": "Every device in the tenant, across all hubs. Read with a user token."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test(\"hub reported at least one device\", function () {",
+                  "    pm.expect(pm.response.json().data.length).to.be.above(0);",
+                  "});",
+                  "(function () {",
+                  "    const d = pm.response.json().data || [];",
+                  "    if (d.length) { pm.collectionVariables.set('deviceId', d[0].id); }",
+                  "})();"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Rename device",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/devices/{{deviceId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "devices",
+                "{{deviceId}}"
+              ]
+            },
+            "description": "Owned by the user side. Survives subsequent hub syncs.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Living Room Ceiling\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "8. Invitations",
       "description": "Accepting an invite is unauthenticated \u2014 the token is the credential. Invite someone from folder 4 first, then read the token out of the database.",
       "item": [
         {
@@ -1225,8 +1740,8 @@
       ]
     },
     {
-      "name": "7. Password",
-      "description": "\u26a0\ufe0f Ordered last on purpose. Change password swaps the password used by the Login request above, and Reset password revokes the caller's sessions in EVERY tenant, so anything after it needs a fresh login.",
+      "name": "9. Password",
+      "description": "\u26a0\ufe0f Ordered last on purpose. Change password swaps the password used by the Login request above, and Reset password revokes the caller's sessions in EVERY tenant, so anything after it needs a fresh login.\n\n\u26a0\ufe0f These mutate the account: after Change password, the Login request in folder 2 no longer matches the password in its body. Re-running the whole collection wants a fresh account (change the email in Register, or drop the database volume).",
       "item": [
         {
           "name": "Change password",
@@ -1375,9 +1890,41 @@
       ]
     },
     {
-      "name": "8. Sign out",
-      "description": "\u26a0\ufe0f Ordered last on purpose: these revoke the token the rest of the collection depends on.",
+      "name": "10. Teardown",
+      "description": "\u26a0\ufe0f Ordered last on purpose: each of these revokes something the rest of the collection depends on. Revoking the hub kills the hub token used by folder 7; logging out kills the user token used by everything else.",
       "item": [
+        {
+          "name": "Revoke hub",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/hubs/{{hubId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hubs",
+                "{{hubId}}"
+              ]
+            },
+            "description": "Owner or admin only. The hub's next heartbeat gets 401 and its refresh is refused, so it drops its stored credentials and asks for a new activation code."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
         {
           "name": "Logout",
           "request": {
