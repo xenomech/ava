@@ -1,6 +1,7 @@
 package repository
 
 import (
+	devicerepo "ava/api/internal/repository/device"
 	flowrepo "ava/api/internal/repository/flow"
 	hubrepo "ava/api/internal/repository/hub"
 	membershiprepo "ava/api/internal/repository/membership"
@@ -20,6 +21,7 @@ type Repository struct {
 	Token      tokenrepo.Repository
 	Flow       flowrepo.Repository
 	Hub        hubrepo.Repository
+	Device     devicerepo.Repository
 }
 
 func NewRepository(db *gorm.DB) *Repository {
@@ -31,5 +33,6 @@ func NewRepository(db *gorm.DB) *Repository {
 		Token:      tokenrepo.NewRepository(db),
 		Flow:       flowrepo.NewRepository(db),
 		Hub:        hubrepo.NewRepository(db),
+		Device:     devicerepo.NewRepository(db),
 	}
 }
