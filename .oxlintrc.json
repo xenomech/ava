@@ -21,6 +21,14 @@
   "overrides": [
     {
       "files": [
+        "frontend/packages/ui/src/components/**"
+      ],
+      "rules": {
+        "jsx-a11y/label-has-associated-control": "off"
+      }
+    },
+    {
+      "files": [
         "frontend/apps/*/src/modules/**"
       ],
       "rules": {
