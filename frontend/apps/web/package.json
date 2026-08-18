@@ -13,28 +13,28 @@
   "dependencies": {
     "@ava/env": "workspace:*",
     "@ava/ui": "workspace:*",
-    "@tailwindcss/vite": "^4.3.3",
-    "@tanstack/react-router": "^1.170.18",
+    "@tailwindcss/vite": "catalog:",
+    "@tanstack/react-router": "catalog:",
     "lucide-react": "catalog:",
     "next-themes": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
     "sonner": "catalog:",
-    "vite-plugin-pwa": "^1.3.0",
+    "vite-plugin-pwa": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@ava/config": "workspace:*",
-    "@tanstack/react-router-devtools": "^1.167.0",
-    "@tanstack/router-plugin": "^1.168.23",
+    "@tanstack/react-router-devtools": "catalog:",
+    "@tanstack/router-plugin": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
-    "@vite-pwa/assets-generator": "^1.0.2",
-    "@vitejs/plugin-react": "^6.0.4",
-    "postcss": "^8.5.24",
+    "@vite-pwa/assets-generator": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "postcss": "catalog:",
     "tailwindcss": "catalog:",
     "typescript": "catalog:",
-    "vite": "^8.1.5"
+    "vite": "catalog:"
   }
 }
