@@ -72,6 +72,10 @@ linters:
         text: G101
         linters:
           - gosec
+      - path: internal/state/state\.go
+        text: G117
+        linters:
+          - gosec
 
 formatters:
   enable:

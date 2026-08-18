@@ -8,9 +8,20 @@ import (
 	"syscall"
 
 	"ava/hub/internal/config"
+	"ava/hub/internal/hub"
 )
 
 func main() {
+	if err := run(); err != nil {
+		slog.Error("HUB_FAILED", slog.String("error", err.Error()))
+		slog.Info("HUB_STOPPED")
+		os.Exit(1)
+	}
+
+	slog.Info("HUB_STOPPED")
+}
+
+func run() error {
 	cfg := config.GetConfig()
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: cfg.LogLevel}))
@@ -20,13 +31,14 @@ func main() {
 	defer stop()
 
 	slog.Info("HUB_STARTED",
-		slog.String("device_id", cfg.DeviceID),
+		slog.String("device_name", cfg.DeviceName),
 		slog.String("api_base_url", cfg.APIBaseURL),
-		slog.String("mqtt_broker_url", cfg.MQTTBrokerURL),
+		slog.String("state_file", cfg.StateFile),
 	)
 
-	<-ctx.Done()
+	if err := hub.New(cfg).Run(ctx); err != nil && ctx.Err() == nil {
+		return err
+	}
 
-	slog.Info("SHUTDOWN_SIGNAL_RECEIVED")
-	slog.Info("HUB_STOPPED")
+	return nil
 }

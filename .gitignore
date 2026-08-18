@@ -13,6 +13,7 @@ dist/
 *.out
 
 # Env
+avahub-state.json
 .env
 .env.*
 !.env.example
