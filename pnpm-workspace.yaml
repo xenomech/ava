@@ -4,6 +4,7 @@ packages:
 
 allowBuilds:
   esbuild: true
+  sharp: true
 
 catalog:
   "@types/node": ^22.20.1

@@ -20,6 +20,8 @@ avahub-state.json
 
 # Node / frontend
 node_modules/
+frontend/apps/web/src/routeTree.gen.ts
+dev-dist/
 dist/
 .turbo/
 *.tsbuildinfo
