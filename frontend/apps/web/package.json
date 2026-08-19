@@ -23,6 +23,7 @@
     "next-themes": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
+    "sonner": "catalog:",
     "vite-plugin-pwa": "catalog:",
     "zod": "catalog:"
   },
