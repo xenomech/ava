@@ -1,9 +1,10 @@
-import { Loader2 } from "lucide-react";
+import { Loader2Icon } from "lucide-react";
 
-export default function Loader() {
+export function Loader({ label = "Loading" }: { label?: string }) {
   return (
-    <div className="flex h-full items-center justify-center pt-8">
-      <Loader2 className="animate-spin" />
-    </div>
+    <output className="flex min-h-dvh items-center justify-center" aria-live="polite">
+      <Loader2Icon className="text-muted size-5 animate-spin" aria-hidden="true" />
+      <span className="sr-only">{label}</span>
+    </output>
   );
 }
