@@ -1,6 +1,18 @@
 pre-commit:
   parallel: true
   jobs:
+    - name: pkg-lint
+      glob: "backend/pkg/**/*.go"
+      run: cd backend/pkg && golangci-lint run
+
+    - name: pkg-fmt
+      glob: "backend/pkg/**/*.go"
+      run: cd backend/pkg && test -z "$(gofumpt -l .)" || (echo "Run 'make fmt' to format code" && exit 1)
+
+    - name: pkg-test
+      glob: "backend/pkg/**/*.go"
+      run: cd backend/pkg && go test ./...
+
     - name: api-lint
       glob: "backend/services/api/**/*.go"
       run: cd backend/services/api && golangci-lint run
@@ -29,6 +41,17 @@ pre-commit:
       glob: "backend/services/hub/**/*.go"
       run: cd backend/services/hub && go vet ./...
 
+    - name: hub-test
+      glob: "backend/services/hub/**/*.go"
+      run: cd backend/services/hub && go test ./...
+
+    - name: web-types
+      glob: "frontend/**/*.{ts,tsx}"
+      run: cd frontend && pnpm -r check-types
+
+    - name: web-lint
+      glob: "frontend/**/*.{ts,tsx}"
+      run: cd frontend && pnpm exec oxlint apps packages
+
     - name: module-boundary
       run: make check-boundary
-
