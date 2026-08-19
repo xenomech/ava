@@ -68,6 +68,7 @@ func main() {
 
 	app.Use(mw.RequestTrace)
 	app.Use(middleware.SecurityHeaders(cfg.ServerEnv))
+	app.Use(middleware.VerifyOrigin(cfg.CORSAllowedOrigins))
 
 	routes.AddRoutes(app, ctrl, mw)
 
