@@ -101,3 +101,19 @@ func (r *sessionRepository) UpdateSessionRID(ctx context.Context, tenantID, sess
 
 	return nil
 }
+
+func (r *sessionRepository) LatestTenantForUser(ctx context.Context, userID uuid.UUID) (uuid.UUID, error) {
+	var session model.Session
+
+	err := r.db.WithContext(ctx).Where("user_id = ?", userID).
+		Order("created_at DESC").First(&session).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return uuid.Nil, ErrSessionNotFound
+	}
+
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	return session.TenantID, nil
+}

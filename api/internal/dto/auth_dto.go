@@ -76,11 +76,9 @@ type UserResponse struct {
 }
 
 type AuthResponse struct {
-	User                 UserResponse    `json:"user"`
-	Tenant               *TenantSummary  `json:"tenant,omitempty"`
-	Tokens               *TokenResponse  `json:"tokens,omitempty"`
-	NeedsTenantSelection bool            `json:"needs_tenant_selection,omitempty"`
-	Tenants              []TenantSummary `json:"tenants,omitempty"`
+	User   UserResponse   `json:"user"`
+	Tenant *TenantSummary `json:"tenant,omitempty"`
+	Tokens *TokenResponse `json:"tokens,omitempty"`
 }
 
 type TenantSummary struct {

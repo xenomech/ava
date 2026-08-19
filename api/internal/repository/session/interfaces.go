@@ -17,6 +17,7 @@ type Repository interface {
 	RevokeAllUserSessions(ctx context.Context, tenantID, userID uuid.UUID) error
 	RevokeAllUserSessionsGlobal(ctx context.Context, userID uuid.UUID) error
 	GetUserSessions(ctx context.Context, tenantID, userID uuid.UUID) ([]*model.Session, error)
+	LatestTenantForUser(ctx context.Context, userID uuid.UUID) (uuid.UUID, error)
 	UpdateSessionRID(ctx context.Context, tenantID, sessionID uuid.UUID, rid string) error
 }
 

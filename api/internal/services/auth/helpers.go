@@ -65,36 +65,6 @@ func (s *authService) selectMembership(ctx context.Context, memberships []*model
 	return nil, ErrTenantSelectionRequired
 }
 
-func (s *authService) tenantSummaries(ctx context.Context, memberships []*model.TenantMembership) ([]dto.TenantSummary, error) {
-	ids := make([]uuid.UUID, 0, len(memberships))
-	roles := make(map[uuid.UUID]model.TenantRole, len(memberships))
-
-	for _, membership := range memberships {
-		ids = append(ids, membership.TenantID)
-		roles[membership.TenantID] = membership.Role
-	}
-
-	tenants, err := s.tenantRepo.ListByIDs(ctx, ids)
-	if err != nil {
-		logger.Error("failed to list tenants", logger.Err(err))
-
-		return nil, err
-	}
-
-	summaries := make([]dto.TenantSummary, 0, len(tenants))
-
-	for _, tenant := range tenants {
-		summaries = append(summaries, dto.TenantSummary{
-			ID:   tenant.ID,
-			Name: tenant.Name,
-			Slug: tenant.Slug,
-			Role: roles[tenant.ID],
-		})
-	}
-
-	return summaries, nil
-}
-
 func (s *authService) issueSession(ctx context.Context, user *model.User, membership *model.TenantMembership, deviceInfo dto.DeviceInfo) (*dto.AuthResponse, error) {
 	tenant, err := s.tenantRepo.GetByID(ctx, membership.TenantID)
 	if err != nil {
@@ -180,4 +150,21 @@ func (s *authService) generateRandomToken() (string, error) {
 	}
 
 	return hex.EncodeToString(bytes), nil
+}
+
+func (s *authService) defaultMembership(ctx context.Context, userID uuid.UUID, memberships []*model.TenantMembership) *model.TenantMembership {
+	if len(memberships) == 1 {
+		return memberships[0]
+	}
+
+	lastTenantID, err := s.sessionRepo.LatestTenantForUser(ctx, userID)
+	if err == nil {
+		for _, membership := range memberships {
+			if membership.TenantID == lastTenantID {
+				return membership
+			}
+		}
+	}
+
+	return memberships[0]
 }

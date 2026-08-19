@@ -122,22 +122,13 @@ func (s *authService) Login(ctx context.Context, req *dto.LoginRequest, deviceIn
 		return nil, ErrNoTenantMembership
 	}
 
+	if req.TenantSlug == "" {
+		return s.issueSession(ctx, user, s.defaultMembership(ctx, user.ID, memberships), deviceInfo)
+	}
+
 	membership, err := s.selectMembership(ctx, memberships, req.TenantSlug)
 	if err != nil {
-		if !serrors.Is(err, ErrTenantSelectionRequired) {
-			return nil, err
-		}
-
-		tenants, err := s.tenantSummaries(ctx, memberships)
-		if err != nil {
-			return nil, err
-		}
-
-		return &dto.AuthResponse{
-			User:                 *s.userToResponse(user),
-			NeedsTenantSelection: true,
-			Tenants:              tenants,
-		}, nil
+		return nil, err
 	}
 
 	return s.issueSession(ctx, user, membership, deviceInfo)
