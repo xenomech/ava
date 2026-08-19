@@ -2,18 +2,11 @@
   "info": {
     "name": "Ava API",
     "_postman_id": "8f3d1c42-6a51-4c7e-9a1b-0d2f5e7c9b10",
-    "description": "Multi-tenant Go API \u2014 auth, tenants with roles, and the onboarding flow engine.\n\n## Getting started\n\n1. `docker compose up -d postgres` then `make dev` (or `make run`).\n2. Send **Auth \u203a Register**, then verify the email (see that request's description for how to read the token out of the database locally).\n3. Send **Auth \u203a Login** \u2014 the access and refresh tokens are captured into collection variables automatically, and every protected request inherits them.\n\n## How auth works here\n\nThe collection sends `Authorization: Bearer {{accessToken}}` by default; public endpoints override that to no-auth. A token is scoped to **one tenant**: it carries the tenant id and the caller's role in it. To act in another tenant use **Switch tenant**, which revokes the current session and issues a new one.\n\n## Tokens that arrive by email\n\nEmail verification, password reset, and invitations all send a link. With no `RESEND_API_KEY` set, sending fails (logged as a warning) and the request still succeeds \u2014 read the token from Postgres, as each of those requests describes.\n\n## Hubs and devices\n\nA **hub** is the box in the home: it authenticates with the API through the RFC 8628 device grant (folder 6) and holds the credentials. **Devices** are what hang off it \u2014 they never authenticate, the hub reports them (folder 7). Requests that act as the hub carry the hub token rather than your user token; the collection tracks both.\n\n## Rate limits\n\n100 requests/minute per IP globally, 25/minute on auth endpoints. A throttled auth call returns 429 `auth_rate_limited`.\n\n## Re-running\n\nFolders 1\u20138 are safe to re-run. Folders 9 and 10 change the password, revoke the hub and log out, so a second full pass needs a fresh account or a reset database.\n\n## Response envelope\n\nEvery response is `{ success, data, error: { code, message, details? } }`. Branch on `error.code`, not on the message text.",
+    "description": "Multi-tenant Go API \u2014 auth, tenants with roles, and the onboarding flow engine.\n\n## Getting started\n\n1. `docker compose up -d postgres` then `make dev` (or `make run`).\n2. Send **Auth \u203a Register**, then verify the email (see that request's description for how to read the token out of the database locally).\n3. Send **Auth \u203a Login** \u2014 the access and refresh tokens are captured into collection variables automatically, and every protected request inherits them.\n\n## How auth works here\n\nUser requests carry no `Authorization` header at all. Login sets **httpOnly cookies** (`ava_access`, `ava_refresh`) and Postman's cookie jar replays them, so the session simply works \u2014 and the tokens are never visible to scripts, which is the point. A session is scoped to **one tenant**. Login signs you into the tenant you used last; **Switch tenant** moves between them, revoking the current session and issuing a new one.\n\nHub requests are the exception: a device has no cookie jar, so those still send `Authorization: Bearer {{hubAccessToken}}`.\n\n## Tokens that arrive by email\n\nEmail verification, password reset, and invitations all send a link. With no `RESEND_API_KEY` set, sending fails (logged as a warning) and the request still succeeds \u2014 read the token from Postgres, as each of those requests describes.\n\n## Hubs and devices\n\nA **hub** is the box in the home: it authenticates with the API through the RFC 8628 device grant (folder 6) and holds the credentials. **Devices** are what hang off it \u2014 they never authenticate, the hub reports them (folder 7). Requests that act as the hub carry the hub token rather than your user token; the collection tracks both.\n\n## Rate limits\n\n100 requests/minute per IP globally, 25/minute on auth endpoints. A throttled auth call returns 429 `auth_rate_limited`.\n\n## Re-running\n\nFolders 1\u20138 are safe to re-run. Folders 9 and 10 change the password, revoke the hub and log out, so a second full pass needs a fresh account or a reset database.\n\n## Response envelope\n\nEvery response is `{ success, data, error: { code, message, details? } }`. Branch on `error.code`, not on the message text.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
-    "type": "bearer",
-    "bearer": [
-      {
-        "key": "token",
-        "value": "{{accessToken}}",
-        "type": "string"
-      }
-    ]
+    "type": "noauth"
   },
   "event": [
     {
@@ -35,16 +28,6 @@
     {
       "key": "baseUrl",
       "value": "http://localhost:8000/api/v1",
-      "type": "string"
-    },
-    {
-      "key": "accessToken",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "refreshToken",
-      "value": "",
       "type": "string"
     },
     {
@@ -137,10 +120,7 @@
                 "health"
               ]
             },
-            "description": "Liveness probe. Returns a static ok \u2014 it does not touch the database.",
-            "auth": {
-              "type": "noauth"
-            }
+            "description": "Liveness probe. Returns a static ok \u2014 it does not touch the database."
           },
           "response": [],
           "event": [
@@ -192,9 +172,6 @@
                   "language": "json"
                 }
               }
-            },
-            "auth": {
-              "type": "noauth"
             }
           },
           "response": [],
@@ -245,9 +222,6 @@
                   "language": "json"
                 }
               }
-            },
-            "auth": {
-              "type": "noauth"
             }
           },
           "response": [],
@@ -294,9 +268,6 @@
                   "language": "json"
                 }
               }
-            },
-            "auth": {
-              "type": "noauth"
             }
           },
           "response": [],
@@ -334,7 +305,7 @@
                 "login"
               ]
             },
-            "description": "Saves accessToken and refreshToken to collection variables automatically.\n\nA user who belongs to several tenants gets `needs_tenant_selection: true` and a list of choices instead of tokens \u2014 add `\"tenant_slug\": \"{{tenantSlug}}\"` to the body and send again.",
+            "description": "Signs in and sets the session cookies. A user who belongs to several tenants is signed into the one they used last (or their first, on a first login) \u2014 there is no selection step. Use **Switch tenant** to move between them.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"ada@example.com\",\n  \"password\": \"supersecret1\"\n}",
@@ -343,9 +314,6 @@
                   "language": "json"
                 }
               }
-            },
-            "auth": {
-              "type": "noauth"
             }
           },
           "response": [],
@@ -361,12 +329,9 @@
                   "(function () {",
                   "    const body = pm.response.json();",
                   "    const data = body.data || {};",
-                  "    if (data.needs_tenant_selection) {",
                   "        const slugs = (data.tenants || []).map(t => t.slug).join(', ');",
                   "        console.log('Multiple tenants: ' + slugs + ' \u2014 set tenantSlug and send again.');",
                   "    } else if (data.tokens) {",
-                  "        pm.collectionVariables.set('accessToken', data.tokens.access_token);",
-                  "        pm.collectionVariables.set('refreshToken', data.tokens.refresh_token);",
                   "        if (data.tenant) { pm.collectionVariables.set('tenantSlug', data.tenant.slug); }",
                   "        console.log('Tokens saved.');",
                   "    }",
@@ -396,7 +361,7 @@
                 "login"
               ]
             },
-            "description": "Signs in to a named tenant. 403 access_denied if the caller is not a member of it.",
+            "description": "Signs in directly to a named tenant, skipping the last-used default. 403 access_denied if the caller is not a member of it.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"ada@example.com\",\n  \"password\": \"supersecret1\",\n  \"tenant_slug\": \"{{tenantSlug}}\"\n}",
@@ -405,9 +370,6 @@
                   "language": "json"
                 }
               }
-            },
-            "auth": {
-              "type": "noauth"
             }
           },
           "response": [],
@@ -423,12 +385,9 @@
                   "(function () {",
                   "    const body = pm.response.json();",
                   "    const data = body.data || {};",
-                  "    if (data.needs_tenant_selection) {",
                   "        const slugs = (data.tenants || []).map(t => t.slug).join(', ');",
                   "        console.log('Multiple tenants: ' + slugs + ' \u2014 set tenantSlug and send again.');",
                   "    } else if (data.tokens) {",
-                  "        pm.collectionVariables.set('accessToken', data.tokens.access_token);",
-                  "        pm.collectionVariables.set('refreshToken', data.tokens.refresh_token);",
                   "        if (data.tenant) { pm.collectionVariables.set('tenantSlug', data.tenant.slug); }",
                   "        console.log('Tokens saved.');",
                   "    }",
@@ -442,12 +401,7 @@
           "name": "Refresh token",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [],
             "url": {
               "raw": "{{baseUrl}}/auth/refresh",
               "host": [
@@ -458,19 +412,7 @@
                 "refresh"
               ]
             },
-            "description": "Rotates the pair: the old refresh token dies immediately. Membership is re-read, so a removed member loses access here rather than when the token expires.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"refresh_token\": \"{{refreshToken}}\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "auth": {
-              "type": "noauth"
-            }
+            "description": "Rotates the pair: the old refresh token dies immediately. Membership is re-read, so a removed member loses access here rather than when the token expires."
           },
           "response": [],
           "event": [
@@ -485,8 +427,6 @@
                   "(function () {",
                   "    const data = pm.response.json().data || {};",
                   "    if (data.access_token) {",
-                  "        pm.collectionVariables.set('accessToken', data.access_token);",
-                  "        pm.collectionVariables.set('refreshToken', data.refresh_token);",
                   "        console.log('Tokens rotated.');",
                   "    }",
                   "})();"
@@ -609,12 +549,9 @@
                   "(function () {",
                   "    const body = pm.response.json();",
                   "    const data = body.data || {};",
-                  "    if (data.needs_tenant_selection) {",
                   "        const slugs = (data.tenants || []).map(t => t.slug).join(', ');",
                   "        console.log('Multiple tenants: ' + slugs + ' \u2014 set tenantSlug and send again.');",
                   "    } else if (data.tokens) {",
-                  "        pm.collectionVariables.set('accessToken', data.tokens.access_token);",
-                  "        pm.collectionVariables.set('refreshToken', data.tokens.refresh_token);",
                   "        if (data.tenant) { pm.collectionVariables.set('tenantSlug', data.tenant.slug); }",
                   "        console.log('Tokens saved.');",
                   "    }",
@@ -1237,9 +1174,6 @@
                   "language": "json"
                 }
               }
-            },
-            "auth": {
-              "type": "noauth"
             }
           },
           "response": [],
@@ -1340,9 +1274,6 @@
                   "language": "json"
                 }
               }
-            },
-            "auth": {
-              "type": "noauth"
             }
           },
           "response": [],
@@ -1399,9 +1330,6 @@
                   "language": "json"
                 }
               }
-            },
-            "auth": {
-              "type": "noauth"
             }
           },
           "response": [],
@@ -1717,9 +1645,6 @@
                   "language": "json"
                 }
               }
-            },
-            "auth": {
-              "type": "noauth"
             }
           },
           "response": [],
@@ -1818,9 +1743,6 @@
                   "language": "json"
                 }
               }
-            },
-            "auth": {
-              "type": "noauth"
             }
           },
           "response": [],
@@ -1867,9 +1789,6 @@
                   "language": "json"
                 }
               }
-            },
-            "auth": {
-              "type": "noauth"
             }
           },
           "response": [],
