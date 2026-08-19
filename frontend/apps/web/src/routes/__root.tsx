@@ -4,11 +4,15 @@ import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 
 import { AppShell } from "@/app/shell";
 import type { RouterContext } from "@/app/router";
+import { NotFound } from "@/shared/layouts/not-found";
+import { RouteErrorBoundary } from "@/shared/layouts/route-error-boundary";
 
 import "../index.css";
 
 export const Route = createRootRouteWithContext<RouterContext>()({
   component: RootComponent,
+  notFoundComponent: NotFound,
+  errorComponent: RouteErrorBoundary,
   head: () => ({
     meta: [
       { title: "Ava" },
