@@ -16,6 +16,7 @@ type App struct {
 	cfg     *config.Config
 	client  *api.Client
 	state   *state.State
+	devices *registry
 }
 
 func Bootstrap(_ context.Context) (*App, error) {
@@ -38,6 +39,7 @@ func Bootstrap(_ context.Context) (*App, error) {
 		cfg:     cfg,
 		client:  api.NewClient(cfg.APIBaseURL),
 		state:   loaded,
+		devices: newRegistry(),
 	}, nil
 }
 
@@ -62,6 +64,8 @@ func (a *App) Run(ctx context.Context) error {
 		logger.String("hub_name", tokens.Hub.Name),
 		logger.String("tenant", tokens.Tenant.Slug),
 	)
+
+	go a.syncLoop(ctx)
 
 	return a.heartbeatLoop(ctx, tokens)
 }

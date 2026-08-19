@@ -17,6 +17,8 @@ type Config struct {
 	MQTTBrokerURL     string
 	StateFile         string
 	HeartbeatInterval time.Duration
+	SyncInterval      time.Duration
+	DiscoveryTimeout  time.Duration
 	LogLevel          string
 	Env               string
 }
@@ -36,6 +38,8 @@ func load() *Config {
 		MQTTBrokerURL:     env("MQTT_BROKER_URL", "tcp://localhost:1883"),
 		StateFile:         env("STATE_FILE", "avahub-state.json"),
 		HeartbeatInterval: duration(env("HEARTBEAT_INTERVAL", "60s"), time.Minute),
+		SyncInterval:      duration(env("SYNC_INTERVAL", "60s"), time.Minute),
+		DiscoveryTimeout:  duration(env("DISCOVERY_TIMEOUT", "4s"), 4*time.Second),
 		LogLevel:          env("LOG_LEVEL", "info"),
 		Env:               env("HUB_ENV", "local"),
 	}
