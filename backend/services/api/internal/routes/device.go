@@ -10,4 +10,5 @@ import (
 func deviceRoutes(router fiber.Router, controller *devicectrl.Controller, mw *middleware.Middleware) {
 	router.Get("/", mw.ValidateAccessToken, controller.List)
 	router.Patch("/:deviceID", mw.ValidateAccessToken, controller.Rename)
+	router.Post("/:deviceID/command", mw.ValidateAccessToken, controller.SendCommand)
 }

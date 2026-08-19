@@ -34,3 +34,15 @@ type DeviceResponse struct {
 	State      json.RawMessage `json:"state"`
 	CreatedAt  time.Time       `json:"created_at"`
 }
+
+type SendCommandRequest struct {
+	Action string          `json:"action" validate:"required,oneof=power brightness color_temp"`
+	Value  json.RawMessage `json:"value" validate:"required"`
+}
+
+type CommandAcceptedResponse struct {
+	DeviceID   uuid.UUID `json:"device_id"`
+	ExternalID string    `json:"external_id"`
+	Action     string    `json:"action"`
+	Topic      string    `json:"topic"`
+}

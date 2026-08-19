@@ -15,6 +15,7 @@ import (
 	"ava/api/internal/routes"
 	"ava/api/internal/services"
 	"ava/pkg/logger"
+	"ava/pkg/mqtt"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -63,8 +64,24 @@ func main() {
 		MaxAge:           cfg.CORSMaxAge,
 	}))
 
+	publisher, err := mqtt.Connect(context.Background(), &mqtt.Options{
+		BrokerURL: cfg.MQTTBrokerURL,
+		ClientID:  "ava-api",
+	})
+	if err != nil {
+		logger.Warn("MQTT_UNAVAILABLE", logger.Err(err))
+	}
+
+	defer publisher.Close()
+
 	repo := repository.NewRepository(database)
-	service := services.NewService(repo)
+
+	var commander services.Commander
+	if publisher != nil {
+		commander = publisher
+	}
+
+	service := services.NewService(repo, commander)
 	mw := middleware.NewMiddleware(service)
 	ctrl := controller.NewController(service)
 
