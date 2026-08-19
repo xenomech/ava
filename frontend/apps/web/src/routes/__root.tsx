@@ -1,15 +1,12 @@
-import { Toaster } from "@ava/ui/components/sonner";
 import { HeadContent, Outlet, createRootRouteWithContext } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 
-import Header from "@/components/header";
-import { ThemeProvider } from "@/components/theme-provider";
+import { AppShell } from "@/app/shell";
+import type { RouterContext } from "@/app/router";
 
 import "../index.css";
 
-export interface RouterAppContext {}
-
-export const Route = createRootRouteWithContext<RouterAppContext>()({
+export const Route = createRootRouteWithContext<RouterContext>()({
   component: RootComponent,
   head: () => ({
     meta: [
@@ -24,18 +21,9 @@ function RootComponent() {
   return (
     <>
       <HeadContent />
-      <ThemeProvider
-        attribute="class"
-        defaultTheme="dark"
-        disableTransitionOnChange
-        storageKey="ava-ui-theme"
-      >
-        <div className="grid h-svh grid-rows-[auto_1fr]">
-          <Header />
-          <Outlet />
-        </div>
-        <Toaster richColors />
-      </ThemeProvider>
+      <AppShell>
+        <Outlet />
+      </AppShell>
       <TanStackRouterDevtools position="bottom-left" />
     </>
   );

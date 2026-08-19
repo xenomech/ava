@@ -7,7 +7,7 @@ import {
 } from "@ava/ui/components/dropdown-menu";
 import { Moon, Sun } from "lucide-react";
 
-import { useTheme } from "@/components/theme-provider";
+import { useTheme } from "./theme-provider";
 
 export function ModeToggle() {
   const { setTheme } = useTheme();
