@@ -11,10 +11,14 @@
     "generate-pwa-assets": "pwa-assets-generator"
   },
   "dependencies": {
+    "@ava/contracts": "workspace:*",
     "@ava/env": "workspace:*",
     "@ava/ui": "workspace:*",
     "@tailwindcss/vite": "catalog:",
+    "@tanstack/react-query": "catalog:",
     "@tanstack/react-router": "catalog:",
+    "axios": "catalog:",
+    "detect-browser": "catalog:",
     "lucide-react": "catalog:",
     "next-themes": "catalog:",
     "react": "catalog:",
