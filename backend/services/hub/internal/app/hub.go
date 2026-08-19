@@ -10,6 +10,8 @@ import (
 	"ava/hub/internal/api"
 	"ava/hub/internal/config"
 	"ava/hub/internal/state"
+	"ava/pkg/mqtt"
+	"ava/pkg/wire"
 )
 
 type App struct {
@@ -17,6 +19,8 @@ type App struct {
 	client  *api.Client
 	state   *state.State
 	devices *registry
+	mqtt    *mqtt.Client
+	topics  wire.Topics
 }
 
 func Bootstrap(_ context.Context) (*App, error) {
@@ -48,6 +52,7 @@ func (a *App) Close() {
 		return
 	}
 
+	a.mqtt.Close()
 	logger.Sync()
 }
 
@@ -64,6 +69,10 @@ func (a *App) Run(ctx context.Context) error {
 		logger.String("hub_name", tokens.Hub.Name),
 		logger.String("tenant", tokens.Tenant.Slug),
 	)
+
+	if _, err := a.startCommands(ctx, tokens); err != nil {
+		logger.Warn("MQTT_UNAVAILABLE", logger.Err(err))
+	}
 
 	go a.syncLoop(ctx)
 
