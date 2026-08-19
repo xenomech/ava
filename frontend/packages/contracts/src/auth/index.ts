@@ -1,11 +1,9 @@
 export {
   authResponseDto,
   authenticatedDto,
-  needsTenantSelection,
   registerResponseDto,
   sessionDto,
   sessionListDto,
-  tenantSelectionRequiredDto,
   tokensDto,
 } from "./auth.dto";
 export type {
@@ -13,7 +11,6 @@ export type {
   AuthenticatedDto,
   RegisterResponseDto,
   SessionDto,
-  TenantSelectionRequiredDto,
   TokensDto,
 } from "./auth.dto";
 

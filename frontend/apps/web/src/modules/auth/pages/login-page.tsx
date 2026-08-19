@@ -1,0 +1,88 @@
+import { Button, Field, Input } from "@ava/ui";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Link, useNavigate, useSearch } from "@tanstack/react-router";
+import { useState } from "react";
+
+import { isApiError } from "@/config/http/request";
+import { login } from "../api";
+import { AuthCard } from "../components/auth-card";
+import { FormError } from "../components/form-error";
+import { deviceName } from "../device";
+import { SESSION_QUERY_KEY } from "../queries";
+
+export function LoginPage() {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const search = useSearch({ strict: false }) as { redirect?: string };
+
+  const [form, setForm] = useState({ email: "", password: "" });
+
+  const attempt = useMutation({
+    mutationFn: () => login(form, deviceName()),
+    onSuccess: (result) => {
+      queryClient.setQueryData(SESSION_QUERY_KEY, { user: result.user, tenant: result.tenant });
+      void navigate({ to: search.redirect ?? "/" });
+    },
+  });
+
+  const fieldErrors = isApiError(attempt.error) ? attempt.error.details : undefined;
+
+  return (
+    <AuthCard
+      title="Welcome back"
+      description="Sign in to take control of your space."
+      footer={
+        <div className="flex items-center justify-between">
+          <Link to="/auth/forgot-password" className="hover:text-fg">
+            Forgot password?
+          </Link>
+          <Link to="/auth/register" className="font-semibold text-fg">
+            Create an account
+          </Link>
+        </div>
+      }
+    >
+      <form
+        className="grid gap-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          attempt.mutate();
+        }}
+      >
+        <Field label="Email" error={fieldErrors?.email}>
+          {(props) => (
+            <Input
+              {...props}
+              type="email"
+              autoComplete="email"
+              placeholder="you@home.com"
+              required
+              value={form.email}
+              onChange={(event) => setForm({ ...form, email: event.target.value })}
+            />
+          )}
+        </Field>
+
+        <Field label="Password" error={fieldErrors?.password}>
+          {(props) => (
+            <Input
+              {...props}
+              type="password"
+              autoComplete="current-password"
+              placeholder="••••••••"
+              required
+              value={form.password}
+              onChange={(event) => setForm({ ...form, password: event.target.value })}
+            />
+          )}
+        </Field>
+
+        {fieldErrors ? null : <FormError error={attempt.error} fallback="Could not sign in" />}
+
+        <Button type="submit" className="mt-1 w-full" disabled={attempt.isPending}>
+          {attempt.isPending ? "Signing in…" : "Continue"}
+        </Button>
+      </form>
+    </AuthCard>
+  );
+}

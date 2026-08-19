@@ -4,9 +4,9 @@ import { tenantSummaryDto } from "../tenant/tenant.dto";
 import { userDto } from "../user/user.dto";
 
 export const tokensDto = z.object({
-  access_token: z.string(),
-  refresh_token: z.string(),
-    expires_in: z.number().int(),
+  expires_in: z.number().int(),
+  access_token: z.string().optional(),
+  refresh_token: z.string().optional(),
 });
 
 export type TokensDto = z.infer<typeof tokensDto>;
@@ -15,26 +15,12 @@ export const authenticatedDto = z.object({
   user: userDto,
   tenant: tenantSummaryDto,
   tokens: tokensDto,
-  needs_tenant_selection: z.literal(false).optional(),
 });
 
-export const tenantSelectionRequiredDto = z.object({
-  user: userDto,
-  needs_tenant_selection: z.literal(true),
-  tenants: z.array(tenantSummaryDto),
-});
-
-export const authResponseDto = z.union([tenantSelectionRequiredDto, authenticatedDto]);
+export const authResponseDto = authenticatedDto;
 
 export type AuthenticatedDto = z.infer<typeof authenticatedDto>;
-export type TenantSelectionRequiredDto = z.infer<typeof tenantSelectionRequiredDto>;
 export type AuthResponseDto = z.infer<typeof authResponseDto>;
-
-export function needsTenantSelection(
-  response: AuthResponseDto,
-): response is TenantSelectionRequiredDto {
-  return response.needs_tenant_selection === true;
-}
 
 export const registerResponseDto = z.object({
   user: userDto,
