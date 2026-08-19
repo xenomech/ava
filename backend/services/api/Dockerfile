@@ -2,8 +2,9 @@ FROM golang:1.26-alpine AS build
 
 WORKDIR /app
 
+COPY backend/pkg/go.mod backend/pkg/go.sum ./backend/pkg/
 COPY backend/services/api/go.mod backend/services/api/go.sum ./backend/services/api/
-RUN cd backend/services/api && go mod download && go mod verify
+RUN cd backend/services/api && go mod download
 
 COPY . .
 

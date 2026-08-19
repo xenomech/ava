@@ -8,8 +8,8 @@ import (
 	"ava/api/internal/dto"
 	"ava/api/internal/model"
 	hubrepo "ava/api/internal/repository/hub"
-	"ava/api/pkg/logger"
 	"ava/api/pkg/serrors"
+	"ava/pkg/logger"
 
 	"github.com/google/uuid"
 )

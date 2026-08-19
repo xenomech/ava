@@ -10,8 +10,8 @@ import (
 	membershiprepo "ava/api/internal/repository/membership"
 	userrepo "ava/api/internal/repository/user"
 	tenantsvc "ava/api/internal/services/tenant"
-	"ava/api/pkg/logger"
 	"ava/api/pkg/serrors"
+	"ava/pkg/logger"
 
 	"github.com/google/uuid"
 )

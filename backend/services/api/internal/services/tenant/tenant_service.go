@@ -12,8 +12,8 @@ import (
 	tenantrepo "ava/api/internal/repository/tenant"
 	userrepo "ava/api/internal/repository/user"
 	"ava/api/pkg/email"
-	"ava/api/pkg/logger"
 	"ava/api/pkg/serrors"
+	"ava/pkg/logger"
 
 	"github.com/google/uuid"
 )

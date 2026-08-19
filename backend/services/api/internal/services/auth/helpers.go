@@ -11,8 +11,8 @@ import (
 	"ava/api/internal/model"
 	tenantrepo "ava/api/internal/repository/tenant"
 	"ava/api/internal/services/auth/jwt"
-	"ava/api/pkg/logger"
 	"ava/api/pkg/serrors"
+	"ava/pkg/logger"
 
 	"github.com/google/uuid"
 )

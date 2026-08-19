@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"ava/api/internal/services"
-	"ava/api/pkg/logger"
+	"ava/pkg/logger"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"

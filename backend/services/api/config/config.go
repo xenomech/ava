@@ -36,6 +36,7 @@ type Config struct {
 	DBDatabase string
 
 	CookieDomain string
+	LogLevel     string
 
 	CORSAllowedOrigins string
 	CORSAllowedMethods string
@@ -89,6 +90,7 @@ func load() *Config {
 		DBDatabase: v.GetString("DB_DATABASE"),
 
 		CookieDomain: v.GetString("COOKIE_DOMAIN"),
+		LogLevel:     v.GetString("LOG_LEVEL"),
 
 		CORSAllowedOrigins: v.GetString("CORS_ALLOWED_ORIGINS"),
 		CORSAllowedMethods: v.GetString("CORS_ALLOWED_METHODS"),

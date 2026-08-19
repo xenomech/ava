@@ -19,18 +19,22 @@ build:
 	cd backend/services/api && go build -ldflags="-s -w" -o ./tmp/main ./cmd/ava
 
 test:
+	cd backend/pkg && go test ./...
 	cd backend/services/api && go test ./...
 	cd backend/services/hub && go test ./...
 
 lint:
+	cd backend/pkg && golangci-lint run
 	cd backend/services/api && golangci-lint run
 	cd backend/services/hub && golangci-lint run
 
 fmt:
+	cd backend/pkg && gofumpt -w .
 	cd backend/services/api && gofumpt -w .
 	cd backend/services/hub && gofumpt -w .
 
 tidy:
+	cd backend/pkg && go mod tidy
 	cd backend/services/api && go mod tidy
 	cd backend/services/hub && go mod tidy
 

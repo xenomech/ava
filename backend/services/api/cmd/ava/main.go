@@ -14,7 +14,7 @@ import (
 	"ava/api/internal/repository"
 	"ava/api/internal/routes"
 	"ava/api/internal/services"
-	"ava/api/pkg/logger"
+	"ava/pkg/logger"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -22,6 +22,8 @@ import (
 
 func main() {
 	cfg := config.GetConfig()
+
+	logger.Init(cfg.ServerEnv, cfg.LogLevel)
 
 	sslMode := "require"
 	if cfg.ServerEnv == "local" {

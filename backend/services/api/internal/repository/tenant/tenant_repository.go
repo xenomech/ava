@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	"ava/api/internal/model"
-	"ava/api/pkg/logger"
+	"ava/pkg/logger"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"

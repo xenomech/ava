@@ -16,8 +16,8 @@ import (
 	userrepo "ava/api/internal/repository/user"
 	"ava/api/internal/services/auth/jwt"
 	"ava/api/pkg/email"
-	"ava/api/pkg/logger"
 	"ava/api/pkg/serrors"
+	"ava/pkg/logger"
 
 	"github.com/google/uuid"
 )
