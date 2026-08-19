@@ -25,7 +25,8 @@
     "react-dom": "catalog:",
     "sonner": "catalog:",
     "vite-plugin-pwa": "catalog:",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "zustand": "catalog:"
   },
   "devDependencies": {
     "@ava/config": "workspace:*",
