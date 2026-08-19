@@ -2,32 +2,32 @@ pre-commit:
   parallel: true
   jobs:
     - name: api-lint
-      glob: "api/**/*.go"
-      run: cd api && golangci-lint run
+      glob: "backend/services/api/**/*.go"
+      run: cd backend/services/api && golangci-lint run
 
     - name: api-fmt
-      glob: "api/**/*.go"
-      run: cd api && test -z "$(gofumpt -l .)" || (echo "Run 'make fmt' to format code" && exit 1)
+      glob: "backend/services/api/**/*.go"
+      run: cd backend/services/api && test -z "$(gofumpt -l .)" || (echo "Run 'make fmt' to format code" && exit 1)
 
     - name: api-vet
-      glob: "api/**/*.go"
-      run: cd api && go vet ./...
+      glob: "backend/services/api/**/*.go"
+      run: cd backend/services/api && go vet ./...
 
     - name: api-test
-      glob: "api/**/*.go"
-      run: cd api && go test ./...
+      glob: "backend/services/api/**/*.go"
+      run: cd backend/services/api && go test ./...
 
     - name: hub-lint
-      glob: "hub/**/*.go"
-      run: cd hub && golangci-lint run
+      glob: "backend/services/hub/**/*.go"
+      run: cd backend/services/hub && golangci-lint run
 
     - name: hub-fmt
-      glob: "hub/**/*.go"
-      run: cd hub && test -z "$(gofumpt -l .)" || (echo "Run 'make fmt' to format code" && exit 1)
+      glob: "backend/services/hub/**/*.go"
+      run: cd backend/services/hub && test -z "$(gofumpt -l .)" || (echo "Run 'make fmt' to format code" && exit 1)
 
     - name: hub-vet
-      glob: "hub/**/*.go"
-      run: cd hub && go vet ./...
+      glob: "backend/services/hub/**/*.go"
+      run: cd backend/services/hub && go vet ./...
 
     - name: module-boundary
       run: make check-boundary

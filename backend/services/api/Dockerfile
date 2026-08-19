@@ -2,12 +2,12 @@ FROM golang:1.26-alpine AS build
 
 WORKDIR /app
 
-COPY api/go.mod api/go.sum ./api/
-RUN cd api && go mod download && go mod verify
+COPY backend/services/api/go.mod backend/services/api/go.sum ./backend/services/api/
+RUN cd backend/services/api && go mod download && go mod verify
 
 COPY . .
 
-RUN cd api && CGO_ENABLED=0 go build -ldflags="-s -w" -o /app/bin/ava ./cmd/ava
+RUN cd backend/services/api && CGO_ENABLED=0 go build -ldflags="-s -w" -o /app/bin/ava ./cmd/ava
 
 FROM alpine:latest
 
@@ -17,7 +17,7 @@ RUN apk add --no-cache ca-certificates tzdata && \
 WORKDIR /app
 
 COPY --from=build /app/bin/ava /app/bin/ava
-COPY --from=build /app/api/templates /app/templates
+COPY --from=build /app/backend/services/api/templates /app/templates
 
 RUN chown -R ava:ava /app
 

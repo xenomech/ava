@@ -6,14 +6,13 @@
 .env
 .env.*
 .gitignore
-.golangci.yml
+backend/.golangci.yml
 .air.toml
 .DS_Store
 
-hub/
+backend/services/hub/
 frontend/
-go.work
-go.work.sum
+backend/go.work
 
 tmp/
 bin/
@@ -32,5 +31,5 @@ logs/
 *.tmp
 
 docker-compose.yml
-Dockerfile
+backend/services/api/Dockerfile
 Makefile

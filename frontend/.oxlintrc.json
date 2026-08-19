@@ -21,7 +21,7 @@
   "overrides": [
     {
       "files": [
-        "frontend/packages/ui/src/components/**"
+        "packages/ui/src/components/**"
       ],
       "rules": {
         "jsx-a11y/label-has-associated-control": "off"
@@ -29,7 +29,7 @@
     },
     {
       "files": [
-        "frontend/apps/*/src/modules/**"
+        "apps/*/src/modules/**"
       ],
       "rules": {
         "no-restricted-imports": [
@@ -57,8 +57,8 @@
     },
     {
       "files": [
-        "frontend/apps/*/src/shared/**",
-        "frontend/apps/*/src/config/**"
+        "apps/*/src/shared/**",
+        "apps/*/src/config/**"
       ],
       "rules": {
         "no-restricted-imports": [
@@ -81,7 +81,7 @@
     },
     {
       "files": [
-        "frontend/apps/*/src/config/**"
+        "apps/*/src/config/**"
       ],
       "rules": {
         "no-restricted-imports": [
@@ -111,7 +111,7 @@
     },
     {
       "files": [
-        "frontend/packages/contracts/**"
+        "packages/contracts/**"
       ],
       "rules": {
         "no-restricted-imports": [

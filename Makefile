@@ -10,40 +10,40 @@ setup:
 	lefthook install
 
 dev:
-	cd api && air
+	cd backend/services/api && air
 
 run:
-	cd api && go run ./cmd/ava
+	cd backend/services/api && go run ./cmd/ava
 
 build:
-	cd api && go build -ldflags="-s -w" -o ./tmp/main ./cmd/ava
+	cd backend/services/api && go build -ldflags="-s -w" -o ./tmp/main ./cmd/ava
 
 test:
-	cd api && go test ./...
-	cd hub && go test ./...
+	cd backend/services/api && go test ./...
+	cd backend/services/hub && go test ./...
 
 lint:
-	cd api && golangci-lint run
-	cd hub && golangci-lint run
+	cd backend/services/api && golangci-lint run
+	cd backend/services/hub && golangci-lint run
 
 fmt:
-	cd api && gofumpt -w .
-	cd hub && gofumpt -w .
+	cd backend/services/api && gofumpt -w .
+	cd backend/services/hub && gofumpt -w .
 
 tidy:
-	cd api && go mod tidy
-	cd hub && go mod tidy
+	cd backend/services/api && go mod tidy
+	cd backend/services/hub && go mod tidy
 
 hub-run:
-	cd hub && go run ./cmd/avahub
+	cd backend/services/hub && go run ./cmd/avahub
 
 hub-build:
-	cd hub && GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="-s -w" -o dist/avahub-linux-arm64 ./cmd/avahub
+	cd backend/services/hub && GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="-s -w" -o dist/avahub-linux-arm64 ./cmd/avahub
 
 hub-build-dev:
-	cd hub && GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="-s -w" -o dist/avahub-darwin-arm64 ./cmd/avahub
+	cd backend/services/hub && GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="-s -w" -o dist/avahub-darwin-arm64 ./cmd/avahub
 
 check-boundary:
-	cd hub && GOWORK=off go build ./...
-	cd hub && ! go list -deps ./... | grep -q '^ava/api' || (echo "hub must not import api" && exit 1)
-	cd api && ! go list -deps ./... | grep -q '^ava/hub' || (echo "api must not import hub" && exit 1)
+	cd backend/services/hub && GOWORK=off go build ./...
+	cd backend/services/hub && ! go list -deps ./... | grep -q '^ava/api' || (echo "hub must not import api" && exit 1)
+	cd backend/services/api && ! go list -deps ./... | grep -q '^ava/hub' || (echo "api must not import hub" && exit 1)

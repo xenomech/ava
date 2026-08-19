@@ -3,8 +3,8 @@
   "private": true,
   "type": "module",
   "workspaces": [
-    "frontend/apps/*",
-    "frontend/packages/*"
+    "apps/*",
+    "packages/*"
   ],
   "scripts": {
     "dev": "turbo run dev",
