@@ -1,4 +1,3 @@
-import { Toaster } from "@ava/ui/components/sonner";
 import { QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
@@ -9,13 +8,12 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider
-        attribute="class"
+        attribute="data-theme"
         defaultTheme="dark"
         disableTransitionOnChange
-        storageKey="ava-ui-theme"
+        storageKey="ava.theme"
       >
         {children}
-        <Toaster richColors />
       </ThemeProvider>
     </QueryClientProvider>
   );
