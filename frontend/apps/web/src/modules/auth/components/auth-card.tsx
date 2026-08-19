@@ -12,7 +12,7 @@ export function AuthCard({
   footer?: ReactNode;
 }) {
   return (
-    <main className="grid min-h-full place-items-center bg-bg p-6">
+    <main className="grid min-h-dvh place-items-center bg-bg p-6">
       <div className="w-full max-w-[400px] rounded-xl border border-border bg-surface p-7">
         <div className="mb-6 flex items-center gap-2.5">
           <span className="grid size-7 place-items-center rounded-xs bg-accent text-small font-bold text-accent-fg">

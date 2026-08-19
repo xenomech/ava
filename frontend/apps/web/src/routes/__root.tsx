@@ -2,7 +2,6 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { HeadContent, Outlet, createRootRouteWithContext } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 
-import { AppShell } from "@/app/shell";
 import type { RouterContext } from "@/app/router";
 import { NotFound } from "@/shared/layouts/not-found";
 import { RouteErrorBoundary } from "@/shared/layouts/route-error-boundary";
@@ -26,9 +25,7 @@ function RootComponent() {
   return (
     <>
       <HeadContent />
-      <AppShell>
-        <Outlet />
-      </AppShell>
+      <Outlet />
       <TanStackRouterDevtools position="bottom-left" />
       <ReactQueryDevtools buttonPosition="bottom-right" />
     </>

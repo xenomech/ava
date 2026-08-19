@@ -1,14 +1,16 @@
 import { Button, Chip, buttonVariants } from "@ava/ui";
-import { Link } from "@tanstack/react-router";
+import { Link, Outlet } from "@tanstack/react-router";
 
 import { useSession, useSignOut } from "@/modules/auth";
 import { ModeToggle } from "@/shared/components/mode-toggle";
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell() {
   return (
     <div className="grid h-svh grid-rows-[auto_1fr] bg-bg">
       <Header />
-      <div className="overflow-y-auto">{children}</div>
+      <div className="overflow-y-auto">
+        <Outlet />
+      </div>
     </div>
   );
 }

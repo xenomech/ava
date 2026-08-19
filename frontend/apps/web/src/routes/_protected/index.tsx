@@ -1,11 +1,8 @@
 import { env } from "@ava/env/web";
 import { createFileRoute } from "@tanstack/react-router";
-
-import { requireAuth } from "@/modules/auth";
 import { useEffect, useState } from "react";
 
-export const Route = createFileRoute("/")({
-  beforeLoad: requireAuth,
+export const Route = createFileRoute("/_protected/")({
   component: HomeComponent,
 });
 
