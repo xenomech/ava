@@ -66,32 +66,45 @@ func (c *Controller) Login(ctx *fiber.Ctx) error {
 		return response.Send(ctx, fiber.StatusInternalServerError, nil, "Failed to login")
 	}
 
+	setSessionCookies(ctx, authResponse.Tokens)
+
+	authResponse.Tokens = redactTokens(authResponse.Tokens)
+
 	return response.Send(ctx, fiber.StatusOK, authResponse, "")
 }
 
 func (c *Controller) RefreshToken(ctx *fiber.Ctx) error {
 	var req dto.RefreshTokenRequest
-	if err := ctx.BodyParser(&req); err != nil {
-		return response.Send(ctx, fiber.StatusBadRequest, nil, "Invalid request body")
+	_ = ctx.BodyParser(&req)
+
+	refreshToken := ctx.Cookies(RefreshCookie)
+	if refreshToken == "" {
+		refreshToken = req.RefreshToken
 	}
 
-	if err := validator.ValidateStruct(&req); err != nil {
-		return response.SendValidation(ctx, validator.FirstError(err), validator.FieldErrors(err))
+	if refreshToken == "" {
+		return response.Send(ctx, fiber.StatusUnauthorized, nil, "Missing refresh token")
 	}
 
-	tokens, err := c.authService.RefreshToken(ctx.Context(), req.RefreshToken)
+	tokens, err := c.authService.RefreshToken(ctx.Context(), refreshToken)
 	if err != nil {
 		if serrors.Is(err, authsvc.ErrInvalidToken) ||
 			serrors.Is(err, authsvc.ErrSessionRevoked) ||
 			serrors.Is(err, authsvc.ErrSessionNotFound) ||
 			serrors.Is(err, authsvc.ErrSessionExpired) {
+			clearSessionCookies(ctx)
+
 			return response.SendError(ctx, fiber.StatusUnauthorized, err)
 		}
+
+		clearSessionCookies(ctx)
 
 		return response.Send(ctx, fiber.StatusInternalServerError, nil, "Failed to refresh token")
 	}
 
-	return response.Send(ctx, fiber.StatusOK, tokens, "")
+	setSessionCookies(ctx, tokens)
+
+	return response.Send(ctx, fiber.StatusOK, redactTokens(tokens), "")
 }
 
 func (c *Controller) Logout(ctx *fiber.Ctx) error {
@@ -108,6 +121,8 @@ func (c *Controller) Logout(ctx *fiber.Ctx) error {
 	if err := c.authService.Logout(ctx.Context(), tenantID, sessionID); err != nil {
 		return response.Send(ctx, fiber.StatusInternalServerError, nil, "Failed to logout")
 	}
+
+	clearSessionCookies(ctx)
 
 	return response.Send(ctx, fiber.StatusOK, nil, "")
 }
@@ -152,6 +167,8 @@ func (c *Controller) LogoutAll(ctx *fiber.Ctx) error {
 	if err := c.authService.LogoutAll(ctx.Context(), tenantID, userID); err != nil {
 		return response.Send(ctx, fiber.StatusInternalServerError, nil, "Failed to logout")
 	}
+
+	clearSessionCookies(ctx)
 
 	return response.Send(ctx, fiber.StatusOK, nil, "")
 }
@@ -198,6 +215,10 @@ func (c *Controller) SwitchTenant(ctx *fiber.Ctx) error {
 
 		return response.Send(ctx, fiber.StatusInternalServerError, nil, "Failed to switch tenant")
 	}
+
+	setSessionCookies(ctx, authResponse.Tokens)
+
+	authResponse.Tokens = redactTokens(authResponse.Tokens)
 
 	return response.Send(ctx, fiber.StatusOK, authResponse, "")
 }

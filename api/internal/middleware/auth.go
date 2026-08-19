@@ -12,6 +12,8 @@ import (
 	"github.com/google/uuid"
 )
 
+const AccessCookie = "ava_access"
+
 func ValidateAccessToken(authService authsvc.Service) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		token := extractToken(c)
@@ -61,6 +63,14 @@ func ValidateAccessToken(authService authsvc.Service) fiber.Handler {
 }
 
 func extractToken(c *fiber.Ctx) string {
+	if token := extractBearer(c); token != "" {
+		return token
+	}
+
+	return c.Cookies(AccessCookie)
+}
+
+func extractBearer(c *fiber.Ctx) string {
 	authHeader := c.Get("Authorization")
 	if authHeader == "" {
 		return ""

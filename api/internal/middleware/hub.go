@@ -11,7 +11,7 @@ import (
 
 func ValidateHubToken(hubService hubsvc.Service) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		token := extractToken(c)
+		token := extractBearer(c)
 		if token == "" {
 			return response.Send(c, fiber.StatusUnauthorized, nil, "Missing authorization token")
 		}
