@@ -43,6 +43,33 @@ func (s *deviceService) SyncFromHub(ctx context.Context, tenantID, hubID uuid.UU
 	return synced, nil
 }
 
+func (s *deviceService) MarkHubOffline(ctx context.Context, tenantID, hubID uuid.UUID) error {
+	affected, err := s.deviceRepo.MarkHubDevicesOffline(ctx, hubID)
+	if err != nil {
+		logger.Error("device.MarkHubOffline", logger.Err(err))
+
+		return err
+	}
+
+	if affected == 0 {
+		return nil
+	}
+
+	devices, err := s.ListByHub(ctx, tenantID, hubID)
+	if err != nil {
+		return err
+	}
+
+	s.announceList(tenantID, hubID, devices)
+
+	logger.Info("DEVICES_MARKED_OFFLINE",
+		logger.Any("hub.ID", hubID),
+		logger.Int("count", int(affected)),
+	)
+
+	return nil
+}
+
 func (s *deviceService) announceList(tenantID, hubID uuid.UUID, devices []*dto.DeviceResponse) {
 	if s.events == nil {
 		return

@@ -19,6 +19,7 @@ type Service interface {
 	Update(ctx context.Context, tenantID, deviceID uuid.UUID, req *dto.UpdateDeviceRequest) (*dto.DeviceResponse, error)
 	SendCommand(ctx context.Context, tenantID, deviceID uuid.UUID, req *dto.SendCommandRequest) (*dto.CommandAcceptedResponse, error)
 	ApplyReportedState(ctx context.Context, hubID uuid.UUID, externalID string, state json.RawMessage) error
+	MarkHubOffline(ctx context.Context, tenantID, hubID uuid.UUID) error
 }
 
 type Commander interface {

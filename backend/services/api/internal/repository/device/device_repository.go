@@ -138,3 +138,17 @@ func (r *deviceRepository) ApplyState(
 
 	return &updated, nil
 }
+
+func (r *deviceRepository) MarkHubDevicesOffline(ctx context.Context, hubID uuid.UUID) (int64, error) {
+	result := r.db.WithContext(ctx).Model(&model.Device{}).
+		Where("hub_id = ? AND status <> ?", hubID, model.DeviceStatusOffline).
+		Updates(map[string]any{
+			"status":     model.DeviceStatusOffline,
+			"updated_at": time.Now(),
+		})
+	if result.Error != nil {
+		return 0, result.Error
+	}
+
+	return result.RowsAffected, nil
+}

@@ -94,12 +94,20 @@ func (a *App) applyPresence(ctx context.Context, topic string, payload []byte) {
 		return
 	}
 
-	if _, err := a.Service.Hub.ApplyPresence(ctx, hubID, presence.Online); err != nil {
+	hub, err := a.Service.Hub.ApplyPresence(ctx, hubID, presence.Online)
+	if err != nil {
 		logger.Warn("PRESENCE_APPLY_FAILED", logger.Any("hub.ID", hubID), logger.Err(err))
 
 		return
 	}
 
+	if hub.IsOnline() {
+		return
+	}
+
+	if err := a.Service.Device.MarkHubOffline(ctx, hub.TenantID, hub.ID); err != nil {
+		logger.Warn("PRESENCE_CASCADE_FAILED", logger.Any("hub.ID", hubID), logger.Err(err))
+	}
 }
 
 func hubFromTopic(topic string) (uuid.UUID, bool) {
