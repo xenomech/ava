@@ -22,3 +22,6 @@ export {
   updateDeviceRequest,
 } from "./device.request";
 export type { DeviceAction, SendCommandRequest, UpdateDeviceRequest } from "./device.request";
+
+export { DEVICE_FORMS, deviceControls, deviceProfile } from "./registry";
+export type { DeviceControls, DeviceForm, DeviceProfile, Range } from "./registry";

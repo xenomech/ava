@@ -37,7 +37,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 
 import { useTheme } from "@/shared/components/theme-provider";
 
-const KINDS: DeviceKind[] = ["bulb", "strip", "lamp", "plug", "sensor"];
+const KINDS: DeviceKind[] = ["bulb", "tube", "strip", "lamp", "plug", "sensor"];
 
 const SURFACES = [
   ["bg", "bg-bg"],

@@ -23,6 +23,7 @@ export const deviceStateDto = z.looseObject({
   color_temp: z.number().optional(),
   capabilities: z.array(deviceCapabilitySchema).default([]),
   limits: deviceLimitsDto.optional(),
+  model: z.string().optional(),
   vendor: z.string().optional(),
   ip: z.string().optional(),
 });
