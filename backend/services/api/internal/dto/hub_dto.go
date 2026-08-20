@@ -42,6 +42,7 @@ type HubResponse struct {
 	ID         uuid.UUID  `json:"id"`
 	Name       string     `json:"name"`
 	Status     string     `json:"status"`
+	Online     bool       `json:"online"`
 	LastSeenAt *time.Time `json:"last_seen_at,omitempty"`
 	CreatedAt  time.Time  `json:"created_at"`
 }

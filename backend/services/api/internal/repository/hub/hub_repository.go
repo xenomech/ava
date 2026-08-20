@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 func (r *hubRepository) CreateAuthorization(ctx context.Context, auth *model.HubAuthorization) error {
@@ -184,6 +185,43 @@ func (r *hubRepository) UpdateRefreshToken(ctx context.Context, hubID uuid.UUID,
 func (r *hubRepository) TouchLastSeen(ctx context.Context, hubID uuid.UUID, at time.Time) error {
 	return r.db.WithContext(ctx).Model(&model.Hub{}).Where("id = ?", hubID).
 		Update("last_seen_at", at).Error
+}
+
+func (r *hubRepository) SetPresence(
+	ctx context.Context,
+	hubID uuid.UUID,
+	online bool,
+	at time.Time,
+) (hub *model.Hub, changed bool, err error) {
+	err = r.db.WithContext(ctx).Transaction(func(dbTx *gorm.DB) error {
+		var current model.Hub
+
+		err := dbTx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", hubID).First(&current).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrHubNotFound
+		}
+
+		if err != nil {
+			return err
+		}
+
+		was := current.IsOnline()
+
+		fields := map[string]any{"online": online, "updated_at": at}
+		if online {
+			fields["last_seen_at"] = at
+		}
+
+		if err := dbTx.Model(&current).Clauses(clause.Returning{}).Updates(fields).Error; err != nil {
+			return err
+		}
+
+		hub, changed = &current, current.IsOnline() != was
+
+		return nil
+	})
+
+	return hub, changed, err
 }
 
 func (r *hubRepository) Revoke(ctx context.Context, tenantID, hubID uuid.UUID) error {
