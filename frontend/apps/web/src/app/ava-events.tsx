@@ -1,10 +1,11 @@
 import { avaEvent, type DeviceDto, type HubDto } from "@ava/contracts";
-import { env } from "@ava/env/web";
 import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
+import { toast } from "sonner";
 
 import { deviceQueries } from "@/modules/devices";
 import { hubQueries } from "@/modules/hub";
+import { useAvaSocket } from "@/shared/realtime";
 
 function byCreation(one: DeviceDto, other: DeviceDto) {
   return one.created_at.localeCompare(other.created_at);
@@ -33,31 +34,34 @@ function setHubPresence(queryClient: QueryClient, hubID: string, online: boolean
   );
 }
 
-export function useAvaStream() {
+function apply(queryClient: QueryClient, raw: string) {
+  const parsed = avaEvent.safeParse(JSON.parse(raw));
+  if (!parsed.success) return;
+
+  const event = parsed.data;
+
+  switch (event.type) {
+    case "device.state":
+      replaceDevice(queryClient, event.device);
+      break;
+    case "device.list":
+      replaceHubDevices(queryClient, event.hub_id, event.devices);
+      break;
+    case "hub.presence":
+      setHubPresence(queryClient, event.hub_id, event.online);
+      break;
+    case "command.rejected":
+      toast.error(event.message);
+      void queryClient.invalidateQueries({ queryKey: deviceQueries.all() });
+      break;
+  }
+}
+
+export function AvaEvents() {
   const queryClient = useQueryClient();
+  const socket = useAvaSocket();
 
-  useEffect(() => {
-    const source = new EventSource(`${env.VITE_API_URL}/events`, { withCredentials: true });
+  useEffect(() => socket.subscribe((raw) => apply(queryClient, raw)), [socket, queryClient]);
 
-    source.onmessage = (message) => {
-      const parsed = avaEvent.safeParse(JSON.parse(message.data));
-      if (!parsed.success) return;
-
-      const event = parsed.data;
-
-      switch (event.type) {
-        case "device.state":
-          replaceDevice(queryClient, event.device);
-          break;
-        case "device.list":
-          replaceHubDevices(queryClient, event.hub_id, event.devices);
-          break;
-        case "hub.presence":
-          setHubPresence(queryClient, event.hub_id, event.online);
-          break;
-      }
-    };
-
-    return () => source.close();
-  }, [queryClient]);
+  return null;
 }

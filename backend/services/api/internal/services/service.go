@@ -32,7 +32,7 @@ func NewService(repo *repository.Repository, commander devicesvc.Commander) *Ser
 		Tenant: tenantService,
 		Flow:   flowsvc.NewService(repo.Flow, tenantService, repo.User, repo.Membership),
 		Hub:    hubsvc.NewService(repo.Hub, repo.Tenant, eventService),
-		Device: devicesvc.NewService(repo.Device, repo.Hub, repo.Tenant, commander, eventService),
+		Device: devicesvc.NewService(repo.Device, commander, eventService),
 		Event:  eventService,
 		Health: healthsvc.NewService(),
 	}

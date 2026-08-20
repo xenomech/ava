@@ -5,19 +5,18 @@ import { Device } from "@ava/ui";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 
 import { hubQueries } from "@/modules/hub";
-import { sendCommand } from "../api";
 import { Loader } from "@/shared/components/loader";
 import { ColorControl } from "../components/color-control";
 import { DeviceStage, deviceColor, deviceKind, deviceLevel } from "../components/device-stage";
 import { NoDevices } from "../components/empty-state";
 import { HubOfflineNotice } from "../components/hub-notice";
-import { useDeviceCommand, useDevices } from "../use-devices";
+import { useDeviceControl, useDevices } from "../use-devices";
 import { useLiveSlider } from "../use-live-slider";
 
 export function ConsolePage() {
   const { devices, isPending } = useDevices();
   const hubs = useQuery(hubQueries.list());
-  const command = useDeviceCommand();
+  const control = useDeviceControl();
 
   const navigate = useNavigate();
   const search = useSearch({ strict: false }) as { device?: string };
@@ -27,22 +26,16 @@ export function ConsolePage() {
   const controls = deviceControls(device);
   const dimming = controls.brightness ?? { min: 0, max: 100 };
 
-  const send = (action: DeviceAction, value: number) => {
+  const send = (action: DeviceAction, value: boolean | number) => {
     if (!device) return;
 
-    void sendCommand(device.id, { action, value }).catch(() => undefined);
-  };
-
-  const settle = (action: DeviceAction, value: number) => {
-    if (!device) return;
-
-    command.mutate({ device, action, value });
+    control(device, action, value);
   };
 
   const brightness = useLiveSlider(
     clamp(device?.state.brightness ?? dimming.max, dimming.min, dimming.max),
     (value) => send("brightness", value),
-    (value) => settle("brightness", value),
+    (value) => send("brightness", value),
   );
 
   const focus = (id: string) => {
@@ -106,8 +99,8 @@ export function ConsolePage() {
             </span>
             <Switch
               checked={device.state.power}
-              disabled={offline || command.isPending}
-              onCheckedChange={(on) => command.mutate({ device, action: "power", value: on })}
+              disabled={offline}
+              onCheckedChange={(on) => send("power", on)}
               aria-label={`${device.name} power`}
             />
           </div>
@@ -149,7 +142,7 @@ export function ConsolePage() {
                 showColor={controls.color}
                 disabled={offline}
                 onWhitePreview={(kelvin) => send("color_temp", kelvin)}
-                onWhite={(kelvin) => settle("color_temp", kelvin)}
+                onWhite={(kelvin) => send("color_temp", kelvin)}
                 onColor={() => undefined}
               />
             </div>

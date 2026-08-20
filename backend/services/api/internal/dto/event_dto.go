@@ -1,12 +1,42 @@
 package dto
 
-import "github.com/google/uuid"
+import (
+	"encoding/json"
+
+	"github.com/google/uuid"
+)
 
 const (
 	EventDeviceState = "device.state"
 	EventDeviceList  = "device.list"
 	EventHubPresence = "hub.presence"
+
+	EventDeviceCommand   = "device.command"
+	EventCommandRejected = "command.rejected"
 )
+
+type DeviceCommandFrame struct {
+	Type     string          `json:"type"`
+	DeviceID uuid.UUID       `json:"device_id"`
+	Action   string          `json:"action"`
+	Value    json.RawMessage `json:"value"`
+}
+
+type CommandRejectedEvent struct {
+	Type     string    `json:"type"`
+	DeviceID uuid.UUID `json:"device_id"`
+	Reason   string    `json:"reason"`
+	Message  string    `json:"message"`
+}
+
+func NewCommandRejectedEvent(deviceID uuid.UUID, reason, message string) CommandRejectedEvent {
+	return CommandRejectedEvent{
+		Type:     EventCommandRejected,
+		DeviceID: deviceID,
+		Reason:   reason,
+		Message:  message,
+	}
+}
 
 type DeviceStateEvent struct {
 	Type   string          `json:"type"`

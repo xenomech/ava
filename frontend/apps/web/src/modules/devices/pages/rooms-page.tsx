@@ -7,14 +7,14 @@ import { hubQueries } from "@/modules/hub";
 import { Loader } from "@/shared/components/loader";
 import { deviceColor, deviceKind, deviceLevel } from "../components/device-stage";
 import { NoDevices } from "../components/empty-state";
-import { useDeviceCommand, useDevices } from "../use-devices";
+import { useDeviceControl, useDevices } from "../use-devices";
 
 const UNASSIGNED = "No room";
 
 export function RoomsPage() {
   const { devices, isPending } = useDevices();
   const hubs = useQuery(hubQueries.list());
-  const command = useDeviceCommand();
+  const control = useDeviceControl();
 
   if (isPending) return <Loader label="Loading devices" />;
 
@@ -50,10 +50,8 @@ export function RoomsPage() {
                 <DeviceCard
                   key={device.id}
                   device={device}
-                  disabled={device.status === "offline" || command.isPending}
-                  onToggle={() =>
-                    command.mutate({ device, action: "power", value: !device.state.power })
-                  }
+                  disabled={device.status === "offline"}
+                  onToggle={() => control(device, "power", !device.state.power)}
                 />
               ))}
             </div>

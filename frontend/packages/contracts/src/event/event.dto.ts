@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { deviceDto } from "../device";
+import { deviceDto, type DeviceAction } from "../device";
 
 export const deviceStateEvent = z.object({
   type: z.literal("device.state"),
@@ -19,12 +19,28 @@ export const hubPresenceEvent = z.object({
   online: z.boolean(),
 });
 
+export const commandRejectedEvent = z.object({
+  type: z.literal("command.rejected"),
+  device_id: z.uuid(),
+  reason: z.string(),
+  message: z.string(),
+});
+
 export const avaEvent = z.discriminatedUnion("type", [
   deviceStateEvent,
   deviceListEvent,
   hubPresenceEvent,
+  commandRejectedEvent,
 ]);
 
+export type DeviceCommandFrame = {
+  type: "device.command";
+  device_id: string;
+  action: DeviceAction;
+  value: boolean | number;
+};
+
+export type CommandRejectedEvent = z.infer<typeof commandRejectedEvent>;
 export type DeviceStateEvent = z.infer<typeof deviceStateEvent>;
 export type DeviceListEvent = z.infer<typeof deviceListEvent>;
 export type HubPresenceEvent = z.infer<typeof hubPresenceEvent>;
