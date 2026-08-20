@@ -11,6 +11,7 @@ import { Loader } from "@/shared/components/loader";
 import { ColorControl } from "../components/color-control";
 import { DeviceStage, deviceColor, deviceKind, deviceLevel } from "../components/device-stage";
 import { NoDevices } from "../components/empty-state";
+import { HubOfflineNotice } from "../components/hub-notice";
 import { useDeviceCommand, useDevices } from "../use-devices";
 import { useThrottled } from "../use-throttled-command";
 
@@ -39,7 +40,9 @@ export function ConsolePage() {
 
   const device = devices.find((entry) => entry.id === search.device) ?? devices[0]!;
   const level = dragging ?? deviceLevel(device);
-  const offline = device.status === "offline";
+  const hub = (hubs.data ?? []).find((entry) => entry.id === device.hub_id);
+  const hubOffline = hub !== undefined && !hub.online;
+  const offline = device.status === "offline" || hubOffline;
   const capabilities = device.state.capabilities;
   const limits = device.state.limits;
   const brightnessMin = limits?.brightness_min ?? 0;
@@ -48,7 +51,9 @@ export function ConsolePage() {
   const kelvinMax = limits?.kelvin_max;
 
   return (
-    <div className="grid h-full grid-rows-[minmax(0,1fr)_auto]">
+    <div className="grid h-full grid-rows-[auto_minmax(0,1fr)_auto]">
+      {hubOffline ? <HubOfflineNotice name={hub.name} /> : null}
+
       <div className="min-h-0 overflow-y-auto lg:grid lg:grid-cols-[minmax(0,1fr)_330px] lg:overflow-hidden">
         <main className="grid min-h-0 grid-rows-[34vh_auto] p-5 sm:p-6 lg:grid-rows-[minmax(0,1fr)_auto]">
           <DeviceStage devices={devices} focusedID={device.id} levelOverride={dragging} />
@@ -58,7 +63,9 @@ export function ConsolePage() {
               <h1 className="text-display font-semibold">{device.name}</h1>
               <p className="mt-1.5 flex items-center gap-2 text-small text-muted">
                 {device.room || "No room"}
-                {offline ? <Chip tone="warning">Offline</Chip> : null}
+                {offline ? (
+                  <Chip tone="warning">{hubOffline ? "Hub offline" : "Offline"}</Chip>
+                ) : null}
               </p>
             </div>
 
@@ -122,6 +129,7 @@ export function ConsolePage() {
                 kelvinMin={kelvinMin}
                 kelvinMax={kelvinMax}
                 showColor={capabilities.includes("color")}
+                disabled={offline}
                 onWhite={(kelvin) =>
                   command.mutate({ device, action: "color_temp", value: kelvin })
                 }
