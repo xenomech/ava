@@ -58,20 +58,38 @@ func (s *deviceService) ListByHub(ctx context.Context, tenantID, hubID uuid.UUID
 	return toDeviceResponses(devices), nil
 }
 
-func (s *deviceService) Rename(ctx context.Context, tenantID, deviceID uuid.UUID, name string) (*dto.DeviceResponse, error) {
-	if err := s.deviceRepo.Rename(ctx, tenantID, deviceID, name); err != nil {
+func (s *deviceService) Update(
+	ctx context.Context,
+	tenantID, deviceID uuid.UUID,
+	req *dto.UpdateDeviceRequest,
+) (*dto.DeviceResponse, error) {
+	fields := make(map[string]any, 2)
+
+	if req.Name != nil {
+		fields["name"] = *req.Name
+	}
+
+	if req.Room != nil {
+		fields["room"] = *req.Room
+	}
+
+	if len(fields) == 0 {
+		return nil, ErrNothingToUpdate
+	}
+
+	if err := s.deviceRepo.Update(ctx, tenantID, deviceID, fields); err != nil {
 		if serrors.Is(err, devicerepo.ErrDeviceNotFound) {
 			return nil, ErrDeviceNotFound
 		}
 
-		logger.Error("device.Rename", logger.Err(err))
+		logger.Error("device.Update", logger.Err(err))
 
 		return nil, err
 	}
 
 	device, err := s.deviceRepo.GetByID(ctx, tenantID, deviceID)
 	if err != nil {
-		logger.Error("device.Rename", logger.Err(err))
+		logger.Error("device.Update", logger.Err(err))
 
 		return nil, err
 	}

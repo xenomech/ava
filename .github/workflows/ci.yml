@@ -72,6 +72,23 @@ jobs:
       - run: go test ./...
         working-directory: backend/services/api
 
+  packages:
+    name: Packages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/pkg/go.mod
+      - run: go vet ./...
+        working-directory: backend/pkg
+      - run: go test ./...
+        working-directory: backend/pkg
+      - uses: golangci/golangci-lint-action@v9
+        with:
+          version: latest
+          working-directory: backend/pkg
+
   boundary:
     name: Module boundary
     runs-on: ubuntu-latest
@@ -88,6 +105,13 @@ jobs:
         run: |
           if go list -deps ./... | grep -q '^ava/api'; then
             echo "hub must not import api"
+            exit 1
+          fi
+      - name: Packages depend on neither service
+        working-directory: backend/pkg
+        run: |
+          if go list -deps ./... | grep -qE '^ava/(api|hub)'; then
+            echo "packages must not import a service"
             exit 1
           fi
       - name: Api does not depend on hub

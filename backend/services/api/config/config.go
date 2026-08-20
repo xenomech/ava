@@ -38,6 +38,8 @@ type Config struct {
 	CookieDomain string
 	LogLevel     string
 
+	MQTTBrokerURL string
+
 	CORSAllowedOrigins string
 	CORSAllowedMethods string
 	CORSAllowedHeaders string
@@ -91,6 +93,8 @@ func load() *Config {
 
 		CookieDomain: v.GetString("COOKIE_DOMAIN"),
 		LogLevel:     v.GetString("LOG_LEVEL"),
+
+		MQTTBrokerURL: v.GetString("MQTT_BROKER_URL"),
 
 		CORSAllowedOrigins: v.GetString("CORS_ALLOWED_ORIGINS"),
 		CORSAllowedMethods: v.GetString("CORS_ALLOWED_METHODS"),

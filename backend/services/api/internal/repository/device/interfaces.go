@@ -14,7 +14,7 @@ type Repository interface {
 	ListByTenant(ctx context.Context, tenantID uuid.UUID) ([]*model.Device, error)
 	ListByHub(ctx context.Context, tenantID, hubID uuid.UUID) ([]*model.Device, error)
 	GetByID(ctx context.Context, tenantID, id uuid.UUID) (*model.Device, error)
-	Rename(ctx context.Context, tenantID, id uuid.UUID, name string) error
+	Update(ctx context.Context, tenantID, id uuid.UUID, fields map[string]any) error
 }
 
 type deviceRepository struct {

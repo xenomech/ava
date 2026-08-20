@@ -10,7 +10,12 @@ import (
 	"ava/hub/internal/device"
 )
 
-const BroadcastAddr = "255.255.255.255"
+const (
+	BroadcastAddr = "255.255.255.255"
+
+	probeCount    = 4
+	probeInterval = 400 * time.Millisecond
+)
 
 type Found struct {
 	Info  device.Info
@@ -52,7 +57,23 @@ func Discover(ctx context.Context, timeout time.Duration) ([]Found, error) {
 		return nil, fmt.Errorf("wiz: broadcast: %w", err)
 	}
 
+	go reprobe(ctx, conn, target, probe)
+
 	return collect(ctx, conn), nil
+}
+
+func reprobe(ctx context.Context, conn net.PacketConn, target net.Addr, probe []byte) {
+	for range probeCount - 1 {
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(probeInterval):
+		}
+
+		if _, err := conn.WriteTo(probe, target); err != nil {
+			return
+		}
+	}
 }
 
 func collect(ctx context.Context, conn net.PacketConn) []Found {

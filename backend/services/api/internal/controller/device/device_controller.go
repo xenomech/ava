@@ -72,7 +72,7 @@ func (c *Controller) ListByHub(ctx *fiber.Ctx) error {
 	return response.Send(ctx, fiber.StatusOK, devices, "")
 }
 
-func (c *Controller) Rename(ctx *fiber.Ctx) error {
+func (c *Controller) Update(ctx *fiber.Ctx) error {
 	tenantID, ok := ctx.Locals("tenantID").(uuid.UUID)
 	if !ok {
 		return response.Send(ctx, fiber.StatusUnauthorized, nil, "Unauthorized")
@@ -83,7 +83,7 @@ func (c *Controller) Rename(ctx *fiber.Ctx) error {
 		return response.Send(ctx, fiber.StatusBadRequest, nil, "Invalid device ID")
 	}
 
-	var req dto.RenameDeviceRequest
+	var req dto.UpdateDeviceRequest
 	if err := ctx.BodyParser(&req); err != nil {
 		return response.Send(ctx, fiber.StatusBadRequest, nil, "Invalid request body")
 	}
@@ -92,7 +92,7 @@ func (c *Controller) Rename(ctx *fiber.Ctx) error {
 		return response.SendValidation(ctx, validator.FirstError(err), validator.FieldErrors(err))
 	}
 
-	device, err := c.deviceService.Rename(ctx.Context(), tenantID, deviceID, req.Name)
+	device, err := c.deviceService.Update(ctx.Context(), tenantID, deviceID, &req)
 	if err != nil {
 		if serrors.Is(err, devicesvc.ErrDeviceNotFound) {
 			return response.SendError(ctx, fiber.StatusNotFound, err)
@@ -102,4 +102,39 @@ func (c *Controller) Rename(ctx *fiber.Ctx) error {
 	}
 
 	return response.Send(ctx, fiber.StatusOK, device, "")
+}
+
+func (c *Controller) SendCommand(ctx *fiber.Ctx) error {
+	tenantID, ok := ctx.Locals("tenantID").(uuid.UUID)
+	if !ok {
+		return response.Send(ctx, fiber.StatusUnauthorized, nil, "Unauthorized")
+	}
+
+	deviceID, err := uuid.Parse(ctx.Params("deviceID"))
+	if err != nil {
+		return response.Send(ctx, fiber.StatusBadRequest, nil, "Invalid device id")
+	}
+
+	var req dto.SendCommandRequest
+	if err := ctx.BodyParser(&req); err != nil {
+		return response.Send(ctx, fiber.StatusBadRequest, nil, "Invalid request body")
+	}
+
+	if err := validator.ValidateStruct(&req); err != nil {
+		return response.SendValidation(ctx, validator.FirstError(err), validator.FieldErrors(err))
+	}
+
+	accepted, err := c.deviceService.SendCommand(ctx.Context(), tenantID, deviceID, &req)
+	if err != nil {
+		switch {
+		case serrors.Is(err, devicesvc.ErrDeviceNotFound):
+			return response.Send(ctx, fiber.StatusNotFound, nil, "Device not found")
+		case serrors.Is(err, devicesvc.ErrCommandChannelUnavailable):
+			return response.Send(ctx, fiber.StatusServiceUnavailable, nil, "The hub command channel is unavailable")
+		default:
+			return response.Send(ctx, fiber.StatusInternalServerError, nil, "Failed to send the command")
+		}
+	}
+
+	return response.Send(ctx, fiber.StatusAccepted, accepted, "")
 }

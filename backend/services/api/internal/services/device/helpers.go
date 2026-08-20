@@ -18,6 +18,7 @@ func toDeviceResponse(device *model.Device) *dto.DeviceResponse {
 		HubID:      device.HubID,
 		ExternalID: device.ExternalID,
 		Name:       device.Name,
+		Room:       device.Room,
 		Kind:       device.Kind,
 		Status:     string(device.Status),
 		LastSeenAt: device.LastSeenAt,

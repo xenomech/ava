@@ -94,12 +94,11 @@ func (r *deviceRepository) GetByID(ctx context.Context, tenantID, id uuid.UUID) 
 	return &device, nil
 }
 
-func (r *deviceRepository) Rename(ctx context.Context, tenantID, id uuid.UUID, name string) error {
+func (r *deviceRepository) Update(ctx context.Context, tenantID, id uuid.UUID, fields map[string]any) error {
+	fields["updated_at"] = time.Now()
+
 	result := r.db.WithContext(ctx).Model(&model.Device{}).Where("tenant_id = ? AND id = ?", tenantID, id).
-		Updates(map[string]any{
-			"name":       name,
-			"updated_at": time.Now(),
-		})
+		Updates(fields)
 	if result.Error != nil {
 		return result.Error
 	}

@@ -10,6 +10,8 @@ import (
 	tenantsvc "ava/api/internal/services/tenant"
 )
 
+type Commander = devicesvc.Commander
+
 type Service struct {
 	Auth   authsvc.Service
 	Tenant tenantsvc.Service
@@ -19,7 +21,7 @@ type Service struct {
 	Health healthsvc.Service
 }
 
-func NewService(repo *repository.Repository) *Service {
+func NewService(repo *repository.Repository, commander devicesvc.Commander) *Service {
 	tenantService := tenantsvc.NewService(repo.Tenant, repo.Membership, repo.User, repo.Session)
 
 	return &Service{
@@ -27,7 +29,7 @@ func NewService(repo *repository.Repository) *Service {
 		Tenant: tenantService,
 		Flow:   flowsvc.NewService(repo.Flow, tenantService, repo.User, repo.Membership),
 		Hub:    hubsvc.NewService(repo.Hub, repo.Tenant),
-		Device: devicesvc.NewService(repo.Device),
+		Device: devicesvc.NewService(repo.Device, repo.Tenant, commander),
 		Health: healthsvc.NewService(),
 	}
 }

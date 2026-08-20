@@ -32,6 +32,7 @@ type Device struct {
 	Hub        *Hub            `gorm:"foreignKey:HubID;constraint:OnDelete:CASCADE" json:"-"`
 	ExternalID string          `gorm:"type:varchar(128);not null;uniqueIndex:idx_device_hub_external" json:"external_id"`
 	Name       string          `gorm:"not null" json:"name"`
+	Room       string          `gorm:"type:varchar(80);not null;default:''" json:"room"`
 	Kind       string          `gorm:"type:varchar(40);not null" json:"kind"`
 	Status     DeviceStatus    `gorm:"type:varchar(20);not null;default:'offline';index" json:"status"`
 	LastSeenAt *time.Time      `json:"last_seen_at,omitempty"`

@@ -1,5 +1,7 @@
 name: ava-course
 
+x-env-note: compose reads backend/services/api/.env via COMPOSE_ENV_FILES in the Makefile, or pass --env-file
+
 services:
   postgres:
     image: postgres:17-alpine
@@ -21,6 +23,22 @@ services:
     networks:
       - ava-network
 
+  mosquitto:
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    volumes:
+      - ./docker/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto_data:/mosquitto/data
+    ports:
+      - "${MQTT_PORT:-1883}:1883"
+    healthcheck:
+      test: ["CMD-SHELL", "mosquitto_sub -t '$$SYS/#' -C 1 -W 3 -q 1 >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ava-network
+
   app:
     build:
       context: .
@@ -30,10 +48,13 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      mosquitto:
+        condition: service_started
     environment:
       PORT: 8000
       DB_HOST: postgres
       DB_PORT: 5432
+      MQTT_BROKER_URL: tcp://mosquitto:1883
     ports:
       - "${PORT:-8000}:8000"
     networks:
@@ -41,6 +62,8 @@ services:
 
 volumes:
   postgres_data:
+    driver: local
+  mosquitto_data:
     driver: local
 
 networks:

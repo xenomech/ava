@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"ava/hub/internal/device"
@@ -42,6 +43,13 @@ type systemConfigResult struct {
 	FWVersion  string `json:"fwVersion"`
 }
 
+type modelConfigResult struct {
+	MinDimLevel int   `json:"minDimLevel"`
+	CCTRange    []int `json:"cctRange"`
+	WhiteRange  []int `json:"whiteRange"`
+	ExtRange    []int `json:"extRange"`
+}
+
 type response struct {
 	Result json.RawMessage `json:"result"`
 	Error  *struct {
@@ -51,8 +59,10 @@ type response struct {
 }
 
 type Light struct {
-	info      device.Info
-	transport transport
+	info         device.Info
+	capabilities device.Capability
+	limits       device.Limits
+	transport    transport
 }
 
 func New(ip string, timeout time.Duration) *Light {
@@ -61,8 +71,10 @@ func New(ip string, timeout time.Duration) *Light {
 
 func newWith(ip string, t transport) *Light {
 	return &Light{
-		info:      device.Info{Vendor: Vendor, IP: ip},
-		transport: t,
+		info:         device.Info{Vendor: Vendor, IP: ip},
+		capabilities: device.CapabilityBrightness | device.CapabilityColorTemp,
+		limits:       device.Limits{}.WithDefaults(MinDimming, MaxDimming, MinKelvin, MaxKelvin),
+		transport:    t,
 	}
 }
 
@@ -71,7 +83,11 @@ func (l *Light) Info() device.Info {
 }
 
 func (l *Light) Capabilities() device.Capability {
-	return device.CapabilityBrightness | device.CapabilityColorTemp
+	return l.capabilities
+}
+
+func (l *Light) Limits() device.Limits {
+	return l.limits
 }
 
 func (l *Light) State(ctx context.Context) (device.State, error) {
@@ -99,8 +115,70 @@ func (l *Light) Identify(ctx context.Context) (device.Info, error) {
 	l.info.Model = result.ModuleName
 	l.info.ID = result.MAC
 	l.info.LastSeen = time.Now()
+	l.capabilities = capabilitiesFor(result.ModuleName)
+
+	l.limits = l.readLimits(ctx)
 
 	return l.info, nil
+}
+
+func (l *Light) readLimits(ctx context.Context) device.Limits {
+	var model modelConfigResult
+
+	if err := l.call(ctx, request{Method: "getModelConfig", Params: struct{}{}}, &model); err != nil {
+		return device.Limits{}.WithDefaults(MinDimming, MaxDimming, MinKelvin, MaxKelvin)
+	}
+
+	limits := device.Limits{BrightnessMin: model.MinDimLevel, BrightnessMax: MaxDimming}
+
+	if low, high, ok := kelvinBounds(&model); ok {
+		limits.KelvinMin = low
+		limits.KelvinMax = high
+	}
+
+	if !l.capabilities.Has(device.CapabilityColorTemp) {
+		limits.KelvinMin = 0
+		limits.KelvinMax = 0
+
+		return limits.WithDefaults(MinDimming, MaxDimming, 0, 0)
+	}
+
+	return limits.WithDefaults(MinDimming, MaxDimming, MinKelvin, MaxKelvin)
+}
+
+func kelvinBounds(model *modelConfigResult) (low, high int, ok bool) {
+	for _, candidate := range [][]int{model.CCTRange, model.ExtRange, model.WhiteRange} {
+		if len(candidate) < 2 {
+			continue
+		}
+
+		low, high = candidate[0], candidate[len(candidate)-1]
+		if low > 0 && high > low {
+			return low, high, true
+		}
+	}
+
+	return 0, 0, false
+}
+
+func capabilitiesFor(moduleName string) device.Capability {
+	parts := strings.Split(moduleName, "_")
+	if len(parts) < 2 {
+		return device.CapabilityBrightness | device.CapabilityColorTemp
+	}
+
+	identifier := strings.ToUpper(parts[1])
+
+	switch {
+	case strings.Contains(identifier, "RGB"):
+		return device.CapabilityBrightness | device.CapabilityColorTemp | device.CapabilityColor
+	case strings.Contains(identifier, "TW"):
+		return device.CapabilityBrightness | device.CapabilityColorTemp
+	case strings.Contains(identifier, "SOCKET"):
+		return 0
+	default:
+		return device.CapabilityBrightness
+	}
 }
 
 func (l *Light) SetPower(ctx context.Context, on bool) error {
@@ -108,13 +186,21 @@ func (l *Light) SetPower(ctx context.Context, on bool) error {
 }
 
 func (l *Light) SetBrightness(ctx context.Context, percent int) error {
-	level := device.Clamp(percent, MinDimming, MaxDimming)
+	if !l.capabilities.Has(device.CapabilityBrightness) {
+		return device.Unsupported(Vendor, device.CapabilityBrightness)
+	}
+
+	level := device.Clamp(percent, l.limits.BrightnessMin, l.limits.BrightnessMax)
 
 	return l.setPilot(ctx, pilotParams{Dimming: &level})
 }
 
 func (l *Light) SetColorTemp(ctx context.Context, kelvin int) error {
-	temp := device.Clamp(kelvin, MinKelvin, MaxKelvin)
+	if !l.capabilities.Has(device.CapabilityColorTemp) {
+		return device.Unsupported(Vendor, device.CapabilityColorTemp)
+	}
+
+	temp := device.Clamp(kelvin, l.limits.KelvinMin, l.limits.KelvinMax)
 
 	return l.setPilot(ctx, pilotParams{Temp: &temp})
 }

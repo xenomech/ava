@@ -1,9 +1,7 @@
 package config
 
 import (
-	"log/slog"
 	"os"
-	"strings"
 	"sync"
 	"time"
 )
@@ -19,7 +17,10 @@ type Config struct {
 	MQTTBrokerURL     string
 	StateFile         string
 	HeartbeatInterval time.Duration
-	LogLevel          slog.Level
+	SyncInterval      time.Duration
+	DiscoveryTimeout  time.Duration
+	LogLevel          string
+	Env               string
 }
 
 func GetConfig() *Config {
@@ -37,7 +38,10 @@ func load() *Config {
 		MQTTBrokerURL:     env("MQTT_BROKER_URL", "tcp://localhost:1883"),
 		StateFile:         env("STATE_FILE", "avahub-state.json"),
 		HeartbeatInterval: duration(env("HEARTBEAT_INTERVAL", "60s"), time.Minute),
-		LogLevel:          level(env("LOG_LEVEL", "info")),
+		SyncInterval:      duration(env("SYNC_INTERVAL", "60s"), time.Minute),
+		DiscoveryTimeout:  duration(env("DISCOVERY_TIMEOUT", "4s"), 4*time.Second),
+		LogLevel:          env("LOG_LEVEL", "info"),
+		Env:               env("HUB_ENV", "local"),
 	}
 }
 
@@ -65,17 +69,4 @@ func duration(value string, fallback time.Duration) time.Duration {
 	}
 
 	return parsed
-}
-
-func level(name string) slog.Level {
-	switch strings.ToLower(name) {
-	case "debug":
-		return slog.LevelDebug
-	case "warn":
-		return slog.LevelWarn
-	case "error":
-		return slog.LevelError
-	default:
-		return slog.LevelInfo
-	}
 }
