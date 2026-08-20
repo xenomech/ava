@@ -21,7 +21,6 @@ import (
 
 const (
 	readTimeout     = 10 * time.Second
-	writeTimeout    = 10 * time.Second
 	idleTimeout     = 120 * time.Second
 	shutdownTimeout = 10 * time.Second
 	bodyLimit       = 4 * 1024 * 1024
@@ -100,10 +99,9 @@ func (a *App) Close() {
 
 func buildFiber(cfg *config.Config, service *services.Service) *fiber.App {
 	server := fiber.New(fiber.Config{
-		ReadTimeout:  readTimeout,
-		WriteTimeout: writeTimeout,
-		IdleTimeout:  idleTimeout,
-		BodyLimit:    bodyLimit,
+		ReadTimeout: readTimeout,
+		IdleTimeout: idleTimeout,
+		BodyLimit:   bodyLimit,
 	})
 
 	server.Use(cors.New(cors.Config{
