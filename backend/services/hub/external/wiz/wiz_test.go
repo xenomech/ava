@@ -119,6 +119,20 @@ func TestSetBrightnessClamps(t *testing.T) {
 	}
 }
 
+func TestSetBrightnessTurnsTheLightOn(t *testing.T) {
+	fake := &fakeTransport{}
+	light := newTestLight(fake)
+
+	if err := light.SetBrightness(context.Background(), 60); err != nil {
+		t.Fatalf("SetBrightness: %v", err)
+	}
+
+	params := lastRequest(t, fake)["params"].(map[string]any)
+	if params["state"] != true {
+		t.Errorf("state = %v, want true; a wiz bulb ignores dimming while it is off", params["state"])
+	}
+}
+
 func TestSetColorTempClamps(t *testing.T) {
 	fake := &fakeTransport{}
 	light := newTestLight(fake)
