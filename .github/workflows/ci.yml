@@ -14,11 +14,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version-file: api/go.mod
+          go-version-file: backend/services/api/go.mod
       - uses: golangci/golangci-lint-action@v9
         with:
           version: latest
-          working-directory: api
+          working-directory: backend/services/api
 
   fmt:
     name: Format check
@@ -27,10 +27,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version-file: api/go.mod
+          go-version-file: backend/services/api/go.mod
       - run: go install mvdan.cc/gofumpt@latest
       - name: Check formatting
-        working-directory: api
+        working-directory: backend/services/api
         run: |
           unformatted=$(gofumpt -l .)
           if [ -n "$unformatted" ]; then
@@ -46,9 +46,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version-file: api/go.mod
+          go-version-file: backend/services/api/go.mod
       - run: go build ./...
-        working-directory: api
+        working-directory: backend/services/api
 
   vet:
     name: Vet
@@ -57,9 +57,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version-file: api/go.mod
+          go-version-file: backend/services/api/go.mod
       - run: go vet ./...
-        working-directory: api
+        working-directory: backend/services/api
 
   test:
     name: Test
@@ -68,9 +68,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version-file: api/go.mod
+          go-version-file: backend/services/api/go.mod
       - run: go test ./...
-        working-directory: api
+        working-directory: backend/services/api
 
   boundary:
     name: Module boundary
@@ -79,19 +79,19 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version-file: api/go.mod
+          go-version-file: backend/services/api/go.mod
       - name: Hub builds without the workspace
-        working-directory: hub
+        working-directory: backend/services/hub
         run: GOWORK=off go build ./...
       - name: Hub does not depend on api
-        working-directory: hub
+        working-directory: backend/services/hub
         run: |
           if go list -deps ./... | grep -q '^ava/api'; then
             echo "hub must not import api"
             exit 1
           fi
       - name: Api does not depend on hub
-        working-directory: api
+        working-directory: backend/services/api
         run: |
           if go list -deps ./... | grep -q '^ava/hub'; then
             echo "api must not import hub"
@@ -105,15 +105,15 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version-file: hub/go.mod
+          go-version-file: backend/services/hub/go.mod
       - run: go vet ./...
-        working-directory: hub
+        working-directory: backend/services/hub
       - run: go test ./...
-        working-directory: hub
+        working-directory: backend/services/hub
       - uses: golangci/golangci-lint-action@v9
         with:
           version: latest
-          working-directory: hub
+          working-directory: backend/services/hub
 
   hub-build:
     name: Hub build
@@ -130,9 +130,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version-file: hub/go.mod
+          go-version-file: backend/services/hub/go.mod
       - name: Build ${{ matrix.goos }}/${{ matrix.goarch }}
-        working-directory: hub
+        working-directory: backend/services/hub
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
