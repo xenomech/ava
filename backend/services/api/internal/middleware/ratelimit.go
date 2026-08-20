@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"time"
 
 	"ava/api/pkg/response"
@@ -16,9 +18,7 @@ func GlobalRateLimit() fiber.Handler {
 		Max:               100,
 		Expiration:        1 * time.Minute,
 		LimiterMiddleware: limiter.SlidingWindow{},
-		KeyGenerator: func(c *fiber.Ctx) string {
-			return c.IP()
-		},
+		KeyGenerator:      callerKey,
 		LimitReached: func(c *fiber.Ctx) error {
 			return response.SendWithCode(c, fiber.StatusTooManyRequests, nil,
 				response.CodeRateLimited, "Too many requests, please try again later")
@@ -39,4 +39,14 @@ func AuthRateLimit() fiber.Handler {
 				CodeAuthRateLimited, "Too many authentication attempts, please try again later")
 		},
 	})
+}
+
+func callerKey(c *fiber.Ctx) string {
+	if token := c.Cookies(AccessCookie); token != "" {
+		sum := sha256.Sum256([]byte(token))
+
+		return "session:" + hex.EncodeToString(sum[:8])
+	}
+
+	return "ip:" + c.IP()
 }

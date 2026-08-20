@@ -1,125 +1,138 @@
-import { Button, Device, Slider, Switch, cn } from "@ava/ui";
-import { useEffect, useRef } from "react";
+import { Button, Chip, Slider, Switch, cn } from "@ava/ui";
+import type { DeviceDto } from "@ava/contracts";
+import { useQuery } from "@tanstack/react-query";
+import { Device } from "@ava/ui";
+import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useCallback, useState } from "react";
 
-import { isBehindOverlay } from "@/shared/lib/overlay";
+import { hubQueries } from "@/modules/hub";
+import { sendCommand } from "../api";
+import { Loader } from "@/shared/components/loader";
 import { ColorControl } from "../components/color-control";
-import { DeviceStage } from "../components/device-stage";
-import { useDevices, useFocusedDevice } from "../store";
+import { DeviceStage, deviceColor, deviceKind, deviceLevel } from "../components/device-stage";
+import { NoDevices } from "../components/empty-state";
+import { useDeviceCommand, useDevices } from "../use-devices";
+import { useThrottled } from "../use-throttled-command";
 
 export function ConsolePage() {
-  const { devices, focused, focus } = useDevices();
-  const { device, setLevel, toggle, setColor, setWhite, step } = useFocusedDevice();
+  const { devices, isPending } = useDevices();
+  const hubs = useQuery(hubQueries.list());
+  const command = useDeviceCommand();
 
-  const root = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+  const [dragging, setDragging] = useState<number | null>(null);
 
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement;
-      if (target.matches("input, textarea, [contenteditable]")) return;
+  const sendLive = useThrottled<{ id: string; value: number }>(
+    useCallback(({ id, value }) => {
+      void sendCommand(id, { action: "brightness", value }).catch(() => undefined);
+    }, []),
+  );
+  const search = useSearch({ strict: false }) as { device?: string };
 
-      if (isBehindOverlay(root.current)) return;
+  const focus = (id: string) => {
+    void navigate({ to: "/", search: { device: id }, replace: true });
+  };
 
-      const stepBy = event.shiftKey ? 10 : 5;
-      if (event.key === "ArrowRight") step(1);
-      else if (event.key === "ArrowLeft") step(-1);
-      else if (event.key === "ArrowUp") setLevel(device.id, device.level + stepBy);
-      else if (event.key === "ArrowDown") setLevel(device.id, device.level - stepBy);
-      else if (event.key === " ") toggle(device.id);
-      else return;
+  if (isPending) return <Loader label="Loading devices" />;
 
-      event.preventDefault();
-    };
+  if (devices.length === 0) return <NoDevices hasHub={(hubs.data ?? []).length > 0} />;
 
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [device.id, device.level, setLevel, toggle, step]);
-
-  const watts = ((device.watts * device.level) / 100).toFixed(1);
+  const device = devices.find((entry) => entry.id === search.device) ?? devices[0]!;
+  const level = dragging ?? deviceLevel(device);
+  const offline = device.status === "offline";
+  const capabilities = device.state.capabilities;
+  const limits = device.state.limits;
+  const brightnessMin = limits?.brightness_min ?? 0;
+  const brightnessMax = limits?.brightness_max ?? 100;
+  const kelvinMin = limits?.kelvin_min;
+  const kelvinMax = limits?.kelvin_max;
 
   return (
-    <div ref={root} className="grid h-full grid-rows-[minmax(0,1fr)_auto]">
+    <div className="grid h-full grid-rows-[minmax(0,1fr)_auto]">
       <div className="min-h-0 overflow-y-auto lg:grid lg:grid-cols-[minmax(0,1fr)_330px] lg:overflow-hidden">
         <main className="grid min-h-0 grid-rows-[34vh_auto] p-5 sm:p-6 lg:grid-rows-[minmax(0,1fr)_auto]">
-          <DeviceStage />
+          <DeviceStage devices={devices} focusedID={device.id} levelOverride={dragging} />
 
           <div className="flex items-end justify-between gap-4 pt-4">
             <div>
               <h1 className="text-display font-semibold">{device.name}</h1>
-              <p className="mt-1.5 text-small text-muted">
-                {device.room} · <span className="font-mono tabular">{watts}W</span>
+              <p className="mt-1.5 flex items-center gap-2 text-small text-muted">
+                {device.room || "No room"}
+                {offline ? <Chip tone="warning">Offline</Chip> : null}
               </p>
             </div>
 
             <div className="flex items-start gap-0.5" data-slot="reading">
-              <b className="text-hero font-semibold">{device.level}</b>
+              <b className="text-hero font-semibold">{level}</b>
               <span className="mt-1 text-small text-subtle">%</span>
             </div>
           </div>
         </main>
 
         <aside className="flex flex-col gap-5 border-t border-border p-5 lg:min-h-0 lg:overflow-y-auto lg:border-t-0 lg:border-l">
-          <div className="grid gap-2.5">
-            <div className="flex items-center justify-between">
-              <span className="text-caption font-semibold uppercase tracking-caps text-subtle">
-                Power
-              </span>
-              <Switch
-                checked={device.level > 0}
-                onCheckedChange={() => toggle(device.id)}
-                aria-label={`${device.name} power`}
+          <div className="flex items-center justify-between">
+            <span className="text-caption font-semibold uppercase tracking-caps text-subtle">
+              Power
+            </span>
+            <Switch
+              checked={device.state.power}
+              disabled={offline || command.isPending}
+              onCheckedChange={(on) => command.mutate({ device, action: "power", value: on })}
+              aria-label={`${device.name} power`}
+            />
+          </div>
+
+          {capabilities.includes("brightness") ? (
+            <div className="grid gap-2.5">
+              <div className="flex items-baseline justify-between">
+                <span className="text-caption font-semibold uppercase tracking-caps text-subtle">
+                  Brightness
+                </span>
+                <output className="font-mono text-small tabular">{level}%</output>
+              </div>
+              <Slider
+                value={[level]}
+                min={brightnessMin}
+                max={brightnessMax}
+                step={1}
+                lit
+                disabled={offline}
+                aria-label="Brightness"
+                onValueChange={([value]) => {
+                  setDragging(value ?? 0);
+                  sendLive({ id: device.id, value: value ?? 0 });
+                }}
+                onValueCommit={([value]) => {
+                  setDragging(null);
+                  command.mutate({ device, action: "brightness", value: value ?? 0 });
+                }}
+                style={{ "--lit": deviceColor(device) } as React.CSSProperties}
               />
             </div>
-          </div>
+          ) : null}
 
-          <div className="grid gap-2.5">
-            <div className="flex items-baseline justify-between">
+          {capabilities.includes("color_temp") ? (
+            <div className="grid gap-2.5">
               <span className="text-caption font-semibold uppercase tracking-caps text-subtle">
-                Brightness
+                Colour
               </span>
-              <output className="font-mono text-small tabular">{device.level}%</output>
+              <ColorControl
+                color={deviceColor(device)}
+                kelvin={device.state.color_temp ?? null}
+                kelvinMin={kelvinMin}
+                kelvinMax={kelvinMax}
+                showColor={capabilities.includes("color")}
+                onWhite={(kelvin) =>
+                  command.mutate({ device, action: "color_temp", value: kelvin })
+                }
+                onColor={() => undefined}
+              />
             </div>
-            <Slider
-              value={[device.level]}
-              max={100}
-              step={1}
-              lit
-              aria-label="Brightness"
-              onValueChange={([v]) => setLevel(device.id, v ?? 0)}
-              style={{ "--lit": device.color } as React.CSSProperties}
-            />
-          </div>
+          ) : null}
 
-          <div className="grid gap-2.5">
-            <span className="text-caption font-semibold uppercase tracking-caps text-subtle">
-              Colour
-            </span>
-            <ColorControl
-              color={device.color}
-              kelvin={device.kelvin}
-              onWhite={(k) => setWhite(device.id, k)}
-              onColor={(c) => setColor(device.id, c)}
-            />
-          </div>
-
-          <div className="hidden gap-2.5 lg:grid">
-            <span className="text-caption font-semibold uppercase tracking-caps text-subtle">
-              Shortcuts
-            </span>
-            <dl className="grid gap-px overflow-hidden rounded-md border border-border bg-border">
-              {[
-                ["Change device", "← →"],
-                ["Brightness", "↑ ↓"],
-                ["Toggle", "Space"],
-              ].map(([label, keys]) => (
-                <div
-                  key={label}
-                  className="flex items-center justify-between bg-surface px-3.5 py-2.5"
-                >
-                  <dt className="text-small">{label}</dt>
-                  <dd className="font-mono text-caption text-subtle">{keys}</dd>
-                </div>
-              ))}
-            </dl>
+          <div className="grid gap-1 text-caption text-subtle">
+            <span className="font-mono">{device.external_id}</span>
+            {device.state.vendor ? <span>{device.state.vendor}</span> : null}
           </div>
         </aside>
       </div>
@@ -128,28 +141,54 @@ export function ConsolePage() {
         className="flex gap-2 overflow-x-auto border-t border-border p-3"
         aria-label="All devices"
       >
-        {devices.map((d) => (
-          <Button
-            key={d.id}
-            variant="ghost"
-            aria-current={d.id === focused}
-            onClick={() => focus(d.id)}
-            className={cn(
-              "h-auto w-32 shrink-0 flex-col items-start gap-1.5 rounded-md border-border p-2.5",
-              d.id === focused && "border-fg",
-            )}
-            style={{ "--level": d.level, "--lit": d.color } as React.CSSProperties}
-          >
-            <span className="grid h-14 w-full place-items-center">
-              <Device kind={d.kind} level={d.level} color={d.color} className="h-full" />
-            </span>
-            <span className="w-full truncate text-left text-small font-semibold">{d.name}</span>
-            <span className="font-mono text-caption font-normal text-subtle tabular">
-              {d.level > 0 ? `${d.level}%` : "Off"}
-            </span>
-          </Button>
+        {devices.map((entry) => (
+          <DeviceTile
+            key={entry.id}
+            device={entry}
+            focused={entry.id === device.id}
+            onFocus={() => focus(entry.id)}
+          />
         ))}
       </footer>
     </div>
+  );
+}
+
+function DeviceTile({
+  device,
+  focused,
+  onFocus,
+}: {
+  device: DeviceDto;
+  focused: boolean;
+  onFocus: () => void;
+}) {
+  const level = deviceLevel(device);
+
+  return (
+    <Button
+      variant="ghost"
+      aria-current={focused}
+      onClick={onFocus}
+      className={cn(
+        "h-auto w-32 shrink-0 flex-col items-start gap-1.5 rounded-md border-border p-2.5",
+        focused && "border-fg",
+        device.status === "offline" && "opacity-50",
+      )}
+      style={{ "--level": level, "--lit": deviceColor(device) } as React.CSSProperties}
+    >
+      <span className="grid h-14 w-full place-items-center">
+        <Device
+          kind={deviceKind(device)}
+          level={level}
+          color={deviceColor(device)}
+          className="h-full"
+        />
+      </span>
+      <span className="w-full truncate text-left text-small font-semibold">{device.name}</span>
+      <span className="font-mono text-caption font-normal text-subtle tabular">
+        {device.status === "offline" ? "Offline" : level > 0 ? `${level}%` : "Off"}
+      </span>
+    </Button>
   );
 }

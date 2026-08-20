@@ -2,10 +2,12 @@ package device
 
 import (
 	"context"
+	"encoding/json"
 
 	"ava/api/internal/dto"
 	devicerepo "ava/api/internal/repository/device"
 	tenantrepo "ava/api/internal/repository/tenant"
+	eventsvc "ava/api/internal/services/event"
 
 	"github.com/google/uuid"
 )
@@ -16,6 +18,7 @@ type Service interface {
 	ListByHub(ctx context.Context, tenantID, hubID uuid.UUID) ([]*dto.DeviceResponse, error)
 	Update(ctx context.Context, tenantID, deviceID uuid.UUID, req *dto.UpdateDeviceRequest) (*dto.DeviceResponse, error)
 	SendCommand(ctx context.Context, tenantID, deviceID uuid.UUID, req *dto.SendCommandRequest) (*dto.CommandAcceptedResponse, error)
+	ApplyReportedState(ctx context.Context, hubID uuid.UUID, externalID string, state json.RawMessage) error
 }
 
 type Commander interface {
@@ -26,12 +29,19 @@ type deviceService struct {
 	deviceRepo devicerepo.Repository
 	tenantRepo tenantrepo.Repository
 	commander  Commander
+	events     eventsvc.Service
 }
 
-func NewService(deviceRepo devicerepo.Repository, tenantRepo tenantrepo.Repository, commander Commander) Service {
+func NewService(
+	deviceRepo devicerepo.Repository,
+	tenantRepo tenantrepo.Repository,
+	commander Commander,
+	events eventsvc.Service,
+) Service {
 	return &deviceService{
 		deviceRepo: deviceRepo,
 		tenantRepo: tenantRepo,
 		commander:  commander,
+		events:     events,
 	}
 }

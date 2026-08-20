@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"ava/api/internal/dto"
+	"ava/api/internal/model"
 	devicerepo "ava/api/internal/repository/device"
 	"ava/api/pkg/serrors"
 	"ava/pkg/logger"
@@ -69,3 +70,34 @@ func (s *deviceService) SendCommand(
 }
 
 var ErrCommandChannelUnavailable = serrors.NewCoded("command_channel_unavailable", "the hub command channel is unavailable")
+
+func (s *deviceService) ApplyReportedState(
+	ctx context.Context,
+	hubID uuid.UUID,
+	externalID string,
+	state json.RawMessage,
+) error {
+	updated, err := s.deviceRepo.ApplyState(ctx, hubID, externalID, state)
+	if err != nil {
+		if serrors.Is(err, devicerepo.ErrDeviceNotFound) {
+			return ErrDeviceNotFound
+		}
+
+		return err
+	}
+
+	s.announce(updated)
+
+	return nil
+}
+
+func (s *deviceService) announce(device *model.Device) {
+	if s.events == nil {
+		return
+	}
+
+	s.events.PublishJSON(device.TenantID, map[string]any{
+		"type":   "device.state",
+		"device": toDeviceResponse(device),
+	})
+}

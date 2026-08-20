@@ -2,6 +2,7 @@ package device
 
 import (
 	"context"
+	"encoding/json"
 
 	"ava/api/internal/model"
 
@@ -15,6 +16,7 @@ type Repository interface {
 	ListByHub(ctx context.Context, tenantID, hubID uuid.UUID) ([]*model.Device, error)
 	GetByID(ctx context.Context, tenantID, id uuid.UUID) (*model.Device, error)
 	Update(ctx context.Context, tenantID, id uuid.UUID, fields map[string]any) error
+	ApplyState(ctx context.Context, hubID uuid.UUID, externalID string, state json.RawMessage) (*model.Device, error)
 }
 
 type deviceRepository struct {

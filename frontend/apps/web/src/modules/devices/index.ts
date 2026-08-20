@@ -1,1 +1,2 @@
-export { useDeviceStore, useDevices, useFocusedDevice, type Device } from "./store";
+export { deviceQueries } from "./queries";
+export { useDeviceCommand, useDevices } from "./use-devices";

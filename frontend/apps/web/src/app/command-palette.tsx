@@ -10,14 +10,13 @@ import {
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
-import { useDeviceStore } from "@/modules/devices";
+import { useDevices } from "@/modules/devices";
 
-export function CommandPalette({ onAddDevice }: { onAddDevice: () => void }) {
+export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
 
-  const devices = useDeviceStore((state) => state.devices);
-  const focus = useDeviceStore((state) => state.focus);
+  const { devices } = useDevices();
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -49,27 +48,21 @@ export function CommandPalette({ onAddDevice }: { onAddDevice: () => void }) {
               key={device.id}
               value={`${device.name} ${device.room}`}
               onSelect={run(() => {
-                focus(device.id);
-                void navigate({ to: "/" });
+                void navigate({ to: "/", search: { device: device.id } });
               })}
             >
               {device.name}
-              <CommandHint>{device.room}</CommandHint>
+              <CommandHint>{device.room || "No room"}</CommandHint>
             </CommandItem>
           ))}
         </CommandGroup>
 
         <CommandGroup>
-          <CommandItem value="Add a device" onSelect={run(onAddDevice)}>
-            Add a device
-            <CommandHint>Pair</CommandHint>
-          </CommandItem>
-
           {(
             [
               { label: "Console", to: "/" },
               { label: "Rooms", to: "/rooms" },
-              { label: "Energy", to: "/energy" },
+              { label: "Hubs", to: "/activate" },
               { label: "People", to: "/settings/members" },
               { label: "Settings", to: "/settings" },
             ] as const

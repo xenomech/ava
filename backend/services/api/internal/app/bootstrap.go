@@ -21,7 +21,6 @@ import (
 
 const (
 	readTimeout     = 10 * time.Second
-	writeTimeout    = 10 * time.Second
 	idleTimeout     = 120 * time.Second
 	shutdownTimeout = 10 * time.Second
 	bodyLimit       = 4 * 1024 * 1024
@@ -54,13 +53,17 @@ func Bootstrap(ctx context.Context) (*App, error) {
 
 	service := services.NewService(repository.NewRepository(database), commander)
 
-	return &App{
+	app := &App{
 		Config:    cfg,
 		DB:        database,
 		Service:   service,
 		Publisher: publisher,
 		Fiber:     buildFiber(cfg, service),
-	}, nil
+	}
+
+	app.listenForState(ctx)
+
+	return app, nil
 }
 
 func (a *App) Run(ctx context.Context) error {
@@ -100,10 +103,9 @@ func (a *App) Close() {
 
 func buildFiber(cfg *config.Config, service *services.Service) *fiber.App {
 	server := fiber.New(fiber.Config{
-		ReadTimeout:  readTimeout,
-		WriteTimeout: writeTimeout,
-		IdleTimeout:  idleTimeout,
-		BodyLimit:    bodyLimit,
+		ReadTimeout: readTimeout,
+		IdleTimeout: idleTimeout,
+		BodyLimit:   bodyLimit,
 	})
 
 	server.Use(cors.New(cors.Config{

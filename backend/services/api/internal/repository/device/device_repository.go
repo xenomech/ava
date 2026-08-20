@@ -2,6 +2,7 @@ package device
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"time"
 
@@ -108,4 +109,32 @@ func (r *deviceRepository) Update(ctx context.Context, tenantID, id uuid.UUID, f
 	}
 
 	return nil
+}
+
+func (r *deviceRepository) ApplyState(
+	ctx context.Context,
+	hubID uuid.UUID,
+	externalID string,
+	state json.RawMessage,
+) (*model.Device, error) {
+	var updated model.Device
+
+	result := r.db.WithContext(ctx).Model(&updated).
+		Clauses(clause.Returning{}).
+		Where("hub_id = ? AND external_id = ?", hubID, externalID).
+		Updates(map[string]any{
+			"state":        gorm.Expr("coalesce(state, '{}'::jsonb) || ?::jsonb", string(state)),
+			"status":       model.DeviceStatusOnline,
+			"last_seen_at": time.Now(),
+			"updated_at":   time.Now(),
+		})
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		return nil, ErrDeviceNotFound
+	}
+
+	return &updated, nil
 }
