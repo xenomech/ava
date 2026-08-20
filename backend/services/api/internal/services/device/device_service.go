@@ -33,7 +33,22 @@ func (s *deviceService) SyncFromHub(ctx context.Context, tenantID, hubID uuid.UU
 		return nil, err
 	}
 
-	return s.ListByHub(ctx, tenantID, hubID)
+	synced, err := s.ListByHub(ctx, tenantID, hubID)
+	if err != nil {
+		return nil, err
+	}
+
+	s.announceList(tenantID, hubID, synced)
+
+	return synced, nil
+}
+
+func (s *deviceService) announceList(tenantID, hubID uuid.UUID, devices []*dto.DeviceResponse) {
+	if s.events == nil {
+		return
+	}
+
+	s.events.PublishJSON(tenantID, dto.NewDeviceListEvent(hubID, devices))
 }
 
 func (s *deviceService) ListByTenant(ctx context.Context, tenantID uuid.UUID) ([]*dto.DeviceResponse, error) {
