@@ -96,8 +96,5 @@ func (s *deviceService) announce(device *model.Device) {
 		return
 	}
 
-	s.events.PublishJSON(device.TenantID, map[string]any{
-		"type":   "device.state",
-		"device": toDeviceResponse(device),
-	})
+	s.events.PublishJSON(device.TenantID, dto.NewDeviceStateEvent(toDeviceResponse(device)))
 }
