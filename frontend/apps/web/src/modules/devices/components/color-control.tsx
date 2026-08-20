@@ -70,11 +70,7 @@ export function ColorControl({
           onValueCommit={([v]) => white.release(v ?? kelvinMin)}
           style={{ background: KELVIN_RAMP }}
         />
-        <p className="flex justify-between font-mono text-caption text-subtle tabular">
-          <span>{kelvinMin}K</span>
-          <span className="text-fg">{white.value}K</span>
-          <span>{kelvinMax}K</span>
-        </p>
+        <p className="font-mono text-caption text-subtle tabular">{white.value}K</p>
       </TabsContent>
 
       <TabsContent value="color" className={showColor ? "grid gap-2.5" : "hidden"}>
