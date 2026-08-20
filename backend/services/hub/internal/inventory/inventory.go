@@ -134,6 +134,7 @@ func ToSyncItems(entries []Entry) []api.SyncDeviceItem {
 			ColorTemp:    entry.State.ColorTemp,
 			Capabilities: entry.Spec.Capabilities.Names(),
 			Limits:       entry.Limits,
+			Model:        entry.Spec.Name,
 			Vendor:       string(entry.Spec.Vendor),
 			IP:           entry.Spec.IP,
 		}
@@ -163,6 +164,7 @@ type statePayload struct {
 	Brightness   int           `json:"brightness,omitempty"`
 	ColorTemp    int           `json:"color_temp,omitempty"`
 	Capabilities []string      `json:"capabilities"`
+	Model        string        `json:"model,omitempty"`
 	Vendor       string        `json:"vendor"`
 	IP           string        `json:"ip,omitempty"`
 }
