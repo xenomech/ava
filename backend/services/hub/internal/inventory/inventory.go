@@ -23,10 +23,11 @@ const (
 )
 
 type Entry struct {
-	Spec  device.Spec
-	State device.State
-	Kind  string
-	Name  string
+	Spec   device.Spec
+	State  device.State
+	Limits device.Limits
+	Kind   string
+	Name   string
 }
 
 func Discover(ctx context.Context, timeout time.Duration) []Entry {
@@ -38,7 +39,7 @@ func Discover(ctx context.Context, timeout time.Duration) []Entry {
 	}
 
 	for at := range lights {
-		entries = append(entries, fromWiz(&lights[at]))
+		entries = append(entries, describeWiz(ctx, &lights[at], timeout))
 	}
 
 	plugs, err := tuya.Discover(ctx, timeout)
@@ -63,18 +64,41 @@ func Discover(ctx context.Context, timeout time.Duration) []Entry {
 	return entries
 }
 
-func fromWiz(found *wiz.Found) Entry {
-	return Entry{
+func describeWiz(ctx context.Context, found *wiz.Found, timeout time.Duration) Entry {
+	entry := Entry{
 		Spec: device.Spec{
 			Vendor:       device.VendorWiz,
 			ID:           found.Info.ID,
 			IP:           found.Info.IP,
 			Capabilities: device.CapabilityBrightness | device.CapabilityColorTemp,
 		},
-		State: found.State,
-		Kind:  KindBulb,
-		Name:  friendlyName("WiZ", found.Info.ID),
+		State:  found.State,
+		Limits: device.Limits{}.WithDefaults(wiz.MinDimming, wiz.MaxDimming, wiz.MinKelvin, wiz.MaxKelvin),
+		Kind:   KindBulb,
+		Name:   friendlyName("WiZ", found.Info.ID),
 	}
+
+	light := wiz.New(found.Info.IP, timeout)
+
+	info, err := light.Identify(ctx)
+	if err != nil {
+		logger.Warn("WIZ_IDENTIFY_FAILED",
+			logger.String("ip", found.Info.IP),
+			logger.Err(err),
+		)
+
+		return entry
+	}
+
+	entry.Spec.Capabilities = light.Capabilities()
+	entry.Limits = light.Limits()
+	entry.Name = friendlyName("WiZ", info.MAC)
+
+	if info.Model != "" {
+		entry.Spec.Name = info.Model
+	}
+
+	return entry
 }
 
 func fromTuya(found *tuya.Found) Entry {
@@ -109,6 +133,7 @@ func ToSyncItems(entries []Entry) []api.SyncDeviceItem {
 			Brightness:   entry.State.Brightness,
 			ColorTemp:    entry.State.ColorTemp,
 			Capabilities: entry.Spec.Capabilities.Names(),
+			Limits:       entry.Limits,
 			Vendor:       string(entry.Spec.Vendor),
 			IP:           entry.Spec.IP,
 		}
@@ -133,10 +158,11 @@ func ToSyncItems(entries []Entry) []api.SyncDeviceItem {
 }
 
 type statePayload struct {
-	Power        bool     `json:"power"`
-	Brightness   int      `json:"brightness,omitempty"`
-	ColorTemp    int      `json:"color_temp,omitempty"`
-	Capabilities []string `json:"capabilities"`
-	Vendor       string   `json:"vendor"`
-	IP           string   `json:"ip,omitempty"`
+	Limits       device.Limits `json:"limits"`
+	Power        bool          `json:"power"`
+	Brightness   int           `json:"brightness,omitempty"`
+	ColorTemp    int           `json:"color_temp,omitempty"`
+	Capabilities []string      `json:"capabilities"`
+	Vendor       string        `json:"vendor"`
+	IP           string        `json:"ip,omitempty"`
 }
