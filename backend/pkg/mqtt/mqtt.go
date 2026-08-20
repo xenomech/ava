@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"ava/pkg/logger"
@@ -38,6 +39,8 @@ type Options struct {
 
 type Client struct {
 	inner paho.Client
+	mu    sync.Mutex
+	subs  map[string]Handler
 }
 
 func Connect(ctx context.Context, opts *Options) (*Client, error) {
@@ -45,7 +48,7 @@ func Connect(ctx context.Context, opts *Options) (*Client, error) {
 		return nil, ErrNoBroker
 	}
 
-	client := &Client{}
+	client := &Client{subs: make(map[string]Handler)}
 
 	config := paho.NewClientOptions().
 		AddBroker(opts.BrokerURL).
@@ -61,6 +64,8 @@ func Connect(ctx context.Context, opts *Options) (*Client, error) {
 		}).
 		SetOnConnectHandler(func(_ paho.Client) {
 			logger.Info("MQTT_CONNECTED", logger.String("broker", opts.BrokerURL))
+
+			client.resume()
 
 			if opts.OnConnect != nil {
 				opts.OnConnect(client)
@@ -89,6 +94,18 @@ func (c *Client) Subscribe(ctx context.Context, topic string, handler Handler) e
 		return ErrNotConnected
 	}
 
+	if err := c.subscribe(ctx, topic, handler); err != nil {
+		return err
+	}
+
+	c.mu.Lock()
+	c.subs[topic] = handler
+	c.mu.Unlock()
+
+	return nil
+}
+
+func (c *Client) subscribe(ctx context.Context, topic string, handler Handler) error {
 	token := c.inner.Subscribe(topic, QoSAtLeastOnce, func(_ paho.Client, message paho.Message) {
 		handler(message.Topic(), message.Payload())
 	})
@@ -100,6 +117,26 @@ func (c *Client) Subscribe(ctx context.Context, topic string, handler Handler) e
 	logger.Info("MQTT_SUBSCRIBED", logger.String("topic", topic))
 
 	return nil
+}
+
+func (c *Client) resume() {
+	c.mu.Lock()
+	pending := make(map[string]Handler, len(c.subs))
+
+	for topic, handler := range c.subs {
+		pending[topic] = handler
+	}
+	c.mu.Unlock()
+
+	for topic, handler := range pending {
+		ctx, cancel := context.WithTimeout(context.Background(), actionTimeout)
+
+		if err := c.subscribe(ctx, topic, handler); err != nil {
+			logger.Warn("MQTT_RESUBSCRIBE_FAILED", logger.String("topic", topic), logger.Err(err))
+		}
+
+		cancel()
+	}
 }
 
 func (c *Client) Publish(ctx context.Context, topic string, payload []byte, retained bool) error {
