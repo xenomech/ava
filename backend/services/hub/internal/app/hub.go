@@ -9,18 +9,20 @@ import (
 
 	"ava/hub/internal/api"
 	"ava/hub/internal/config"
+	"ava/hub/internal/inventory"
 	"ava/hub/internal/state"
 	"ava/pkg/mqtt"
 	"ava/pkg/wire"
 )
 
 type App struct {
-	cfg     *config.Config
-	client  *api.Client
-	state   *state.State
-	devices *registry
-	mqtt    *mqtt.Client
-	topics  wire.Topics
+	cfg      *config.Config
+	client   *api.Client
+	state    *state.State
+	devices  *registry
+	lastSeen []inventory.Entry
+	mqtt     *mqtt.Client
+	topics   wire.Topics
 }
 
 func Bootstrap(_ context.Context) (*App, error) {
