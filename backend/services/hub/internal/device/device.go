@@ -78,6 +78,7 @@ type State struct {
 type Device interface {
 	Info() Info
 	Capabilities() Capability
+	Limits() Limits
 	State(ctx context.Context) (State, error)
 	SetPower(ctx context.Context, on bool) error
 	SetBrightness(ctx context.Context, percent int) error
@@ -100,4 +101,31 @@ func Clamp(value, low, high int) int {
 	}
 
 	return value
+}
+
+type Limits struct {
+	BrightnessMin int `json:"brightness_min"`
+	BrightnessMax int `json:"brightness_max"`
+	KelvinMin     int `json:"kelvin_min,omitempty"`
+	KelvinMax     int `json:"kelvin_max,omitempty"`
+}
+
+func (l Limits) WithDefaults(brightnessMin, brightnessMax, kelvinMin, kelvinMax int) Limits {
+	if l.BrightnessMin <= 0 {
+		l.BrightnessMin = brightnessMin
+	}
+
+	if l.BrightnessMax <= 0 {
+		l.BrightnessMax = brightnessMax
+	}
+
+	if l.KelvinMin <= 0 {
+		l.KelvinMin = kelvinMin
+	}
+
+	if l.KelvinMax <= 0 {
+		l.KelvinMax = kelvinMax
+	}
+
+	return l
 }

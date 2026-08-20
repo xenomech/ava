@@ -102,6 +102,17 @@ func (d *Device) Capabilities() device.Capability {
 	return d.capabilities
 }
 
+func (d *Device) Limits() device.Limits {
+	limits := device.Limits{BrightnessMin: 0, BrightnessMax: 100}
+
+	if d.capabilities.Has(device.CapabilityColorTemp) {
+		limits.KelvinMin = kelvinMin
+		limits.KelvinMax = kelvinMax
+	}
+
+	return limits
+}
+
 func (d *Device) RawState(ctx context.Context) (map[string]any, error) {
 	payload := map[string]any{
 		"gwId":  d.info.ID,

@@ -15,6 +15,7 @@ type fakeTransport struct {
 	sent      [][]byte
 	addrs     []string
 	reply     []byte
+	replyFor  func(payload []byte) string
 	err       error
 	failFirst int
 }
@@ -31,6 +32,10 @@ func (f *fakeTransport) Do(_ context.Context, addr string, payload []byte) ([]by
 
 	if f.err != nil {
 		return nil, f.err
+	}
+
+	if f.replyFor != nil {
+		return []byte(f.replyFor(payload)), nil
 	}
 
 	if f.reply == nil {
@@ -197,5 +202,89 @@ func TestCapabilitiesExcludeColor(t *testing.T) {
 
 	if caps.Has(device.CapabilityColor) {
 		t.Error("wiz battens are tunable white only")
+	}
+}
+
+func TestCapabilitiesComeFromTheModuleName(t *testing.T) {
+	tests := []struct {
+		module string
+		want   device.Capability
+	}{
+		{"ESP25_SHTW_01", device.CapabilityBrightness | device.CapabilityColorTemp},
+		{"ESP01_SHRGB1C_31", device.CapabilityBrightness | device.CapabilityColorTemp | device.CapabilityColor},
+		{"ESP01_SHDW1C_31", device.CapabilityBrightness},
+		{"ESP10_SOCKET_06", 0},
+		{"nonsense", device.CapabilityBrightness | device.CapabilityColorTemp},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.module, func(t *testing.T) {
+			if got := capabilitiesFor(tc.module); got != tc.want {
+				t.Errorf("%s -> %s, want %s", tc.module, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestIdentifyLearnsLimitsFromTheDevice(t *testing.T) {
+	fake := &fakeTransport{}
+	fake.reply = nil
+
+	replies := map[string]string{
+		"getSystemConfig": `{"result":{"mac":"a8bb50aabbcc","moduleName":"ESP25_SHTW_01","fwVersion":"1.38.0"}}`,
+		"getModelConfig":  `{"result":{"minDimLevel":10,"cctRange":[2700,2700,6500,6500]}}`,
+	}
+
+	fake.replyFor = func(payload []byte) string {
+		for method, reply := range replies {
+			if contains(string(payload), method) {
+				return reply
+			}
+		}
+
+		return `{"result":{"success":true}}`
+	}
+
+	light := newTestLight(fake)
+
+	if _, err := light.Identify(context.Background()); err != nil {
+		t.Fatalf("Identify: %v", err)
+	}
+
+	limits := light.Limits()
+
+	if limits.KelvinMin != 2700 || limits.KelvinMax != 6500 {
+		t.Errorf("kelvin range = %d-%d, want 2700-6500", limits.KelvinMin, limits.KelvinMax)
+	}
+
+	if limits.BrightnessMin != 10 {
+		t.Errorf("brightness min = %d, want 10", limits.BrightnessMin)
+	}
+
+	if light.Capabilities().Has(device.CapabilityColor) {
+		t.Error("a tunable white bulb must not claim colour")
+	}
+}
+
+func TestColorTempClampsToTheDeviceRangeNotTheDefault(t *testing.T) {
+	fake := &fakeTransport{}
+	light := newTestLight(fake)
+	light.limits = device.Limits{BrightnessMin: 10, BrightnessMax: 100, KelvinMin: 2700, KelvinMax: 6500}
+
+	if err := light.SetColorTemp(context.Background(), 2200); err != nil {
+		t.Fatalf("SetColorTemp: %v", err)
+	}
+
+	if got := lastRequest(t, fake)["params"].(map[string]any)["temp"]; got != float64(2700) {
+		t.Errorf("temp = %v, want 2700 (the device floor, not the 2200 default)", got)
+	}
+}
+
+func TestASocketRejectsBrightness(t *testing.T) {
+	light := newTestLight(&fakeTransport{})
+	light.capabilities = 0
+
+	if err := light.SetBrightness(context.Background(), 50); !errors.Is(err, device.ErrUnsupported) {
+		t.Errorf("got %v", err)
 	}
 }
