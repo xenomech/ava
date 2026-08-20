@@ -64,7 +64,12 @@ export function ConsolePage() {
     capabilities.includes("color_temp") && kelvinMin !== undefined && kelvinMax !== undefined;
 
   return (
-    <div className="grid h-full grid-rows-[auto_minmax(0,1fr)_auto]">
+    <div
+      className={cn(
+        "grid h-full",
+        hubOffline ? "grid-rows-[auto_minmax(0,1fr)_auto]" : "grid-rows-[minmax(0,1fr)_auto]",
+      )}
+    >
       {hubOffline ? <HubOfflineNotice name={hub.name} /> : null}
 
       <div className="min-h-0 overflow-y-auto lg:grid lg:grid-cols-[minmax(0,1fr)_330px] lg:overflow-hidden">
@@ -87,8 +92,14 @@ export function ConsolePage() {
             </div>
 
             <div className="flex items-start gap-0.5" data-slot="reading">
-              <b className="text-hero font-semibold">{brightness.value}</b>
-              <span className="mt-1 text-small text-subtle">%</span>
+              {device.state.power || brightness.dragging !== null ? (
+                <>
+                  <b className="text-hero font-semibold">{brightness.value}</b>
+                  <span className="mt-1 text-small text-subtle">%</span>
+                </>
+              ) : (
+                <b className="text-hero font-semibold text-subtle">Off</b>
+              )}
             </div>
           </div>
         </main>
@@ -121,6 +132,7 @@ export function ConsolePage() {
                 step={1}
                 lit
                 disabled={offline}
+                className={cn(!device.state.power && "opacity-40")}
                 aria-label="Brightness"
                 onValueChange={([value]) => brightness.change(value ?? brightnessMin)}
                 onValueCommit={([value]) => brightness.release(value ?? brightnessMin)}
