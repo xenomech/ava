@@ -128,9 +128,11 @@ func (c *Controller) SendCommand(ctx *fiber.Ctx) error {
 	if err != nil {
 		switch {
 		case serrors.Is(err, devicesvc.ErrDeviceNotFound):
-			return response.Send(ctx, fiber.StatusNotFound, nil, "Device not found")
+			return response.SendError(ctx, fiber.StatusNotFound, err)
+		case serrors.Is(err, devicesvc.ErrHubOffline):
+			return response.SendError(ctx, fiber.StatusConflict, err)
 		case serrors.Is(err, devicesvc.ErrCommandChannelUnavailable):
-			return response.Send(ctx, fiber.StatusServiceUnavailable, nil, "The hub command channel is unavailable")
+			return response.SendError(ctx, fiber.StatusServiceUnavailable, err)
 		default:
 			return response.Send(ctx, fiber.StatusInternalServerError, nil, "Failed to send the command")
 		}

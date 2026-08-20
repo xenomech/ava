@@ -17,6 +17,7 @@ type Repository interface {
 	GetByID(ctx context.Context, tenantID, id uuid.UUID) (*model.Device, error)
 	Update(ctx context.Context, tenantID, id uuid.UUID, fields map[string]any) error
 	ApplyState(ctx context.Context, hubID uuid.UUID, externalID string, state json.RawMessage) (*model.Device, error)
+	MarkHubDevicesOffline(ctx context.Context, hubID uuid.UUID) (int64, error)
 }
 
 type deviceRepository struct {

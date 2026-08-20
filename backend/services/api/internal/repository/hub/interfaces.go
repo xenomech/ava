@@ -24,7 +24,7 @@ type Repository interface {
 	GetByRefreshToken(ctx context.Context, refreshToken string) (*model.Hub, error)
 	ListByTenant(ctx context.Context, tenantID uuid.UUID) ([]*model.Hub, error)
 	UpdateRefreshToken(ctx context.Context, hubID uuid.UUID, refreshToken string) error
-	TouchLastSeen(ctx context.Context, hubID uuid.UUID, at time.Time) error
+	SetPresence(ctx context.Context, hubID uuid.UUID, online bool, at time.Time) (hub *model.Hub, changed bool, err error)
 	Revoke(ctx context.Context, tenantID, hubID uuid.UUID) error
 }
 

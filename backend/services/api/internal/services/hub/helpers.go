@@ -50,6 +50,7 @@ func toHubResponse(hub *model.Hub) *dto.HubResponse {
 		ID:         hub.ID,
 		Name:       hub.Name,
 		Status:     string(hub.Status),
+		Online:     hub.IsOnline(),
 		LastSeenAt: hub.LastSeenAt,
 		CreatedAt:  hub.CreatedAt,
 	}

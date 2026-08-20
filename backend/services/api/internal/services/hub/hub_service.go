@@ -195,14 +195,32 @@ func (s *hubService) Revoke(ctx context.Context, tenantID, hubID uuid.UUID) erro
 	return nil
 }
 
-func (s *hubService) Heartbeat(ctx context.Context, hubID uuid.UUID) error {
-	if err := s.hubRepo.TouchLastSeen(ctx, hubID, time.Now()); err != nil {
-		logger.Error("hub.Heartbeat", logger.Err(err))
+func (s *hubService) ApplyPresence(ctx context.Context, hubID uuid.UUID, online bool) (*model.Hub, error) {
+	hub, changed, err := s.hubRepo.SetPresence(ctx, hubID, online, time.Now())
+	if err != nil {
+		if serrors.Is(err, hubrepo.ErrHubNotFound) {
+			return nil, ErrHubNotFound
+		}
 
-		return err
+		logger.Error("hub.ApplyPresence", logger.Err(err))
+
+		return nil, err
 	}
 
-	return nil
+	if !changed {
+		return hub, nil
+	}
+
+	logger.Info("HUB_PRESENCE_CHANGED",
+		logger.Any("hub.ID", hub.ID),
+		logger.Bool("online", hub.IsOnline()),
+	)
+
+	if s.events != nil {
+		s.events.PublishJSON(hub.TenantID, dto.NewHubPresenceEvent(hub.ID, hub.IsOnline()))
+	}
+
+	return hub, nil
 }
 
 func (s *hubService) ValidateDevice(ctx context.Context, hubID uuid.UUID) (*model.Hub, error) {

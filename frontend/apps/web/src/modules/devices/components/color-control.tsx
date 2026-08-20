@@ -27,6 +27,7 @@ export function ColorControl({
   kelvinMin = KELVIN_MIN,
   kelvinMax = KELVIN_MAX,
   showColor = false,
+  disabled = false,
   onWhite,
   onColor,
 }: {
@@ -35,6 +36,7 @@ export function ColorControl({
   kelvinMin?: number;
   kelvinMax?: number;
   showColor?: boolean;
+  disabled?: boolean;
   onWhite: (kelvin: number) => void;
   onColor: (color: string) => void;
 }) {
@@ -60,6 +62,7 @@ export function ColorControl({
           max={100}
           step={1}
           variant="marker"
+          disabled={disabled}
           aria-label="White temperature"
           aria-valuetext={`${toKelvin(warmth)} kelvin`}
           onValueChange={([v]) => onWhite(toKelvin(v ?? 0))}
@@ -76,6 +79,7 @@ export function ColorControl({
           max={100}
           step={1}
           variant="marker"
+          disabled={disabled}
           aria-label="Hue"
           onValueChange={([v]) => onColor(`hsl(${Math.round(((v ?? 0) / 100) * 360)} 92% 62%)`)}
           style={{ background: HUE_RAMP }}
@@ -86,11 +90,12 @@ export function ColorControl({
             <button
               key={s.css}
               type="button"
+              disabled={disabled}
               aria-label={s.name}
               aria-pressed={color === s.css}
               onClick={() => onColor(s.css)}
               style={{ background: s.css }}
-              className="aspect-square rounded-sm border border-border transition-transform duration-150 ease-out active:scale-95 aria-pressed:ring-2 aria-pressed:ring-fg aria-pressed:ring-offset-2 aria-pressed:ring-offset-surface"
+              className="aspect-square rounded-sm border border-border transition-transform duration-150 ease-out active:scale-95 disabled:opacity-40 aria-pressed:ring-2 aria-pressed:ring-fg aria-pressed:ring-offset-2 aria-pressed:ring-offset-surface"
             />
           ))}
         </div>

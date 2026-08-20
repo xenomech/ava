@@ -21,6 +21,7 @@ type Hub struct {
 	Name         string     `gorm:"not null" json:"name"`
 	Status       HubStatus  `gorm:"type:varchar(20);not null;default:'active';index" json:"status"`
 	RefreshToken string     `gorm:"type:varchar(64);not null;uniqueIndex" json:"-"`
+	Online       bool       `gorm:"not null;default:false" json:"online"`
 	LastSeenAt   *time.Time `json:"last_seen_at,omitempty"`
 }
 
@@ -39,6 +40,16 @@ func NewHub(tenantID uuid.UUID, name, refreshToken string) *Hub {
 
 func (hub *Hub) IsActive() bool {
 	return hub.Status == HubStatusActive
+}
+
+const PresenceGrace = 3 * time.Minute
+
+func (hub *Hub) IsOnline() bool {
+	return hub.Online && hub.LastSeenAt != nil && time.Since(*hub.LastSeenAt) < PresenceGrace
+}
+
+func (hub *Hub) PresenceKnown() bool {
+	return hub.LastSeenAt != nil
 }
 
 type HubAuthStatus string

@@ -33,6 +33,15 @@ func (s *deviceService) SendCommand(
 		return nil, err
 	}
 
+	hub, err := s.hubRepo.GetByID(ctx, tenantID, target.HubID)
+	if err != nil {
+		return nil, err
+	}
+
+	if hub.PresenceKnown() && !hub.IsOnline() {
+		return nil, ErrHubOffline
+	}
+
 	tenant, err := s.tenantRepo.GetByID(ctx, tenantID)
 	if err != nil {
 		return nil, err
@@ -69,7 +78,10 @@ func (s *deviceService) SendCommand(
 	}, nil
 }
 
-var ErrCommandChannelUnavailable = serrors.NewCoded("command_channel_unavailable", "the hub command channel is unavailable")
+var (
+	ErrCommandChannelUnavailable = serrors.NewCoded("command_channel_unavailable", "the hub command channel is unavailable")
+	ErrHubOffline                = serrors.NewCoded("hub_offline", "the hub for this device is offline")
+)
 
 func (s *deviceService) ApplyReportedState(
 	ctx context.Context,
@@ -96,8 +108,5 @@ func (s *deviceService) announce(device *model.Device) {
 		return
 	}
 
-	s.events.PublishJSON(device.TenantID, map[string]any{
-		"type":   "device.state",
-		"device": toDeviceResponse(device),
-	})
+	s.events.PublishJSON(device.TenantID, dto.NewDeviceStateEvent(toDeviceResponse(device)))
 }
