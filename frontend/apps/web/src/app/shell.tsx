@@ -14,23 +14,21 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, Outlet, useNavigate } from "@tanstack/react-router";
 import {
-  BoltIcon,
   ChevronDownIcon,
   HomeIcon,
   LayoutGridIcon,
   LogOutIcon,
   MoonIcon,
   PlusIcon,
+  RadioIcon,
   SettingsIcon,
   SunIcon,
   UsersIcon,
 } from "lucide-react";
-import { useState } from "react";
 import { toast } from "sonner";
 
 import { isApiError } from "@/config/http/request";
 import { switchTenant, useSession, useSignOut } from "@/modules/auth";
-import { AddDeviceDrawer } from "@/modules/devices/components/add-device-drawer";
 import { tenantQueries } from "@/modules/tenant";
 import { useTheme } from "@/shared/components/theme-provider";
 import { CommandPalette } from "./command-palette";
@@ -38,7 +36,7 @@ import { CommandPalette } from "./command-palette";
 const NAV = [
   { to: "/", label: "Console", icon: HomeIcon },
   { to: "/rooms", label: "Rooms", icon: LayoutGridIcon },
-  { to: "/energy", label: "Energy", icon: BoltIcon },
+  { to: "/activate", label: "Hubs", icon: RadioIcon },
   { to: "/settings/members", label: "People", icon: UsersIcon },
   { to: "/settings", label: "Settings", icon: SettingsIcon },
 ] as const;
@@ -47,10 +45,9 @@ const MOBILE_NAV = NAV.filter((item) => item.to !== "/settings/members");
 
 export function AppShell() {
   const { user, tenant } = useSession();
+
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [addOpen, setAddOpen] = useState(false);
-
   const homes = useQuery(tenantQueries.mine()).data ?? [];
 
   const { resolvedTheme, setTheme } = useTheme();
@@ -171,14 +168,16 @@ export function AppShell() {
             </Link>
           ))}
 
-          <Button
-            variant="ghost"
-            onClick={() => setAddOpen(true)}
-            className="mt-2 h-10 justify-center gap-3 px-3 text-small lg:justify-start"
+          <Link
+            to="/activate"
+            className={cn(
+              "mt-2 flex h-10 items-center justify-center gap-3 rounded-sm px-3 text-small font-medium lg:justify-start",
+              "border border-border-strong text-fg transition-colors duration-150 ease-out hover:bg-surface",
+            )}
           >
-            <PlusIcon aria-hidden />
-            <span className="hidden lg:inline">Add device</span>
-          </Button>
+            <PlusIcon className="size-[18px] shrink-0" aria-hidden />
+            <span className="hidden lg:inline">Add hub</span>
+          </Link>
         </nav>
 
         <main className="min-w-0 overflow-y-auto">
@@ -206,21 +205,18 @@ export function AppShell() {
           </Link>
         ))}
 
-        <button
-          type="button"
-          onClick={() => setAddOpen(true)}
+        <Link
+          to="/activate"
           className="grid h-14 place-items-center gap-1 text-caption text-subtle"
         >
           <span className="grid size-[19px] place-items-center rounded-xs bg-accent text-accent-fg">
             <PlusIcon className="size-3.5" aria-hidden />
           </span>
           <span className="leading-none">Add</span>
-        </button>
+        </Link>
       </nav>
 
-      <AddDeviceDrawer open={addOpen} onOpenChange={setAddOpen} />
-
-      <CommandPalette onAddDevice={() => setAddOpen(true)} />
+      <CommandPalette />
     </div>
   );
 }

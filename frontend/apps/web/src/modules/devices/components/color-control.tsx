@@ -1,7 +1,7 @@
 import { Slider, Tabs, TabsContent, TabsList, TabsTrigger } from "@ava/ui";
 
 import { cssToHue } from "@/shared/lib/color";
-import { KELVIN_MAX, KELVIN_MIN, kelvinToPercent, percentToKelvin } from "@/shared/lib/kelvin";
+import { KELVIN_MAX, KELVIN_MIN } from "@/shared/lib/kelvin";
 
 const SWATCHES = [
   { css: "#ff5a3c", name: "Ember" },
@@ -24,23 +24,35 @@ const HUE_RAMP =
 export function ColorControl({
   color,
   kelvin,
+  kelvinMin = KELVIN_MIN,
+  kelvinMax = KELVIN_MAX,
+  showColor = false,
   onWhite,
   onColor,
 }: {
   color: string;
   kelvin: number | null;
+  kelvinMin?: number;
+  kelvinMax?: number;
+  showColor?: boolean;
   onWhite: (kelvin: number) => void;
   onColor: (color: string) => void;
 }) {
-  const warmth = kelvinToPercent(kelvin ?? KELVIN_MIN);
+  const span = Math.max(kelvinMax - kelvinMin, 1);
+  const toPercent = (value: number) => ((value - kelvinMin) / span) * 100;
+  const toKelvin = (percent: number) => Math.round(kelvinMin + (percent / 100) * span);
+
+  const warmth = toPercent(kelvin ?? kelvinMin);
   const hue = (cssToHue(color) / 360) * 100;
 
   return (
-    <Tabs defaultValue={kelvin === null ? "color" : "white"} className="grid gap-2.5">
-      <TabsList className="w-full">
-        <TabsTrigger value="white">White</TabsTrigger>
-        <TabsTrigger value="color">Colour</TabsTrigger>
-      </TabsList>
+    <Tabs defaultValue={showColor && kelvin === null ? "color" : "white"} className="grid gap-2.5">
+      {showColor ? (
+        <TabsList className="w-full">
+          <TabsTrigger value="white">White</TabsTrigger>
+          <TabsTrigger value="color">Colour</TabsTrigger>
+        </TabsList>
+      ) : null}
 
       <TabsContent value="white" className="grid gap-2">
         <Slider
@@ -49,16 +61,16 @@ export function ColorControl({
           step={1}
           variant="marker"
           aria-label="White temperature"
-          aria-valuetext={`${percentToKelvin(warmth)} kelvin`}
-          onValueChange={([v]) => onWhite(percentToKelvin(v ?? 0))}
+          aria-valuetext={`${toKelvin(warmth)} kelvin`}
+          onValueChange={([v]) => onWhite(toKelvin(v ?? 0))}
           style={{ background: KELVIN_RAMP }}
         />
         <p className="font-mono text-caption text-subtle tabular">
-          {kelvin === null ? `${KELVIN_MIN}–${KELVIN_MAX}K` : `${kelvin}K`}
+          {kelvin === null ? `${kelvinMin}–${kelvinMax}K` : `${kelvin}K`}
         </p>
       </TabsContent>
 
-      <TabsContent value="color" className="grid gap-2.5">
+      <TabsContent value="color" className={showColor ? "grid gap-2.5" : "hidden"}>
         <Slider
           value={[hue]}
           max={100}

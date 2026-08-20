@@ -1,75 +1,66 @@
-import { Device, DeviceHalo, cn } from "@ava/ui";
-import { useCallback, useState } from "react";
+import { Device, DeviceHalo, cn, type DeviceKind } from "@ava/ui";
+import type { DeviceDto } from "@ava/contracts";
 
-import { useDeviceGesture } from "@/shared/hooks/use-device-gesture";
-import { isBehindOverlay } from "@/shared/lib/overlay";
-import { useDeviceStore, useDevices, useFocusedDevice } from "../store";
+import { kelvinToCss } from "@/shared/lib/kelvin";
 
-export function DeviceStage({ onHold, className }: { onHold?: () => void; className?: string }) {
-  const { devices, focused } = useDevices();
-  const { device, setLevel, toggle, step } = useFocusedDevice();
+export function deviceKind(device: DeviceDto): DeviceKind {
+  switch (device.kind) {
+    case "strip":
+    case "lamp":
+    case "plug":
+    case "sensor":
+      return device.kind;
+    default:
+      return "bulb";
+  }
+}
 
-  const [dragLevel, setDragLevel] = useState<number | null>(null);
-  const startLevel = useDeviceStore((s) => s.devices.find((d) => d.id === s.focused)?.level ?? 0);
+export function deviceLevel(device: DeviceDto): number {
+  if (!device.state.power) return 0;
 
-  const gesture = useDeviceGesture({
-    onTap: useCallback(() => toggle(device.id), [toggle, device.id]),
-    onHold: useCallback(() => onHold?.(), [onHold]),
-    onDim: useCallback((delta) => setDragLevel(startLevel + delta), [startLevel]),
-    onDimEnd: useCallback(() => {
-      if (dragLevel !== null) setLevel(device.id, dragLevel);
-      setDragLevel(null);
-    }, [dragLevel, setLevel, device.id]),
-    onSwipe: useCallback((direction) => step(direction), [step]),
-  });
+  return device.state.brightness ?? 100;
+}
 
-  const shown = dragLevel ?? device.level;
+export function deviceColor(device: DeviceDto): string {
+  return kelvinToCss(device.state.color_temp ?? 2700);
+}
 
+export function DeviceStage({
+  devices,
+  focusedID,
+  levelOverride,
+  className,
+}: {
+  devices: DeviceDto[];
+  focusedID: string;
+  levelOverride?: number | null;
+  className?: string;
+}) {
   return (
-    <div
-      {...gesture}
-      // oxlint-disable-next-line prefer-tag-over-role
-      role="slider"
-      tabIndex={0}
-      aria-label={`${device.name} brightness`}
-      aria-valuemin={0}
-      aria-valuemax={100}
-      aria-valuenow={Math.round(shown)}
-      onKeyDown={(event) => {
-        if (isBehindOverlay(event.currentTarget)) return;
-
-        const stepBy = event.shiftKey ? 10 : 5;
-        if (event.key === "ArrowUp") setLevel(device.id, device.level + stepBy);
-        else if (event.key === "ArrowDown") setLevel(device.id, device.level - stepBy);
-        else if (event.key === "ArrowRight") step(1);
-        else if (event.key === "ArrowLeft") step(-1);
-        else if (event.key === "Enter" || event.key === " ") toggle(device.id);
-        else return;
-        event.preventDefault();
-      }}
-      className={cn(
-        "relative grid min-h-0 flex-1 cursor-grab place-items-center outline-none",
-        "active:cursor-grabbing",
-        className,
-      )}
-    >
-      {devices.map((d) => {
-        const isFocused = d.id === focused;
-        const level = isFocused ? shown : d.level;
+    <div className={cn("relative grid min-h-0 flex-1 place-items-center", className)}>
+      {devices.map((device) => {
+        const isFocused = device.id === focusedID;
+        const level = isFocused && levelOverride != null ? levelOverride : deviceLevel(device);
+        const color = deviceColor(device);
 
         return (
           <div
-            key={d.id}
+            key={device.id}
             aria-hidden={!isFocused}
             className={cn(
               "absolute inset-0 grid place-items-center",
               "transition-[opacity,transform] duration-[380ms] ease-out-soft",
               isFocused ? "opacity-100 scale-100" : "pointer-events-none opacity-0 scale-90",
             )}
-            style={{ "--level": level, "--lit": d.color } as React.CSSProperties}
+            style={{ "--level": level, "--lit": color } as React.CSSProperties}
           >
             <DeviceHalo className="w-[46%]" />
-            <Device kind={d.kind} level={level} color={d.color} className="h-[58%] max-h-[380px]" />
+            <Device
+              kind={deviceKind(device)}
+              level={level}
+              color={color}
+              className="h-[58%] max-h-[380px]"
+            />
           </div>
         );
       })}
