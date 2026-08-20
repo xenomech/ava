@@ -32,6 +32,7 @@ import { switchTenant, useSession, useSignOut } from "@/modules/auth";
 import { tenantQueries } from "@/modules/tenant";
 import { useTheme } from "@/shared/components/theme-provider";
 import { CommandPalette } from "./command-palette";
+import { useAvaStream } from "./use-ava-stream";
 
 const NAV = [
   { to: "/", label: "Console", icon: HomeIcon },
@@ -45,6 +46,8 @@ const MOBILE_NAV = NAV.filter((item) => item.to !== "/settings/members");
 
 export function AppShell() {
   const { user, tenant } = useSession();
+
+  useAvaStream();
 
   const navigate = useNavigate();
   const queryClient = useQueryClient();
