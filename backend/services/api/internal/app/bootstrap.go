@@ -16,6 +16,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -156,7 +157,7 @@ func connectDatabase(cfg *config.Config) (*gorm.DB, error) {
 func connectBroker(ctx context.Context, cfg *config.Config) *mqtt.Client {
 	publisher, err := mqtt.Connect(ctx, &mqtt.Options{
 		BrokerURL: cfg.MQTTBrokerURL,
-		ClientID:  "ava-api",
+		ClientID:  "ava-api-" + uuid.NewString(),
 	})
 	if err != nil {
 		logger.Warn("MQTT_UNAVAILABLE", logger.Err(err))
