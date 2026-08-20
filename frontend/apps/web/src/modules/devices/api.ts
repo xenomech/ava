@@ -1,4 +1,9 @@
-import { deviceDto, type DeviceDto, type SendCommandRequest, type UpdateDeviceRequest } from "@ava/contracts";
+import {
+  deviceDto,
+  type DeviceDto,
+  type SendCommandRequest,
+  type UpdateDeviceRequest,
+} from "@ava/contracts";
 import { z } from "zod";
 
 import { request } from "@/config/http/request";

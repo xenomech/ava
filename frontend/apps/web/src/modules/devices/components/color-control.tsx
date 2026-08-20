@@ -1,7 +1,9 @@
 import { Slider, Tabs, TabsContent, TabsList, TabsTrigger } from "@ava/ui";
 
 import { cssToHue } from "@/shared/lib/color";
-import { KELVIN_MAX, KELVIN_MIN } from "@/shared/lib/kelvin";
+import { useLiveSlider } from "../use-live-slider";
+
+const KELVIN_STEP = 50;
 
 const SWATCHES = [
   { css: "#ff5a3c", name: "Ember" },
@@ -24,27 +26,25 @@ const HUE_RAMP =
 export function ColorControl({
   color,
   kelvin,
-  kelvinMin = KELVIN_MIN,
-  kelvinMax = KELVIN_MAX,
+  kelvinMin,
+  kelvinMax,
   showColor = false,
   disabled = false,
+  onWhitePreview,
   onWhite,
   onColor,
 }: {
   color: string;
   kelvin: number | null;
-  kelvinMin?: number;
-  kelvinMax?: number;
+  kelvinMin: number;
+  kelvinMax: number;
   showColor?: boolean;
   disabled?: boolean;
+  onWhitePreview: (kelvin: number) => void;
   onWhite: (kelvin: number) => void;
   onColor: (color: string) => void;
 }) {
-  const span = Math.max(kelvinMax - kelvinMin, 1);
-  const toPercent = (value: number) => ((value - kelvinMin) / span) * 100;
-  const toKelvin = (percent: number) => Math.round(kelvinMin + (percent / 100) * span);
-
-  const warmth = toPercent(kelvin ?? kelvinMin);
+  const white = useLiveSlider(kelvin ?? kelvinMin, onWhitePreview, onWhite);
   const hue = (cssToHue(color) / 360) * 100;
 
   return (
@@ -58,18 +58,22 @@ export function ColorControl({
 
       <TabsContent value="white" className="grid gap-2">
         <Slider
-          value={[warmth]}
-          max={100}
-          step={1}
+          value={[white.value]}
+          min={kelvinMin}
+          max={kelvinMax}
+          step={KELVIN_STEP}
           variant="marker"
           disabled={disabled}
           aria-label="White temperature"
-          aria-valuetext={`${toKelvin(warmth)} kelvin`}
-          onValueChange={([v]) => onWhite(toKelvin(v ?? 0))}
+          aria-valuetext={`${white.value} kelvin`}
+          onValueChange={([v]) => white.change(v ?? kelvinMin)}
+          onValueCommit={([v]) => white.release(v ?? kelvinMin)}
           style={{ background: KELVIN_RAMP }}
         />
-        <p className="font-mono text-caption text-subtle tabular">
-          {kelvin === null ? `${kelvinMin}–${kelvinMax}K` : `${kelvin}K`}
+        <p className="flex justify-between font-mono text-caption text-subtle tabular">
+          <span>{kelvinMin}K</span>
+          <span className="text-fg">{white.value}K</span>
+          <span>{kelvinMax}K</span>
         </p>
       </TabsContent>
 
@@ -81,7 +85,7 @@ export function ColorControl({
           variant="marker"
           disabled={disabled}
           aria-label="Hue"
-          onValueChange={([v]) => onColor(`hsl(${Math.round(((v ?? 0) / 100) * 360)} 92% 62%)`)}
+          onValueCommit={([v]) => onColor(`hsl(${Math.round(((v ?? 0) / 100) * 360)} 92% 62%)`)}
           style={{ background: HUE_RAMP }}
         />
 
