@@ -64,7 +64,11 @@ export function forgotPassword(email: string): Promise<void> {
 }
 
 export function resetPassword(token: string, newPassword: string): Promise<void> {
-  return request({ method: "post", url: "/auth/reset-password", body: { token, new_password: newPassword } });
+  return request({
+    method: "post",
+    url: "/auth/reset-password",
+    body: { token, new_password: newPassword },
+  });
 }
 
 export function acceptInvite(token: string): Promise<void> {

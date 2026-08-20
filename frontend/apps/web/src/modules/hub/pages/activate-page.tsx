@@ -29,8 +29,7 @@ export function ActivatePage() {
       setCode("");
       await queryClient.invalidateQueries({ queryKey: hubQueries.all() });
     },
-    onError: (error) =>
-      toast.error(isApiError(error) ? error.message : "Could not pair that hub"),
+    onError: (error) => toast.error(isApiError(error) ? error.message : "Could not pair that hub"),
   });
 
   const revoke = useMutation({
@@ -44,10 +43,7 @@ export function ActivatePage() {
 
   return (
     <Page title="Hubs" description="Pair the box that talks to your devices.">
-      <Section
-        title="Add a hub"
-        description="Start Ava on the hub and enter the code it prints."
-      >
+      <Section title="Add a hub" description="Start Ava on the hub and enter the code it prints.">
         <form
           className="grid gap-4 p-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
           onSubmit={(event) => {

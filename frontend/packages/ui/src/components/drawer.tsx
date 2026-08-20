@@ -59,12 +59,7 @@ function DrawerHeader({ className, ...props }: ComponentProps<"header">) {
 }
 
 function DrawerTitle({ className, ...props }: ComponentProps<typeof Vaul.Title>) {
-  return (
-    <Vaul.Title
-      className={cn("text-title font-semibold", className)}
-      {...props}
-    />
-  );
+  return <Vaul.Title className={cn("text-title font-semibold", className)} {...props} />;
 }
 
 function DrawerDescription({ className, ...props }: ComponentProps<typeof Vaul.Description>) {

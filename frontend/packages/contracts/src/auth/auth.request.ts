@@ -7,7 +7,7 @@ export const passwordSchema = z.string().min(8, "Must be at least 8 characters")
 export const loginRequest = z.object({
   email: z.email(),
   password: z.string().min(1, "Password is required"),
-    tenant_slug: z.string().optional(),
+  tenant_slug: z.string().optional(),
 });
 
 export type LoginRequest = z.infer<typeof loginRequest>;
