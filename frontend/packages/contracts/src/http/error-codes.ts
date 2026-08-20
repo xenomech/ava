@@ -49,6 +49,8 @@ export const DOMAIN_ERROR_CODES = [
   "invalid_step_data",
   "step_not_permitted",
   "device_not_found",
+  "hub_offline",
+  "command_channel_unavailable",
   "invalid_code",
 ] as const;
 
