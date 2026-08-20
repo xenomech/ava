@@ -3,6 +3,7 @@ import { HeadContent, Outlet, createRootRouteWithContext } from "@tanstack/react
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 
 import type { RouterContext } from "@/app/router";
+import { UpdatePrompt } from "@/app/update-prompt";
 import { NotFound } from "@/shared/layouts/not-found";
 import { RouteErrorBoundary } from "@/shared/layouts/route-error-boundary";
 
@@ -13,10 +14,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   notFoundComponent: NotFound,
   errorComponent: RouteErrorBoundary,
   head: () => ({
-    meta: [
-      { title: "Ava" },
-      { name: "description", content: "Ava - multi-tenant hub control" },
-    ],
+    meta: [{ title: "Ava" }, { name: "description", content: "Ava - multi-tenant hub control" }],
     links: [{ rel: "icon", href: "/favicon.ico" }],
   }),
 });
@@ -25,6 +23,7 @@ function RootComponent() {
   return (
     <>
       <HeadContent />
+      <UpdatePrompt />
       <Outlet />
       <TanStackRouterDevtools position="bottom-left" />
       <ReactQueryDevtools buttonPosition="bottom-right" />

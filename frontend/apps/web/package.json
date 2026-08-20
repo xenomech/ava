@@ -25,6 +25,7 @@
     "react-dom": "catalog:",
     "sonner": "catalog:",
     "vite-plugin-pwa": "catalog:",
+    "workbox-window": "catalog:",
     "zod": "catalog:",
     "zustand": "catalog:"
   },

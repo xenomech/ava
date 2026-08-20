@@ -107,6 +107,7 @@ export function SettingsPage() {
             label="Role in this home"
             value={<span className="capitalize">{session.tenant?.role ?? "—"}</span>}
           />
+          <Row label="App version" value={<span className="font-mono">{__APP_VERSION__}</span>} />
         </dl>
       </Section>
     </Page>

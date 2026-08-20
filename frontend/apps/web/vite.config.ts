@@ -1,10 +1,34 @@
+import { execSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
+const pkg = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")) as {
+  version: string;
+};
+
+function buildVersion() {
+  if (process.env.APP_VERSION) return process.env.APP_VERSION;
+
+  try {
+    const sha = execSync("git rev-parse --short HEAD", { stdio: ["ignore", "pipe", "ignore"] })
+      .toString()
+      .trim();
+
+    return `${pkg.version}+${sha}`;
+  } catch {
+    return `${pkg.version}+dev`;
+  }
+}
+
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(buildVersion()),
+  },
   server: {
     port: 3000,
   },
@@ -19,7 +43,7 @@ export default defineConfig({
     }),
     react(),
     VitePWA({
-      registerType: "autoUpdate",
+      registerType: "prompt",
       manifest: {
         name: "Ava",
         short_name: "Ava",
@@ -27,7 +51,14 @@ export default defineConfig({
         theme_color: "#0c0c0c",
       },
       pwaAssets: { disabled: false, config: true },
-      devOptions: { enabled: true },
+      workbox: {
+        clientsClaim: true,
+        skipWaiting: false,
+        cleanupOutdatedCaches: true,
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,webmanifest}"],
+        navigateFallbackDenylist: [/^\/api\//],
+      },
+      devOptions: { enabled: false },
     }),
   ],
 });
