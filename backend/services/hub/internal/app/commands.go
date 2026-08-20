@@ -20,12 +20,20 @@ func (a *App) startCommands(ctx context.Context, tokens *api.HubTokens) (*mqtt.C
 		return nil, err
 	}
 
+	online, err := json.Marshal(wire.Presence{Online: true, HubID: tokens.Hub.ID})
+	if err != nil {
+		return nil, err
+	}
+
 	client, err := mqtt.Connect(ctx, &mqtt.Options{
 		BrokerURL: a.cfg.MQTTBrokerURL,
 		ClientID:  "ava-hub-" + tokens.Hub.ID,
 		WillTopic: topics.Status,
 		Durable:   true,
 		Will:      offline,
+		OnConnect: func(client *mqtt.Client) {
+			a.announce(ctx, client, topics, online)
+		},
 	})
 	if err != nil {
 		return nil, err
@@ -34,28 +42,25 @@ func (a *App) startCommands(ctx context.Context, tokens *api.HubTokens) (*mqtt.C
 	a.topics = topics
 	a.mqtt = client
 
+	return client, nil
+}
+
+func (a *App) announce(ctx context.Context, client *mqtt.Client, topics wire.Topics, online []byte) {
 	if err := client.Subscribe(ctx, topics.Command, func(_ string, payload []byte) {
 		a.handleCommand(ctx, payload)
 	}); err != nil {
-		client.Close()
+		logger.Warn("COMMAND_SUBSCRIBE_FAILED", logger.String("error", err.Error()))
 
-		return nil, err
-	}
-
-	online, err := json.Marshal(wire.Presence{Online: true, HubID: tokens.Hub.ID})
-	if err != nil {
-		client.Close()
-
-		return nil, err
+		return
 	}
 
 	if err := client.Publish(ctx, topics.Status, online, true); err != nil {
-		client.Close()
+		logger.Warn("PRESENCE_PUBLISH_FAILED", logger.String("error", err.Error()))
 
-		return nil, err
+		return
 	}
 
-	return client, nil
+	logger.Info("HUB_ONLINE", logger.String("topic", topics.Status))
 }
 
 func (a *App) handleCommand(ctx context.Context, payload []byte) {

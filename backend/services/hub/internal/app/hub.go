@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"time"
 
@@ -14,6 +15,8 @@ import (
 	"ava/pkg/mqtt"
 	"ava/pkg/wire"
 )
+
+const departTimeout = 2 * time.Second
 
 type App struct {
 	cfg      *config.Config
@@ -54,8 +57,27 @@ func (a *App) Close() {
 		return
 	}
 
+	a.depart()
 	a.mqtt.Close()
 	logger.Sync()
+}
+
+func (a *App) depart() {
+	if a.mqtt == nil || a.topics.Status == "" {
+		return
+	}
+
+	offline, err := json.Marshal(wire.Presence{Online: false, HubID: a.state.HubID})
+	if err != nil {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), departTimeout)
+	defer cancel()
+
+	if err := a.mqtt.Publish(ctx, a.topics.Status, offline, true); err != nil {
+		logger.Warn("PRESENCE_PUBLISH_FAILED", logger.String("error", err.Error()))
+	}
 }
 
 func (a *App) Run(ctx context.Context) error {
