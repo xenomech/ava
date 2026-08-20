@@ -62,6 +62,7 @@ func Bootstrap(ctx context.Context) (*App, error) {
 	}
 
 	app.listenForState(ctx)
+	app.listenForPresence(ctx)
 
 	return app, nil
 }

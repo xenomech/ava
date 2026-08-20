@@ -11,7 +11,10 @@ import (
 	"github.com/google/uuid"
 )
 
-const stateTopicFilter = "ava/+/+/state"
+const (
+	stateTopicFilter    = "ava/+/+/state"
+	presenceTopicFilter = "ava/+/+/status"
+)
 
 func (a *App) listenForState(ctx context.Context) {
 	if a.Publisher == nil {
@@ -62,6 +65,41 @@ func (a *App) applyState(ctx context.Context, topic string, payload []byte) {
 	}
 
 	logger.Debug("STATE_APPLIED", logger.String("device.ExternalID", event.DeviceID))
+}
+
+func (a *App) listenForPresence(ctx context.Context) {
+	if a.Publisher == nil {
+		return
+	}
+
+	err := a.Publisher.Subscribe(ctx, presenceTopicFilter, func(topic string, payload []byte) {
+		a.applyPresence(ctx, topic, payload)
+	})
+	if err != nil {
+		logger.Warn("PRESENCE_SUBSCRIBE_FAILED", logger.Err(err))
+	}
+}
+
+func (a *App) applyPresence(ctx context.Context, topic string, payload []byte) {
+	hubID, ok := hubFromTopic(topic)
+	if !ok {
+		return
+	}
+
+	var presence wire.Presence
+
+	if err := json.Unmarshal(payload, &presence); err != nil {
+		logger.Warn("PRESENCE_DECODE_FAILED", logger.String("topic", topic))
+
+		return
+	}
+
+	if _, err := a.Service.Hub.ApplyPresence(ctx, hubID, presence.Online); err != nil {
+		logger.Warn("PRESENCE_APPLY_FAILED", logger.Any("hub.ID", hubID), logger.Err(err))
+
+		return
+	}
+
 }
 
 func hubFromTopic(topic string) (uuid.UUID, bool) {

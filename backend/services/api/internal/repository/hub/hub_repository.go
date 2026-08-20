@@ -182,11 +182,6 @@ func (r *hubRepository) UpdateRefreshToken(ctx context.Context, hubID uuid.UUID,
 	return nil
 }
 
-func (r *hubRepository) TouchLastSeen(ctx context.Context, hubID uuid.UUID, at time.Time) error {
-	return r.db.WithContext(ctx).Model(&model.Hub{}).Where("id = ?", hubID).
-		Update("last_seen_at", at).Error
-}
-
 func (r *hubRepository) SetPresence(
 	ctx context.Context,
 	hubID uuid.UUID,

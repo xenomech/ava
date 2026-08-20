@@ -4,6 +4,7 @@ import (
 	"ava/api/internal/services/auth/jwt"
 	hubsvc "ava/api/internal/services/hub"
 	"ava/api/pkg/response"
+	"ava/pkg/logger"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -39,6 +40,10 @@ func ValidateHubToken(hubService hubsvc.Service) fiber.Handler {
 
 		if hub.TenantID != claims.TenantID {
 			return response.Send(c, fiber.StatusUnauthorized, nil, "Hub does not belong to this tenant")
+		}
+
+		if _, err := hubService.ApplyPresence(ctx, hub.ID, true); err != nil {
+			logger.Warn("HUB_PRESENCE_NOT_RECORDED", logger.Any("hub.ID", hub.ID), logger.Err(err))
 		}
 
 		c.Locals("hubID", hub.ID)

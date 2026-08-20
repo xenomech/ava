@@ -150,13 +150,8 @@ func (c *Controller) Revoke(ctx *fiber.Ctx) error {
 }
 
 func (c *Controller) Heartbeat(ctx *fiber.Ctx) error {
-	hubID, ok := ctx.Locals("hubID").(uuid.UUID)
-	if !ok {
+	if _, ok := ctx.Locals("hubID").(uuid.UUID); !ok {
 		return response.Send(ctx, fiber.StatusUnauthorized, nil, "Unauthorized")
-	}
-
-	if err := c.hubService.Heartbeat(ctx.Context(), hubID); err != nil {
-		return response.Send(ctx, fiber.StatusInternalServerError, nil, "Failed to record heartbeat")
 	}
 
 	return response.Send(ctx, fiber.StatusOK, nil, "")
