@@ -60,6 +60,8 @@ export function ConsolePage() {
   const hubOffline = hub !== undefined && !hub.online;
   const offline = device.status === "offline" || hubOffline;
   const capabilities = device.state.capabilities;
+  const canWarm =
+    capabilities.includes("color_temp") && kelvinMin !== undefined && kelvinMax !== undefined;
 
   return (
     <div className="grid h-full grid-rows-[auto_minmax(0,1fr)_auto]">
@@ -127,7 +129,7 @@ export function ConsolePage() {
             </div>
           ) : null}
 
-          {capabilities.includes("color_temp") ? (
+          {canWarm ? (
             <div className="grid gap-2.5">
               <span className="text-caption font-semibold uppercase tracking-caps text-subtle">
                 Colour
@@ -139,6 +141,7 @@ export function ConsolePage() {
                 kelvinMax={kelvinMax}
                 showColor={capabilities.includes("color")}
                 disabled={offline}
+                onWhitePreview={(kelvin) => send("color_temp", kelvin)}
                 onWhite={(kelvin) => settle("color_temp", kelvin)}
                 onColor={() => undefined}
               />
