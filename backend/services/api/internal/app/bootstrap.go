@@ -53,13 +53,17 @@ func Bootstrap(ctx context.Context) (*App, error) {
 
 	service := services.NewService(repository.NewRepository(database), commander)
 
-	return &App{
+	app := &App{
 		Config:    cfg,
 		DB:        database,
 		Service:   service,
 		Publisher: publisher,
 		Fiber:     buildFiber(cfg, service),
-	}, nil
+	}
+
+	app.listenForState(ctx)
+
+	return app, nil
 }
 
 func (a *App) Run(ctx context.Context) error {
