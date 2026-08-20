@@ -65,7 +65,7 @@ export const errorCodeSchema = z.union([z.enum(ERROR_CODES), z.string()]);
 export const errorBodySchema = z.object({
   code: errorCodeSchema,
   message: z.string(),
-    details: z.record(z.string(), z.string()).optional(),
+  details: z.record(z.string(), z.string()).optional(),
 });
 
 export type ErrorBody = z.infer<typeof errorBodySchema>;

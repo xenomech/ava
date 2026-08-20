@@ -191,8 +191,9 @@ func (l *Light) SetBrightness(ctx context.Context, percent int) error {
 	}
 
 	level := device.Clamp(percent, l.limits.BrightnessMin, l.limits.BrightnessMax)
+	on := true
 
-	return l.setPilot(ctx, pilotParams{Dimming: &level})
+	return l.setPilot(ctx, pilotParams{State: &on, Dimming: &level})
 }
 
 func (l *Light) SetColorTemp(ctx context.Context, kelvin int) error {

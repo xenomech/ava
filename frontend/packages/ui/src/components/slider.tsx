@@ -16,8 +16,9 @@ export function Slider({ className, lit, variant = "fill", ...props }: SliderPro
       data-slot="slider"
       className={cn(
         "relative flex h-[46px] w-full touch-none select-none items-center",
-        "rounded-md bg-raised overflow-hidden",
+        "rounded-md bg-raised",
         "data-[disabled]:opacity-50",
+        marker ? "px-[3px]" : "overflow-hidden",
         className,
       )}
       {...props}
