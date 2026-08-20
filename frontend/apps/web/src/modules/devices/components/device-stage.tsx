@@ -1,18 +1,10 @@
 import { Device, DeviceHalo, cn, type DeviceKind } from "@ava/ui";
-import type { DeviceDto } from "@ava/contracts";
+import { deviceProfile, type DeviceDto } from "@ava/contracts";
 
 import { kelvinToCss } from "@/shared/lib/kelvin";
 
 export function deviceKind(device: DeviceDto): DeviceKind {
-  switch (device.kind) {
-    case "strip":
-    case "lamp":
-    case "plug":
-    case "sensor":
-      return device.kind;
-    default:
-      return "bulb";
-  }
+  return deviceProfile(device).kind;
 }
 
 export function deviceLevel(device: DeviceDto): number {

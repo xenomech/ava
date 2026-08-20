@@ -1,5 +1,5 @@
 import { Button, Chip, Slider, Switch, cn } from "@ava/ui";
-import type { DeviceAction, DeviceDto } from "@ava/contracts";
+import { deviceControls, deviceProfile, type DeviceAction, type DeviceDto } from "@ava/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { Device } from "@ava/ui";
 import { useNavigate, useSearch } from "@tanstack/react-router";
@@ -24,11 +24,8 @@ export function ConsolePage() {
 
   const device = devices.find((entry) => entry.id === search.device) ?? devices[0];
 
-  const limits = device?.state.limits;
-  const brightnessMin = limits?.brightness_min ?? 0;
-  const brightnessMax = limits?.brightness_max ?? 100;
-  const kelvinMin = limits?.kelvin_min;
-  const kelvinMax = limits?.kelvin_max;
+  const controls = deviceControls(device);
+  const dimming = controls.brightness ?? { min: 0, max: 100 };
 
   const send = (action: DeviceAction, value: number) => {
     if (!device) return;
@@ -43,7 +40,7 @@ export function ConsolePage() {
   };
 
   const brightness = useLiveSlider(
-    clamp(device?.state.brightness ?? brightnessMax, brightnessMin, brightnessMax),
+    clamp(device?.state.brightness ?? dimming.max, dimming.min, dimming.max),
     (value) => send("brightness", value),
     (value) => settle("brightness", value),
   );
@@ -59,9 +56,7 @@ export function ConsolePage() {
   const hub = (hubs.data ?? []).find((entry) => entry.id === device.hub_id);
   const hubOffline = hub !== undefined && !hub.online;
   const offline = device.status === "offline" || hubOffline;
-  const capabilities = device.state.capabilities;
-  const canWarm =
-    capabilities.includes("color_temp") && kelvinMin !== undefined && kelvinMax !== undefined;
+  const profile = deviceProfile(device);
 
   return (
     <div
@@ -117,7 +112,7 @@ export function ConsolePage() {
             />
           </div>
 
-          {capabilities.includes("brightness") ? (
+          {controls.brightness ? (
             <div className="grid gap-2.5">
               <div className="flex items-baseline justify-between">
                 <span className="text-caption font-semibold uppercase tracking-caps text-subtle">
@@ -127,21 +122,21 @@ export function ConsolePage() {
               </div>
               <Slider
                 value={[brightness.value]}
-                min={brightnessMin}
-                max={brightnessMax}
+                min={dimming.min}
+                max={dimming.max}
                 step={1}
                 lit
                 disabled={offline}
                 className={cn(!device.state.power && "opacity-40")}
                 aria-label="Brightness"
-                onValueChange={([value]) => brightness.change(value ?? brightnessMin)}
-                onValueCommit={([value]) => brightness.release(value ?? brightnessMin)}
+                onValueChange={([value]) => brightness.change(value ?? dimming.min)}
+                onValueCommit={([value]) => brightness.release(value ?? dimming.min)}
                 style={{ "--lit": deviceColor(device) } as React.CSSProperties}
               />
             </div>
           ) : null}
 
-          {canWarm ? (
+          {controls.kelvin ? (
             <div className="grid gap-2.5">
               <span className="text-caption font-semibold uppercase tracking-caps text-subtle">
                 Colour
@@ -149,9 +144,9 @@ export function ConsolePage() {
               <ColorControl
                 color={deviceColor(device)}
                 kelvin={device.state.color_temp ?? null}
-                kelvinMin={kelvinMin}
-                kelvinMax={kelvinMax}
-                showColor={capabilities.includes("color")}
+                kelvinMin={controls.kelvin.min}
+                kelvinMax={controls.kelvin.max}
+                showColor={controls.color}
                 disabled={offline}
                 onWhitePreview={(kelvin) => send("color_temp", kelvin)}
                 onWhite={(kelvin) => settle("color_temp", kelvin)}
@@ -161,6 +156,7 @@ export function ConsolePage() {
           ) : null}
 
           <div className="grid gap-1 text-caption text-subtle">
+            <span>{profile.form}</span>
             <span className="font-mono">{device.external_id}</span>
             {device.state.vendor ? <span>{device.state.vendor}</span> : null}
           </div>
