@@ -1,0 +1,95 @@
+import { env } from "@ava/env/web";
+import { createContext, use, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+
+const RECONNECT_MIN_MS = 1_000;
+const RECONNECT_MAX_MS = 15_000;
+
+type Listener = (raw: string) => void;
+
+type AvaSocket = {
+  send: (frame: unknown) => boolean;
+  subscribe: (listener: Listener) => () => void;
+  connected: boolean;
+};
+
+const SocketContext = createContext<AvaSocket>({
+  send: () => false,
+  subscribe: () => () => undefined,
+  connected: false,
+});
+
+export const useAvaSocket = () => use(SocketContext);
+
+function socketURL() {
+  const url = new URL(`${env.VITE_API_URL}/socket`);
+  url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+
+  return url.toString();
+}
+
+export function AvaSocketProvider({ children }: { children: ReactNode }) {
+  const socket = useRef<WebSocket | null>(null);
+  const listeners = useRef(new Set<Listener>());
+  const [connected, setConnected] = useState(false);
+
+  useEffect(() => {
+    let backoff = RECONNECT_MIN_MS;
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    let stopped = false;
+
+    const open = () => {
+      const next = new WebSocket(socketURL());
+      socket.current = next;
+
+      next.onopen = () => {
+        backoff = RECONNECT_MIN_MS;
+        setConnected(true);
+      };
+
+      next.onmessage = (message) => {
+        for (const listener of listeners.current) listener(message.data as string);
+      };
+
+      next.onclose = () => {
+        setConnected(false);
+        socket.current = null;
+
+        if (stopped) return;
+
+        retry = setTimeout(open, backoff);
+        backoff = Math.min(backoff * 2, RECONNECT_MAX_MS);
+      };
+    };
+
+    open();
+
+    return () => {
+      stopped = true;
+      clearTimeout(retry);
+      socket.current?.close();
+      socket.current = null;
+    };
+  }, []);
+
+  const value = useMemo<AvaSocket>(
+    () => ({
+      connected,
+      send: (frame) => {
+        const live = socket.current;
+        if (!live || live.readyState !== WebSocket.OPEN) return false;
+
+        live.send(JSON.stringify(frame));
+
+        return true;
+      },
+      subscribe: (listener) => {
+        listeners.current.add(listener);
+
+        return () => listeners.current.delete(listener);
+      },
+    }),
+    [connected],
+  );
+
+  return <SocketContext value={value}>{children}</SocketContext>;
+}
