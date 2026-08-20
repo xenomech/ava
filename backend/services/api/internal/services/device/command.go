@@ -24,7 +24,7 @@ func (s *deviceService) SendCommand(
 		return nil, ErrCommandChannelUnavailable
 	}
 
-	target, err := s.deviceRepo.GetByID(ctx, tenantID, deviceID)
+	target, err := s.deviceRepo.GetWithRelations(ctx, tenantID, deviceID)
 	if err != nil {
 		if serrors.Is(err, devicerepo.ErrDeviceNotFound) {
 			return nil, ErrDeviceNotFound
@@ -33,18 +33,12 @@ func (s *deviceService) SendCommand(
 		return nil, err
 	}
 
-	hub, err := s.hubRepo.GetByID(ctx, tenantID, target.HubID)
-	if err != nil {
-		return nil, err
+	if target.Hub == nil || target.Tenant == nil {
+		return nil, ErrDeviceNotFound
 	}
 
-	if hub.PresenceKnown() && !hub.IsOnline() {
+	if target.Hub.PresenceKnown() && !target.Hub.IsOnline() {
 		return nil, ErrHubOffline
-	}
-
-	tenant, err := s.tenantRepo.GetByID(ctx, tenantID)
-	if err != nil {
-		return nil, err
 	}
 
 	payload, err := json.Marshal(wire.Command{
@@ -56,7 +50,7 @@ func (s *deviceService) SendCommand(
 		return nil, fmt.Errorf("encode command: %w", err)
 	}
 
-	topic := wire.TopicsFor(tenant.Slug, target.HubID.String()).Command
+	topic := wire.TopicsFor(target.Tenant.Slug, target.HubID.String()).Command
 
 	if err := s.commander.Publish(ctx, topic, payload, false); err != nil {
 		logger.Error("COMMAND_PUBLISH_FAILED", logger.String("topic", topic), logger.Err(err))

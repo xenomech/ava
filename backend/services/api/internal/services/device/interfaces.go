@@ -6,8 +6,6 @@ import (
 
 	"ava/api/internal/dto"
 	devicerepo "ava/api/internal/repository/device"
-	hubrepo "ava/api/internal/repository/hub"
-	tenantrepo "ava/api/internal/repository/tenant"
 	eventsvc "ava/api/internal/services/event"
 
 	"github.com/google/uuid"
@@ -29,23 +27,13 @@ type Commander interface {
 
 type deviceService struct {
 	deviceRepo devicerepo.Repository
-	hubRepo    hubrepo.Repository
-	tenantRepo tenantrepo.Repository
 	commander  Commander
 	events     eventsvc.Service
 }
 
-func NewService(
-	deviceRepo devicerepo.Repository,
-	hubRepo hubrepo.Repository,
-	tenantRepo tenantrepo.Repository,
-	commander Commander,
-	events eventsvc.Service,
-) Service {
+func NewService(deviceRepo devicerepo.Repository, commander Commander, events eventsvc.Service) Service {
 	return &deviceService{
 		deviceRepo: deviceRepo,
-		hubRepo:    hubRepo,
-		tenantRepo: tenantRepo,
 		commander:  commander,
 		events:     events,
 	}

@@ -95,6 +95,25 @@ func (r *deviceRepository) GetByID(ctx context.Context, tenantID, id uuid.UUID) 
 	return &device, nil
 }
 
+func (r *deviceRepository) GetWithRelations(ctx context.Context, tenantID, id uuid.UUID) (*model.Device, error) {
+	var device model.Device
+
+	err := r.db.WithContext(ctx).
+		Joins("Hub").
+		Joins("Tenant").
+		Where("devices.tenant_id = ? AND devices.id = ?", tenantID, id).
+		First(&device).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, ErrDeviceNotFound
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &device, nil
+}
+
 func (r *deviceRepository) Update(ctx context.Context, tenantID, id uuid.UUID, fields map[string]any) error {
 	fields["updated_at"] = time.Now()
 
