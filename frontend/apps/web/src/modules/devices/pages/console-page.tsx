@@ -1,9 +1,8 @@
 import { Button, Chip, Slider, Switch, cn } from "@ava/ui";
-import type { DeviceDto } from "@ava/contracts";
+import type { DeviceAction, DeviceDto } from "@ava/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { Device } from "@ava/ui";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { useCallback, useState } from "react";
 
 import { hubQueries } from "@/modules/hub";
 import { sendCommand } from "../api";
@@ -13,7 +12,7 @@ import { DeviceStage, deviceColor, deviceKind, deviceLevel } from "../components
 import { NoDevices } from "../components/empty-state";
 import { HubOfflineNotice } from "../components/hub-notice";
 import { useDeviceCommand, useDevices } from "../use-devices";
-import { useThrottled } from "../use-throttled-command";
+import { useLiveSlider } from "../use-live-slider";
 
 export function ConsolePage() {
   const { devices, isPending } = useDevices();
@@ -21,14 +20,33 @@ export function ConsolePage() {
   const command = useDeviceCommand();
 
   const navigate = useNavigate();
-  const [dragging, setDragging] = useState<number | null>(null);
-
-  const sendLive = useThrottled<{ id: string; value: number }>(
-    useCallback(({ id, value }) => {
-      void sendCommand(id, { action: "brightness", value }).catch(() => undefined);
-    }, []),
-  );
   const search = useSearch({ strict: false }) as { device?: string };
+
+  const device = devices.find((entry) => entry.id === search.device) ?? devices[0];
+
+  const limits = device?.state.limits;
+  const brightnessMin = limits?.brightness_min ?? 0;
+  const brightnessMax = limits?.brightness_max ?? 100;
+  const kelvinMin = limits?.kelvin_min;
+  const kelvinMax = limits?.kelvin_max;
+
+  const send = (action: DeviceAction, value: number) => {
+    if (!device) return;
+
+    void sendCommand(device.id, { action, value }).catch(() => undefined);
+  };
+
+  const settle = (action: DeviceAction, value: number) => {
+    if (!device) return;
+
+    command.mutate({ device, action, value });
+  };
+
+  const brightness = useLiveSlider(
+    clamp(device?.state.brightness ?? brightnessMax, brightnessMin, brightnessMax),
+    (value) => send("brightness", value),
+    (value) => settle("brightness", value),
+  );
 
   const focus = (id: string) => {
     void navigate({ to: "/", search: { device: id }, replace: true });
@@ -36,19 +54,12 @@ export function ConsolePage() {
 
   if (isPending) return <Loader label="Loading devices" />;
 
-  if (devices.length === 0) return <NoDevices hasHub={(hubs.data ?? []).length > 0} />;
+  if (!device) return <NoDevices hasHub={(hubs.data ?? []).length > 0} />;
 
-  const device = devices.find((entry) => entry.id === search.device) ?? devices[0]!;
-  const level = dragging ?? deviceLevel(device);
   const hub = (hubs.data ?? []).find((entry) => entry.id === device.hub_id);
   const hubOffline = hub !== undefined && !hub.online;
   const offline = device.status === "offline" || hubOffline;
   const capabilities = device.state.capabilities;
-  const limits = device.state.limits;
-  const brightnessMin = limits?.brightness_min ?? 0;
-  const brightnessMax = limits?.brightness_max ?? 100;
-  const kelvinMin = limits?.kelvin_min;
-  const kelvinMax = limits?.kelvin_max;
 
   return (
     <div className="grid h-full grid-rows-[auto_minmax(0,1fr)_auto]">
@@ -56,7 +67,11 @@ export function ConsolePage() {
 
       <div className="min-h-0 overflow-y-auto lg:grid lg:grid-cols-[minmax(0,1fr)_330px] lg:overflow-hidden">
         <main className="grid min-h-0 grid-rows-[34vh_auto] p-5 sm:p-6 lg:grid-rows-[minmax(0,1fr)_auto]">
-          <DeviceStage devices={devices} focusedID={device.id} levelOverride={dragging} />
+          <DeviceStage
+            devices={devices}
+            focusedID={device.id}
+            levelOverride={brightness.dragging}
+          />
 
           <div className="flex items-end justify-between gap-4 pt-4">
             <div>
@@ -70,7 +85,7 @@ export function ConsolePage() {
             </div>
 
             <div className="flex items-start gap-0.5" data-slot="reading">
-              <b className="text-hero font-semibold">{level}</b>
+              <b className="text-hero font-semibold">{brightness.value}</b>
               <span className="mt-1 text-small text-subtle">%</span>
             </div>
           </div>
@@ -95,24 +110,18 @@ export function ConsolePage() {
                 <span className="text-caption font-semibold uppercase tracking-caps text-subtle">
                   Brightness
                 </span>
-                <output className="font-mono text-small tabular">{level}%</output>
+                <output className="font-mono text-small tabular">{brightness.value}%</output>
               </div>
               <Slider
-                value={[level]}
+                value={[brightness.value]}
                 min={brightnessMin}
                 max={brightnessMax}
                 step={1}
                 lit
                 disabled={offline}
                 aria-label="Brightness"
-                onValueChange={([value]) => {
-                  setDragging(value ?? 0);
-                  sendLive({ id: device.id, value: value ?? 0 });
-                }}
-                onValueCommit={([value]) => {
-                  setDragging(null);
-                  command.mutate({ device, action: "brightness", value: value ?? 0 });
-                }}
+                onValueChange={([value]) => brightness.change(value ?? brightnessMin)}
+                onValueCommit={([value]) => brightness.release(value ?? brightnessMin)}
                 style={{ "--lit": deviceColor(device) } as React.CSSProperties}
               />
             </div>
@@ -130,9 +139,7 @@ export function ConsolePage() {
                 kelvinMax={kelvinMax}
                 showColor={capabilities.includes("color")}
                 disabled={offline}
-                onWhite={(kelvin) =>
-                  command.mutate({ device, action: "color_temp", value: kelvin })
-                }
+                onWhite={(kelvin) => settle("color_temp", kelvin)}
                 onColor={() => undefined}
               />
             </div>
@@ -199,4 +206,8 @@ function DeviceTile({
       </span>
     </Button>
   );
+}
+
+function clamp(value: number, low: number, high: number) {
+  return Math.min(Math.max(value, low), high);
 }
