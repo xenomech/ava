@@ -89,6 +89,16 @@ export function SettingsPage() {
         </Link>
       </Section>
 
+      <Section title="Hubs" description="The boxes that talk to your devices.">
+        <Link
+          to="/activate"
+          className="flex items-center justify-between gap-4 p-5 text-body transition-colors duration-150 ease-out hover:bg-raised"
+        >
+          Manage hubs
+          <ChevronRightIcon className="size-4 text-muted" aria-hidden />
+        </Link>
+      </Section>
+
       <Section title="You">
         <dl className="grid gap-3 p-5 text-body">
           <Row label="Name" value={session.user?.name ?? "—"} />
