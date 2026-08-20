@@ -33,6 +33,7 @@ type Options struct {
 	WillTopic string
 	Will      []byte
 	Durable   bool
+	OnConnect func(client *Client)
 }
 
 type Client struct {
@@ -43,6 +44,8 @@ func Connect(ctx context.Context, opts *Options) (*Client, error) {
 	if opts == nil || opts.BrokerURL == "" {
 		return nil, ErrNoBroker
 	}
+
+	client := &Client{}
 
 	config := paho.NewClientOptions().
 		AddBroker(opts.BrokerURL).
@@ -58,6 +61,10 @@ func Connect(ctx context.Context, opts *Options) (*Client, error) {
 		}).
 		SetOnConnectHandler(func(_ paho.Client) {
 			logger.Info("MQTT_CONNECTED", logger.String("broker", opts.BrokerURL))
+
+			if opts.OnConnect != nil {
+				opts.OnConnect(client)
+			}
 		})
 
 	if opts.Username != "" {
@@ -68,13 +75,13 @@ func Connect(ctx context.Context, opts *Options) (*Client, error) {
 		config = config.SetBinaryWill(opts.WillTopic, opts.Will, QoSAtLeastOnce, true)
 	}
 
-	client := paho.NewClient(config)
+	client.inner = paho.NewClient(config)
 
-	if err := wait(ctx, client.Connect(), connectTimeout); err != nil {
+	if err := wait(ctx, client.inner.Connect(), connectTimeout); err != nil {
 		return nil, fmt.Errorf("mqtt: connect to %s: %w", opts.BrokerURL, err)
 	}
 
-	return &Client{inner: client}, nil
+	return client, nil
 }
 
 func (c *Client) Subscribe(ctx context.Context, topic string, handler Handler) error {
