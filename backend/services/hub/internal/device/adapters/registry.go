@@ -17,7 +17,7 @@ func Open(spec *device.Spec) (device.Device, error) {
 
 	switch spec.Vendor {
 	case device.VendorWiz:
-		return wiz.New(spec.IP, spec.Timeout), nil
+		return wiz.Open(spec), nil
 	default:
 		return nil, fmt.Errorf("%w: %q", ErrUnknownVendor, spec.Vendor)
 	}
