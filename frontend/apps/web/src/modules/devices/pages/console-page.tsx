@@ -1,14 +1,38 @@
 import { Button, Chip, Slider, Switch, cn } from "@ava/ui";
-import { deviceControls, deviceProfile, type DeviceAction, type DeviceDto } from "@ava/contracts";
+import {
+  TRAIT_BRIGHTNESS,
+  TRAIT_COLOR_TEMP,
+  TRAIT_POWER,
+  brightnessRange,
+  deviceProfile,
+  hasColor,
+  isOn,
+  kelvinRange,
+  numberOf,
+  readings,
+  supports,
+  writableTraits,
+  type DeviceDto,
+  type TraitValue,
+} from "@ava/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { Device } from "@ava/ui";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 
 import { hubQueries } from "@/modules/hub";
 import { Loader } from "@/shared/components/loader";
+import { AppliancePicker } from "../components/appliance-picker";
+import { RoomPicker } from "../components/room-picker";
 import { ColorControl } from "../components/color-control";
-import { DeviceStage, deviceColor, deviceKind, deviceLevel } from "../components/device-stage";
+import {
+  DeviceStage,
+  OnAPlug,
+  deviceColor,
+  deviceKind,
+  deviceLevel,
+} from "../components/device-stage";
 import { NoDevices } from "../components/empty-state";
+import { TraitControl, TraitReading } from "../components/trait-control";
 import { HubOfflineNotice } from "../components/hub-notice";
 import { useDeviceControl, useDevices } from "../use-devices";
 import { useLiveSlider } from "../use-live-slider";
@@ -23,19 +47,19 @@ export function ConsolePage() {
 
   const device = devices.find((entry) => entry.id === search.device) ?? devices[0];
 
-  const controls = deviceControls(device);
-  const dimming = controls.brightness ?? { min: 0, max: 100 };
+  const dimming = brightnessRange(device) ?? { min: 0, max: 100, step: 1, unit: "%" };
+  const warmth = kelvinRange(device);
 
-  const send = (action: DeviceAction, value: boolean | number) => {
+  const send = (trait: string, value: TraitValue) => {
     if (!device) return;
 
-    control(device, action, value);
+    control(device, trait, value);
   };
 
   const brightness = useLiveSlider(
-    clamp(device?.state.brightness ?? dimming.max, dimming.min, dimming.max),
-    (value) => send("brightness", value),
-    (value) => send("brightness", value),
+    clamp(numberOf(device, TRAIT_BRIGHTNESS) ?? dimming.max, dimming.min, dimming.max),
+    (value) => send(TRAIT_BRIGHTNESS, value),
+    (value) => send(TRAIT_BRIGHTNESS, value),
   );
 
   const focus = (id: string) => {
@@ -45,6 +69,16 @@ export function ConsolePage() {
   if (isPending) return <Loader label="Loading devices" />;
 
   if (!device) return <NoDevices hasHub={(hubs.data ?? []).length > 0} />;
+
+  const on = isOn(device);
+  const dimmable = supports(device, TRAIT_BRIGHTNESS);
+  const extras = writableTraits(device).filter(
+    (capability) =>
+      capability.trait !== TRAIT_POWER &&
+      capability.trait !== TRAIT_BRIGHTNESS &&
+      capability.trait !== TRAIT_COLOR_TEMP,
+  );
+  const sensors = readings(device);
 
   const hub = (hubs.data ?? []).find((entry) => entry.id === device.hub_id);
   const hubOffline = hub !== undefined && !hub.online;
@@ -80,13 +114,15 @@ export function ConsolePage() {
             </div>
 
             <div className="flex items-start gap-0.5" data-slot="reading">
-              {device.state.power || brightness.dragging !== null ? (
+              {!on ? (
+                <b className="text-hero font-semibold text-subtle">Off</b>
+              ) : dimmable ? (
                 <>
                   <b className="text-hero font-semibold">{brightness.value}</b>
                   <span className="mt-1 text-small text-subtle">%</span>
                 </>
               ) : (
-                <b className="text-hero font-semibold text-subtle">Off</b>
+                <b className="text-hero font-semibold">On</b>
               )}
             </div>
           </div>
@@ -98,14 +134,14 @@ export function ConsolePage() {
               Power
             </span>
             <Switch
-              checked={device.state.power}
+              checked={on}
               disabled={offline}
-              onCheckedChange={(on) => send("power", on)}
+              onCheckedChange={(next) => send(TRAIT_POWER, next)}
               aria-label={`${device.name} power`}
             />
           </div>
 
-          {controls.brightness ? (
+          {dimmable ? (
             <div className="grid gap-2.5">
               <div className="flex items-baseline justify-between">
                 <span className="text-caption font-semibold uppercase tracking-caps text-subtle">
@@ -117,10 +153,10 @@ export function ConsolePage() {
                 value={[brightness.value]}
                 min={dimming.min}
                 max={dimming.max}
-                step={1}
+                step={dimming.step}
                 lit
                 disabled={offline}
-                className={cn(!device.state.power && "opacity-40")}
+                className={cn(!on && "opacity-40")}
                 aria-label="Brightness"
                 onValueChange={([value]) => brightness.change(value ?? dimming.min)}
                 onValueCommit={([value]) => brightness.release(value ?? dimming.min)}
@@ -129,29 +165,55 @@ export function ConsolePage() {
             </div>
           ) : null}
 
-          {controls.kelvin ? (
+          {warmth ? (
             <div className="grid gap-2.5">
               <span className="text-caption font-semibold uppercase tracking-caps text-subtle">
                 Colour
               </span>
               <ColorControl
                 color={deviceColor(device)}
-                kelvin={device.state.color_temp ?? null}
-                kelvinMin={controls.kelvin.min}
-                kelvinMax={controls.kelvin.max}
-                showColor={controls.color}
+                kelvin={numberOf(device, TRAIT_COLOR_TEMP) ?? null}
+                kelvinMin={warmth.min}
+                kelvinMax={warmth.max}
+                showColor={hasColor(device)}
                 disabled={offline}
-                onWhitePreview={(kelvin) => send("color_temp", kelvin)}
-                onWhite={(kelvin) => send("color_temp", kelvin)}
+                onWhitePreview={(kelvin) => send(TRAIT_COLOR_TEMP, kelvin)}
+                onWhite={(kelvin) => send(TRAIT_COLOR_TEMP, kelvin)}
                 onColor={() => undefined}
               />
             </div>
           ) : null}
 
+          {extras.map((capability) => (
+            <TraitControl
+              key={capability.trait}
+              capability={capability}
+              value={device.state[capability.trait]}
+              disabled={offline}
+              onChange={(value) => send(capability.trait, value)}
+            />
+          ))}
+
+          {sensors.length > 0 ? (
+            <div className="grid gap-2 border-t border-border pt-4">
+              {sensors.map((capability) => (
+                <TraitReading
+                  key={capability.trait}
+                  capability={capability}
+                  value={device.state[capability.trait]}
+                />
+              ))}
+            </div>
+          ) : null}
+
+          <RoomPicker device={device} />
+
+          {device.kind === "plug" ? <AppliancePicker device={device} /> : null}
+
           <div className="grid gap-1 text-caption text-subtle">
             <span>{profile.form}</span>
             <span className="font-mono">{device.external_id}</span>
-            {device.state.vendor ? <span>{device.state.vendor}</span> : null}
+            {device.vendor ? <span>{device.vendor}</span> : null}
           </div>
         </aside>
       </div>
@@ -190,12 +252,15 @@ function DeviceTile({
       aria-current={focused}
       onClick={onFocus}
       className={cn(
-        "h-auto w-32 shrink-0 flex-col items-start gap-1.5 rounded-md border-border p-2.5",
+        "relative h-auto w-32 shrink-0 flex-col items-start gap-1.5 rounded-md border-border p-2.5",
         focused && "border-fg",
         device.status === "offline" && "opacity-50",
       )}
       style={{ "--level": level, "--lit": deviceColor(device) } as React.CSSProperties}
     >
+      {device.kind === "plug" && device.appliance ? (
+        <OnAPlug className="absolute right-2 top-2 size-5" />
+      ) : null}
       <span className="grid h-14 w-full place-items-center">
         <Device
           kind={deviceKind(device)}
@@ -206,7 +271,7 @@ function DeviceTile({
       </span>
       <span className="w-full truncate text-left text-small font-semibold">{device.name}</span>
       <span className="font-mono text-caption font-normal text-subtle tabular">
-        {device.status === "offline" ? "Offline" : level > 0 ? `${level}%` : "Off"}
+        {tileStatus(device, level)}
       </span>
     </Button>
   );
@@ -214,4 +279,12 @@ function DeviceTile({
 
 function clamp(value: number, low: number, high: number) {
   return Math.min(Math.max(value, low), high);
+}
+
+function tileStatus(device: DeviceDto, level: number) {
+  if (device.status === "offline") return "Offline";
+  if (!isOn(device)) return "Off";
+  if (!supports(device, TRAIT_BRIGHTNESS)) return "On";
+
+  return `${level}%`;
 }
