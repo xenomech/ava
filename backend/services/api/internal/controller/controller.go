@@ -6,6 +6,7 @@ import (
 	flowctrl "ava/api/internal/controller/flow"
 	healthctrl "ava/api/internal/controller/health"
 	hubctrl "ava/api/internal/controller/hub"
+	roomctrl "ava/api/internal/controller/room"
 	socketctrl "ava/api/internal/controller/socket"
 	tenantctrl "ava/api/internal/controller/tenant"
 	"ava/api/internal/services"
@@ -15,6 +16,7 @@ type Controller struct {
 	Auth   *authctrl.Controller
 	Tenant *tenantctrl.Controller
 	Flow   *flowctrl.Controller
+	Room   *roomctrl.Controller
 	Hub    *hubctrl.Controller
 	Device *devicectrl.Controller
 	Socket *socketctrl.Controller
@@ -26,6 +28,7 @@ func NewController(service *services.Service) *Controller {
 		Auth:   authctrl.NewController(service.Auth),
 		Tenant: tenantctrl.NewController(service.Tenant),
 		Flow:   flowctrl.NewController(service.Flow),
+		Room:   roomctrl.NewController(service.Room),
 		Hub:    hubctrl.NewController(service.Hub),
 		Device: devicectrl.NewController(service.Device),
 		Socket: socketctrl.NewController(service.Event, service.Device),

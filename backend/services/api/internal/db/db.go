@@ -31,6 +31,7 @@ func Migrate(database *gorm.DB) error {
 		&model.TenantMembership{},
 		&model.Session{},
 		&model.Token{},
+		&model.Room{},
 		&model.Hub{},
 		&model.HubAuthorization{},
 		&model.Device{},
@@ -40,6 +41,14 @@ func Migrate(database *gorm.DB) error {
 		logger.Error("DB_MIGRATION_ERROR", logger.Err(err))
 
 		return err
+	}
+
+	if database.Migrator().HasColumn(&model.Device{}, "room") {
+		if err := database.Migrator().DropColumn(&model.Device{}, "room"); err != nil {
+			logger.Error("DB_MIGRATION_ERROR", logger.Err(err))
+
+			return err
+		}
 	}
 
 	logger.Info("DB_MIGRATED")
