@@ -40,6 +40,8 @@ type Config struct {
 	LogLevel     string
 
 	MQTTBrokerURL string
+	MQTTUsername  string
+	MQTTPassword  string
 
 	CORSAllowedOrigins string
 	CORSAllowedMethods string
@@ -109,6 +111,8 @@ func load() *Config {
 		LogLevel:     v.GetString("LOG_LEVEL"),
 
 		MQTTBrokerURL: v.GetString("MQTT_BROKER_URL"),
+		MQTTUsername:  v.GetString("MQTT_USERNAME"),
+		MQTTPassword:  v.GetString("MQTT_PASSWORD"),
 
 		CORSAllowedOrigins: v.GetString("CORS_ALLOWED_ORIGINS"),
 		CORSAllowedMethods: v.GetString("CORS_ALLOWED_METHODS"),
