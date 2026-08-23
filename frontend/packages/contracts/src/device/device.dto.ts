@@ -4,30 +4,36 @@ export const DEVICE_STATUSES = ["online", "offline"] as const;
 export const deviceStatusSchema = z.enum(DEVICE_STATUSES);
 export type DeviceStatus = z.infer<typeof deviceStatusSchema>;
 
-export const DEVICE_CAPABILITIES = ["brightness", "color_temp", "color"] as const;
-export const deviceCapabilitySchema = z.enum(DEVICE_CAPABILITIES);
-export type DeviceCapability = z.infer<typeof deviceCapabilitySchema>;
+export const TRAIT_KINDS = ["bool", "number", "enum", "color"] as const;
+export const traitKindSchema = z.enum(TRAIT_KINDS);
+export type TraitKind = z.infer<typeof traitKindSchema>;
 
-export const deviceLimitsDto = z.object({
-  brightness_min: z.number().default(0),
-  brightness_max: z.number().default(100),
-  kelvin_min: z.number().optional(),
-  kelvin_max: z.number().optional(),
+export const TRAIT_ACCESS = ["r", "rw"] as const;
+export const traitAccessSchema = z.enum(TRAIT_ACCESS);
+export type TraitAccess = z.infer<typeof traitAccessSchema>;
+
+export const TRAIT_POWER = "power";
+export const TRAIT_BRIGHTNESS = "brightness";
+export const TRAIT_COLOR_TEMP = "color_temp";
+export const TRAIT_COLOR = "color";
+
+export const capabilityDto = z.object({
+  trait: z.string(),
+  kind: traitKindSchema,
+  access: traitAccessSchema,
+  min: z.number().optional(),
+  max: z.number().optional(),
+  step: z.number().optional(),
+  unit: z.string().optional(),
+  values: z.array(z.string()).optional(),
 });
 
-export type DeviceLimitsDto = z.infer<typeof deviceLimitsDto>;
+export type CapabilityDto = z.infer<typeof capabilityDto>;
 
-export const deviceStateDto = z.looseObject({
-  power: z.boolean().default(false),
-  brightness: z.number().optional(),
-  color_temp: z.number().optional(),
-  capabilities: z.array(deviceCapabilitySchema).default([]),
-  limits: deviceLimitsDto.optional(),
-  model: z.string().optional(),
-  vendor: z.string().optional(),
-  ip: z.string().optional(),
-});
+export const traitValueSchema = z.union([z.boolean(), z.number(), z.string()]);
+export type TraitValue = z.infer<typeof traitValueSchema>;
 
+export const deviceStateDto = z.record(z.string(), traitValueSchema);
 export type DeviceStateDto = z.infer<typeof deviceStateDto>;
 
 export const deviceDto = z.object({
@@ -35,11 +41,17 @@ export const deviceDto = z.object({
   hub_id: z.uuid(),
   external_id: z.string(),
   name: z.string(),
-  room: z.string(),
+  room_id: z.uuid().optional(),
+  room: z.string().default(""),
+  appliance: z.string().default(""),
   kind: z.string(),
+  vendor: z.string().optional(),
+  model: z.string().optional(),
+  parent: z.string().optional(),
   status: deviceStatusSchema,
   last_seen_at: z.iso.datetime({ offset: true }).optional(),
-  state: deviceStateDto,
+  capabilities: z.array(capabilityDto).default([]),
+  state: deviceStateDto.default({}),
   created_at: z.iso.datetime({ offset: true }),
 });
 

@@ -1,5 +1,8 @@
 import {
+  applyResponse,
   deviceDto,
+  type ApplyRequest,
+  type ApplyResponse,
   type DeviceDto,
   type SendCommandRequest,
   type UpdateDeviceRequest,
@@ -18,4 +21,8 @@ export function updateDevice(deviceID: string, body: UpdateDeviceRequest): Promi
 
 export function sendCommand(deviceID: string, body: SendCommandRequest): Promise<void> {
   return request({ url: `/devices/${deviceID}/command`, method: "post", body });
+}
+
+export function applyTargets(body: ApplyRequest): Promise<ApplyResponse> {
+  return request({ url: "/devices/apply", method: "post", body, schema: applyResponse });
 }

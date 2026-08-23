@@ -1,27 +1,60 @@
 export {
-  DEVICE_CAPABILITIES,
   DEVICE_STATUSES,
-  deviceCapabilitySchema,
+  TRAIT_ACCESS,
+  TRAIT_BRIGHTNESS,
+  TRAIT_COLOR,
+  TRAIT_COLOR_TEMP,
+  TRAIT_KINDS,
+  TRAIT_POWER,
+  capabilityDto,
   deviceDto,
-  deviceLimitsDto,
   deviceStateDto,
   deviceStatusSchema,
+  traitAccessSchema,
+  traitKindSchema,
+  traitValueSchema,
 } from "./device.dto";
 export type {
-  DeviceCapability,
+  CapabilityDto,
   DeviceDto,
-  DeviceLimitsDto,
   DeviceStateDto,
   DeviceStatus,
+  TraitAccess,
+  TraitKind,
+  TraitValue,
 } from "./device.dto";
 
 export {
-  DEVICE_ACTIONS,
-  deviceActionSchema,
+  applyRequest,
+  applyResponse,
+  applyTargetRequest,
   sendCommandRequest,
   updateDeviceRequest,
 } from "./device.request";
-export type { DeviceAction, SendCommandRequest, UpdateDeviceRequest } from "./device.request";
+export type {
+  ApplyRequest,
+  ApplyResponse,
+  ApplyTargetRequest,
+  SendCommandRequest,
+  UpdateDeviceRequest,
+} from "./device.request";
 
-export { DEVICE_FORMS, deviceControls, deviceProfile } from "./registry";
-export type { DeviceControls, DeviceForm, DeviceProfile, Range } from "./registry";
+export {
+  APPLIANCE_CHOICES,
+  DEVICE_FORMS,
+  brightnessRange,
+  capabilityFor,
+  deviceProfile,
+  emitsLight,
+  hasColor,
+  isOn,
+  kelvinRange,
+  numberOf,
+  rangeOf,
+  readings,
+  supports,
+  traitLabel,
+  traitValue,
+  writableTraits,
+} from "./registry";
+export type { DeviceForm, DeviceProfile, Range } from "./registry";
