@@ -1,12 +1,14 @@
 import { Device, DeviceHalo, cn, type DeviceKind } from "@ava/ui";
 import {
   TRAIT_BRIGHTNESS,
+  TRAIT_COLOR,
   TRAIT_COLOR_TEMP,
   deviceProfile,
   emitsLight,
   isOn,
   numberOf,
   supports,
+  traitValue,
   type DeviceDto,
 } from "@ava/contracts";
 import { PlugZapIcon } from "lucide-react";
@@ -40,6 +42,9 @@ export function OnAPlug({ className }: { className?: string }) {
 }
 
 export function deviceColor(device: DeviceDto): string {
+  const picked = traitValue(device, TRAIT_COLOR);
+  if (typeof picked === "string" && picked !== "") return picked;
+
   return kelvinToCss(numberOf(device, TRAIT_COLOR_TEMP) ?? 2700);
 }
 

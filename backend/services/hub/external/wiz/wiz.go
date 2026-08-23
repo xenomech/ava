@@ -120,15 +120,31 @@ func (l *Light) State(ctx context.Context) (wire.State, error) {
 		state[wire.TraitBrightness] = wire.Number(float64(result.Dimming))
 	}
 
-	if l.capabilities.Has(wire.TraitColorTemp) && result.Temp > 0 {
-		state[wire.TraitColorTemp] = wire.Number(float64(result.Temp))
+	if l.capabilities.Has(wire.TraitColorTemp) {
+		state[wire.TraitColorTemp] = optionalNumber(result.Temp)
 	}
 
-	if l.capabilities.Has(wire.TraitColor) && result.R+result.G+result.B > 0 {
-		state[wire.TraitColor] = wire.Text(formatHex(result.R, result.G, result.B))
+	if l.capabilities.Has(wire.TraitColor) {
+		state[wire.TraitColor] = optionalColor(result.R, result.G, result.B)
 	}
 
 	return state, nil
+}
+
+func optionalNumber(value int) wire.Value {
+	if value <= 0 {
+		return wire.Value{}
+	}
+
+	return wire.Number(float64(value))
+}
+
+func optionalColor(red, green, blue int) wire.Value {
+	if red+green+blue <= 0 {
+		return wire.Value{}
+	}
+
+	return wire.Text(formatHex(red, green, blue))
 }
 
 func (l *Light) Identify(ctx context.Context) (device.Info, error) {
