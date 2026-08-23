@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"encoding/json"
+	"sync"
 
 	"ava/pkg/logger"
 
@@ -54,6 +55,14 @@ func (a *App) announce(ctx context.Context, client *mqtt.Client, topics wire.Top
 		return
 	}
 
+	if err := client.Subscribe(ctx, topics.Apply, func(_ string, payload []byte) {
+		a.handleApply(ctx, payload)
+	}); err != nil {
+		logger.Warn("APPLY_SUBSCRIBE_FAILED", logger.String("error", err.Error()))
+
+		return
+	}
+
 	if err := client.Publish(ctx, topics.Status, online, true); err != nil {
 		logger.Warn("PRESENCE_PUBLISH_FAILED", logger.String("error", err.Error()))
 
@@ -78,10 +87,10 @@ func (a *App) handleCommand(ctx context.Context, payload []byte) {
 		return
 	}
 
-	if err := apply(ctx, target, cmd); err != nil {
+	if err := target.Apply(ctx, cmd.Trait, cmd.Value); err != nil {
 		logger.Warn("COMMAND_FAILED",
 			logger.String("device_id", cmd.DeviceID),
-			logger.String("action", cmd.Action),
+			logger.String("trait", string(cmd.Trait)),
 			logger.String("error", err.Error()),
 		)
 
@@ -90,38 +99,10 @@ func (a *App) handleCommand(ctx context.Context, payload []byte) {
 
 	logger.Info("COMMAND_APPLIED",
 		logger.String("device_id", cmd.DeviceID),
-		logger.String("action", cmd.Action),
+		logger.String("trait", string(cmd.Trait)),
 	)
 
 	a.publishState(ctx, cmd.DeviceID, target)
-}
-
-func apply(ctx context.Context, target device.Device, cmd wire.Command) error {
-	switch cmd.Action {
-	case wire.ActionPower:
-		on, err := cmd.Bool()
-		if err != nil {
-			return err
-		}
-
-		return target.SetPower(ctx, on)
-	case wire.ActionBrightness:
-		level, err := cmd.Int()
-		if err != nil {
-			return err
-		}
-
-		return target.SetBrightness(ctx, level)
-	case wire.ActionColorTemp:
-		kelvin, err := cmd.Int()
-		if err != nil {
-			return err
-		}
-
-		return target.SetColorTemp(ctx, kelvin)
-	default:
-		return wire.ErrUnknownAction
-	}
 }
 
 func (a *App) publishState(ctx context.Context, deviceID string, target device.Device) {
@@ -136,12 +117,7 @@ func (a *App) publishState(ctx context.Context, deviceID string, target device.D
 		return
 	}
 
-	payload, err := json.Marshal(wire.StateEvent{
-		DeviceID:   deviceID,
-		Power:      state.Power,
-		Brightness: state.Brightness,
-		ColorTemp:  state.ColorTemp,
-	})
+	payload, err := json.Marshal(wire.StateEvent{DeviceID: deviceID, State: state})
 	if err != nil {
 		return
 	}
@@ -149,4 +125,48 @@ func (a *App) publishState(ctx context.Context, deviceID string, target device.D
 	if err := a.mqtt.Publish(ctx, a.topics.State, payload, false); err != nil {
 		logger.Warn("STATE_PUBLISH_FAILED", logger.String("error", err.Error()))
 	}
+}
+
+func (a *App) handleApply(ctx context.Context, payload []byte) {
+	apply, err := wire.DecodeApply(payload)
+	if err != nil {
+		logger.Warn("APPLY_REJECTED", logger.String("error", err.Error()))
+
+		return
+	}
+
+	var wg sync.WaitGroup
+
+	for at := range apply.Targets {
+		target := apply.Targets[at]
+
+		handle, ok := a.devices.get(target.DeviceID)
+		if !ok {
+			logger.Warn("APPLY_UNKNOWN_DEVICE", logger.String("device_id", target.DeviceID))
+
+			continue
+		}
+
+		wg.Add(1)
+
+		go func() {
+			defer wg.Done()
+
+			if err := handle.Apply(ctx, target.Trait, target.Value); err != nil {
+				logger.Warn("APPLY_FAILED",
+					logger.String("device_id", target.DeviceID),
+					logger.String("trait", string(target.Trait)),
+					logger.String("error", err.Error()),
+				)
+
+				return
+			}
+
+			a.publishState(ctx, target.DeviceID, handle)
+		}()
+	}
+
+	wg.Wait()
+
+	logger.Info("APPLY_DONE", logger.Int("targets", len(apply.Targets)))
 }
