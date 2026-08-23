@@ -15,6 +15,12 @@ export function cssToHue(css: string): number {
   return (((hue * 60) % 360) + 360) % 360;
 }
 
+export function hueToHex(hue: number): string {
+  const [r, g, b] = hueOnly(hue);
+
+  return `#${[r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
+}
+
 function toRgb(css: string): [number, number, number] | null {
   const hsl = /^hsl\(\s*([\d.]+)/.exec(css);
   if (hsl) return hueOnly(Number(hsl[1]));

@@ -1,6 +1,7 @@
 import { Button, Chip, Slider, Switch, cn } from "@ava/ui";
 import {
   TRAIT_BRIGHTNESS,
+  TRAIT_COLOR,
   TRAIT_COLOR_TEMP,
   TRAIT_POWER,
   brightnessRange,
@@ -179,7 +180,7 @@ export function ConsolePage() {
                 disabled={offline}
                 onWhitePreview={(kelvin) => send(TRAIT_COLOR_TEMP, kelvin)}
                 onWhite={(kelvin) => send(TRAIT_COLOR_TEMP, kelvin)}
-                onColor={() => undefined}
+                onColor={(hex) => send(TRAIT_COLOR, hex)}
               />
             </div>
           ) : null}

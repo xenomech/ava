@@ -1,6 +1,6 @@
 import { Slider, Tabs, TabsContent, TabsList, TabsTrigger } from "@ava/ui";
 
-import { cssToHue } from "@/shared/lib/color";
+import { cssToHue, hueToHex } from "@/shared/lib/color";
 import { useLiveSlider } from "../use-live-slider";
 
 const KELVIN_STEP = 50;
@@ -81,7 +81,7 @@ export function ColorControl({
           variant="marker"
           disabled={disabled}
           aria-label="Hue"
-          onValueCommit={([v]) => onColor(`hsl(${Math.round(((v ?? 0) / 100) * 360)} 92% 62%)`)}
+          onValueCommit={([v]) => onColor(hueToHex(((v ?? 0) / 100) * 360))}
           style={{ background: HUE_RAMP }}
         />
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -29,6 +30,9 @@ type pilotParams struct {
 	State   *bool `json:"state,omitempty"`
 	Dimming *int  `json:"dimming,omitempty"`
 	Temp    *int  `json:"temp,omitempty"`
+	R       *int  `json:"r,omitempty"`
+	G       *int  `json:"g,omitempty"`
+	B       *int  `json:"b,omitempty"`
 }
 
 type pilotResult struct {
@@ -36,6 +40,9 @@ type pilotResult struct {
 	State   bool   `json:"state"`
 	Dimming int    `json:"dimming"`
 	Temp    int    `json:"temp"`
+	R       int    `json:"r"`
+	G       int    `json:"g"`
+	B       int    `json:"b"`
 }
 
 type systemConfigResult struct {
@@ -69,6 +76,21 @@ func New(ip string, timeout time.Duration) *Light {
 	return newWith(ip, newUDPTransport(timeout))
 }
 
+func Open(spec *device.Spec) *Light {
+	light := New(spec.IP, spec.Timeout)
+
+	if len(spec.Capabilities) > 0 {
+		light.capabilities = spec.Capabilities
+	}
+
+	if spec.ID != "" {
+		light.info.ID = spec.ID
+		light.info.MAC = spec.ID
+	}
+
+	return light
+}
+
 func newWith(ip string, t transport) *Light {
 	return &Light{
 		info:         device.Info{Vendor: Vendor, IP: ip},
@@ -100,6 +122,10 @@ func (l *Light) State(ctx context.Context) (wire.State, error) {
 
 	if l.capabilities.Has(wire.TraitColorTemp) && result.Temp > 0 {
 		state[wire.TraitColorTemp] = wire.Number(float64(result.Temp))
+	}
+
+	if l.capabilities.Has(wire.TraitColor) && result.R+result.G+result.B > 0 {
+		state[wire.TraitColor] = wire.Text(formatHex(result.R, result.G, result.B))
 	}
 
 	return state, nil
@@ -240,6 +266,17 @@ func (l *Light) Apply(ctx context.Context, trait wire.Trait, value wire.Value) e
 		temp := int(kelvin)
 
 		return l.setPilot(ctx, pilotParams{Temp: &temp})
+	case wire.TraitColor:
+		hex, _ := value.Text()
+
+		red, green, blue, err := parseHex(hex)
+		if err != nil {
+			return err
+		}
+
+		on := true
+
+		return l.setPilot(ctx, pilotParams{State: &on, R: &red, G: &green, B: &blue})
 	default:
 		return device.Unsupported(Vendor, trait)
 	}
@@ -278,4 +315,27 @@ func (l *Light) call(ctx context.Context, req request, out any) error {
 	}
 
 	return nil
+}
+
+func parseHex(hex string) (red, green, blue int, err error) {
+	if len(hex) != 7 || hex[0] != '#' {
+		return 0, 0, 0, fmt.Errorf("wiz: color must look like #rrggbb, got %q", hex)
+	}
+
+	channels := [3]int{}
+
+	for at := range channels {
+		value, convErr := strconv.ParseUint(hex[1+at*2:3+at*2], 16, 8)
+		if convErr != nil {
+			return 0, 0, 0, fmt.Errorf("wiz: color %q is not hexadecimal", hex)
+		}
+
+		channels[at] = int(value)
+	}
+
+	return channels[0], channels[1], channels[2], nil
+}
+
+func formatHex(red, green, blue int) string {
+	return fmt.Sprintf("#%02x%02x%02x", red, green, blue)
 }
