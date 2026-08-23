@@ -14,6 +14,8 @@ import (
 
 type Commander = devicesvc.Commander
 
+type Provisioner = hubsvc.BrokerProvisioner
+
 type Service struct {
 	Auth   authsvc.Service
 	Tenant tenantsvc.Service
@@ -25,7 +27,7 @@ type Service struct {
 	Health healthsvc.Service
 }
 
-func NewService(repo *repository.Repository, commander devicesvc.Commander) *Service {
+func NewService(repo *repository.Repository, commander devicesvc.Commander, provisioner Provisioner) *Service {
 	tenantService := tenantsvc.NewService(repo.Tenant, repo.Membership, repo.User, repo.Session)
 	eventService := eventsvc.NewService()
 	deviceService := devicesvc.NewService(repo.Device, commander, eventService)
@@ -35,7 +37,7 @@ func NewService(repo *repository.Repository, commander devicesvc.Commander) *Ser
 		Tenant: tenantService,
 		Flow:   flowsvc.NewService(repo.Flow, tenantService, repo.User, repo.Membership),
 		Room:   roomsvc.NewService(repo.Room),
-		Hub:    hubsvc.NewService(repo.Hub, repo.Tenant, eventService, deviceService),
+		Hub:    hubsvc.NewService(repo.Hub, repo.Tenant, eventService, deviceService, provisioner),
 		Device: deviceService,
 		Event:  eventService,
 		Health: healthsvc.NewService(),

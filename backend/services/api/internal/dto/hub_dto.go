@@ -30,12 +30,18 @@ type ActivateHubRequest struct {
 	UserCode string `json:"user_code" validate:"required"`
 }
 
+type BrokerCredentials struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
 type HubTokenResponse struct {
-	AccessToken  string        `json:"access_token"`
-	RefreshToken string        `json:"refresh_token"`
-	ExpiresIn    int64         `json:"expires_in"`
-	Hub          HubResponse   `json:"hub"`
-	Tenant       TenantSummary `json:"tenant"`
+	AccessToken  string             `json:"access_token"`
+	RefreshToken string             `json:"refresh_token"`
+	ExpiresIn    int64              `json:"expires_in"`
+	Hub          HubResponse        `json:"hub"`
+	Tenant       TenantSummary      `json:"tenant"`
+	Broker       *BrokerCredentials `json:"broker,omitempty"`
 }
 
 type HubResponse struct {

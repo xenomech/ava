@@ -192,6 +192,12 @@ func (s *hubService) Revoke(ctx context.Context, tenantID, hubID uuid.UUID) erro
 		return err
 	}
 
+	if s.broker != nil {
+		if err := s.broker.RevokeHub(ctx, hubID.String()); err != nil {
+			logger.Warn("HUB_BROKER_REVOKE_FAILED", logger.Any("hub.ID", hubID), logger.Err(err))
+		}
+	}
+
 	return nil
 }
 
@@ -284,5 +290,23 @@ func (s *hubService) issueTokens(ctx context.Context, hub *model.Hub) (*dto.HubT
 			Name: tenant.Name,
 			Slug: tenant.Slug,
 		},
+		Broker: s.provisionBroker(ctx, tenant.Slug, hub.ID.String()),
 	}, nil
+}
+
+func (s *hubService) provisionBroker(ctx context.Context, tenantSlug, hubID string) *dto.BrokerCredentials {
+	if s.broker == nil {
+		return nil
+	}
+
+	username, password, err := s.broker.ProvisionHub(ctx, tenantSlug, hubID)
+	if err != nil {
+		logger.Warn("HUB_BROKER_PROVISION_FAILED", logger.String("hub.ID", hubID), logger.Err(err))
+
+		return nil
+	}
+
+	logger.Info("HUB_BROKER_PROVISIONED", logger.String("hub.ID", hubID), logger.String("username", username))
+
+	return &dto.BrokerCredentials{Username: username, Password: password}
 }
