@@ -145,9 +145,23 @@
   --ease-spring: var(--motion-spring);
   --ease-drawer: var(--motion-drawer);
 
+  /* Entrances and exits. Weak to strong — the further something travels, the
+     stronger the curve it can carry. */
+  --ease-out-quart: cubic-bezier(0.165, 0.84, 0.44, 1);
+  --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
+  /* On-screen movement, where the element has to brake as well as start. */
+  --ease-in-out-quart: cubic-bezier(0.77, 0, 0.175, 1);
+
   --animate-fade-in: fade-in 160ms var(--ease-out-soft);
   --animate-scale-in: scale-in 160ms var(--ease-out-soft);
   --animate-slide-up: slide-up 220ms var(--ease-out-soft);
+
+  /* First-run only. Marketing pacing rather than product pacing: this is seen
+     once, so it is allowed to take its time. */
+  --animate-rise: rise 780ms var(--ease-out-expo) both;
+  --animate-bloom-in: bloom-in 1400ms var(--ease-out-expo) both;
+  --animate-breathe: breathe 7s ease-in-out infinite;
+  --animate-sweep: sweep 2.8s var(--ease-out-quart) infinite;
 }
 
 @theme inline {
@@ -178,6 +192,59 @@
   from {
     opacity: 0;
     transform: translateY(6px);
+  }
+}
+
+/* Content arriving in the first-run. Travels further and slower than product
+   UI, and only ever moves transform/opacity. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 22px, 0);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    filter: blur(0);
+  }
+}
+
+/* The room coming up to level. */
+@keyframes bloom-in {
+  from {
+    opacity: 0;
+    transform: translate3d(-50%, -50%, 0) scale(0.72);
+  }
+  to {
+    opacity: var(--bloom-opacity, 0.3);
+    transform: translate3d(-50%, -50%, 0) scale(1);
+  }
+}
+
+/* A filament never sits perfectly still. Very slow and very small — enough to
+   read as alive, not enough to notice as motion. */
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: var(--bloom-opacity, 0.3);
+    transform: translate3d(-50%, -50%, 0) scale(1);
+  }
+  50% {
+    opacity: calc(var(--bloom-opacity, 0.3) * 1.18);
+    transform: translate3d(-50%, -50%, 0) scale(1.045);
+  }
+}
+
+/* Looking for a hub on the network. */
+@keyframes sweep {
+  from {
+    opacity: 0.55;
+    transform: scale(0.35);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.9);
   }
 }
 
@@ -222,7 +289,12 @@
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+    /* Delays have to go too. Zeroing only the duration on a staggered reveal
+       leaves the content invisible for the length of its delay, which is worse
+       than the animation it was meant to spare. */
+    animation-delay: 0ms !important;
     transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
     scroll-behavior: auto !important;
   }
 }

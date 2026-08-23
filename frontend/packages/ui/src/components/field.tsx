@@ -7,6 +7,8 @@ type FieldProps = {
   label: string;
   error?: string;
   hint?: string;
+  /** Sits on the label row, right-aligned — a "Forgot?" link, a unit toggle. */
+  action?: ReactNode;
   className?: string;
   children: (props: {
     id: string;
@@ -15,7 +17,7 @@ type FieldProps = {
   }) => ReactNode;
 };
 
-function Field({ label, error, hint, className, children }: FieldProps) {
+function Field({ label, error, hint, action, className, children }: FieldProps) {
   const id = useId();
   const errorId = `${id}-error`;
   const hintId = `${id}-hint`;
@@ -23,7 +25,14 @@ function Field({ label, error, hint, className, children }: FieldProps) {
 
   return (
     <div data-slot="field" className={cn("grid gap-2", className)}>
-      <Label htmlFor={id}>{label}</Label>
+      {action ? (
+        <div className="flex items-baseline justify-between gap-3">
+          <Label htmlFor={id}>{label}</Label>
+          {action}
+        </div>
+      ) : (
+        <Label htmlFor={id}>{label}</Label>
+      )}
 
       {children({ id, "aria-describedby": describedBy || undefined, invalid: Boolean(error) })}
 
