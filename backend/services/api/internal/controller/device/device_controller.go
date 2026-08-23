@@ -131,6 +131,8 @@ func (c *Controller) SendCommand(ctx *fiber.Ctx) error {
 			return response.SendError(ctx, fiber.StatusNotFound, err)
 		case serrors.Is(err, devicesvc.ErrHubOffline):
 			return response.SendError(ctx, fiber.StatusConflict, err)
+		case serrors.Is(err, devicesvc.ErrTraitRejected):
+			return response.SendError(ctx, fiber.StatusUnprocessableEntity, err)
 		case serrors.Is(err, devicesvc.ErrCommandChannelUnavailable):
 			return response.SendError(ctx, fiber.StatusServiceUnavailable, err)
 		default:
@@ -139,4 +141,34 @@ func (c *Controller) SendCommand(ctx *fiber.Ctx) error {
 	}
 
 	return response.Send(ctx, fiber.StatusAccepted, accepted, "")
+}
+
+func (c *Controller) Apply(ctx *fiber.Ctx) error {
+	tenantID, ok := ctx.Locals("tenantID").(uuid.UUID)
+	if !ok {
+		return response.Send(ctx, fiber.StatusUnauthorized, nil, "Unauthorized")
+	}
+
+	var req dto.ApplyRequest
+	if err := ctx.BodyParser(&req); err != nil {
+		return response.Send(ctx, fiber.StatusBadRequest, nil, "Invalid request body")
+	}
+
+	if err := validator.ValidateStruct(&req); err != nil {
+		return response.SendValidation(ctx, validator.FirstError(err), validator.FieldErrors(err))
+	}
+
+	applied, err := c.deviceService.Apply(ctx.Context(), tenantID, &req)
+	if err != nil {
+		switch {
+		case serrors.Is(err, devicesvc.ErrNothingToApply):
+			return response.Send(ctx, fiber.StatusUnprocessableEntity, applied, "Nothing could be applied")
+		case serrors.Is(err, devicesvc.ErrCommandChannelUnavailable):
+			return response.SendError(ctx, fiber.StatusServiceUnavailable, err)
+		default:
+			return response.Send(ctx, fiber.StatusInternalServerError, nil, "Failed to apply")
+		}
+	}
+
+	return response.Send(ctx, fiber.StatusOK, applied, "")
 }

@@ -14,6 +14,19 @@ import (
 	"gorm.io/gorm/clause"
 )
 
+var hubOwnedColumns = []string{
+	"kind",
+	"vendor",
+	"model",
+	"ip",
+	"parent",
+	"capabilities",
+	"status",
+	"last_seen_at",
+	"state",
+	"updated_at",
+}
+
 func (r *deviceRepository) SyncHubDevices(ctx context.Context, tenantID, hubID uuid.UUID, devices []*model.Device) error {
 	return r.db.WithContext(ctx).Transaction(func(dbTx *gorm.DB) error {
 		seen := make([]string, 0, len(devices))
@@ -27,7 +40,7 @@ func (r *deviceRepository) SyncHubDevices(ctx context.Context, tenantID, hubID u
 		if len(devices) > 0 {
 			err := dbTx.Clauses(clause.OnConflict{
 				Columns:   []clause.Column{{Name: "hub_id"}, {Name: "external_id"}},
-				DoUpdates: clause.AssignmentColumns([]string{"kind", "status", "last_seen_at", "state", "updated_at"}),
+				DoUpdates: clause.AssignmentColumns(hubOwnedColumns),
 			}).Create(&devices).Error
 			if err != nil {
 				return err
@@ -60,7 +73,8 @@ func (r *deviceRepository) SyncHubDevices(ctx context.Context, tenantID, hubID u
 func (r *deviceRepository) ListByTenant(ctx context.Context, tenantID uuid.UUID) ([]*model.Device, error) {
 	var devices []*model.Device
 
-	err := r.db.WithContext(ctx).Where("tenant_id = ?", tenantID).Order("created_at ASC").Find(&devices).Error
+	err := r.db.WithContext(ctx).Preload("Room").
+		Where("tenant_id = ?", tenantID).Order("created_at ASC").Find(&devices).Error
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +85,8 @@ func (r *deviceRepository) ListByTenant(ctx context.Context, tenantID uuid.UUID)
 func (r *deviceRepository) ListByHub(ctx context.Context, tenantID, hubID uuid.UUID) ([]*model.Device, error) {
 	var devices []*model.Device
 
-	err := r.db.WithContext(ctx).Where("tenant_id = ? AND hub_id = ?", tenantID, hubID).
+	err := r.db.WithContext(ctx).Preload("Room").
+		Where("tenant_id = ? AND hub_id = ?", tenantID, hubID).
 		Order("created_at ASC").Find(&devices).Error
 	if err != nil {
 		return nil, err
@@ -83,7 +98,8 @@ func (r *deviceRepository) ListByHub(ctx context.Context, tenantID, hubID uuid.U
 func (r *deviceRepository) GetByID(ctx context.Context, tenantID, id uuid.UUID) (*model.Device, error) {
 	var device model.Device
 
-	err := r.db.WithContext(ctx).Where("tenant_id = ? AND id = ?", tenantID, id).First(&device).Error
+	err := r.db.WithContext(ctx).Preload("Room").
+		Where("tenant_id = ? AND id = ?", tenantID, id).First(&device).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, ErrDeviceNotFound
 	}
@@ -95,12 +111,37 @@ func (r *deviceRepository) GetByID(ctx context.Context, tenantID, id uuid.UUID) 
 	return &device, nil
 }
 
+func (r *deviceRepository) ListWithRelations(
+	ctx context.Context,
+	tenantID uuid.UUID,
+	ids []uuid.UUID,
+) ([]*model.Device, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	var devices []*model.Device
+
+	err := r.db.WithContext(ctx).
+		Preload("Hub").
+		Preload("Tenant").
+		Preload("Room").
+		Where("tenant_id = ? AND id IN ?", tenantID, ids).
+		Find(&devices).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return devices, nil
+}
+
 func (r *deviceRepository) GetWithRelations(ctx context.Context, tenantID, id uuid.UUID) (*model.Device, error) {
 	var device model.Device
 
 	err := r.db.WithContext(ctx).
 		Joins("Hub").
 		Joins("Tenant").
+		Preload("Room").
 		Where("devices.tenant_id = ? AND devices.id = ?", tenantID, id).
 		First(&device).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {

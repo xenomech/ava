@@ -76,17 +76,17 @@ func (c *Controller) read(ctx context.Context, conn *websocket.Conn, tenantID uu
 			continue
 		}
 
-		c.dispatch(ctx, tenantID, frame, outbound)
+		c.dispatch(ctx, tenantID, &frame, outbound)
 	}
 }
 
 func (c *Controller) dispatch(
 	ctx context.Context,
 	tenantID uuid.UUID,
-	frame dto.DeviceCommandFrame,
+	frame *dto.DeviceCommandFrame,
 	outbound chan<- []byte,
 ) {
-	req := &dto.SendCommandRequest{Action: frame.Action, Value: frame.Value}
+	req := &dto.SendCommandRequest{Trait: frame.Trait, Value: frame.Value}
 
 	if _, err := c.devices.SendCommand(ctx, tenantID, frame.DeviceID, req); err != nil {
 		reject(outbound, frame.DeviceID, err)
