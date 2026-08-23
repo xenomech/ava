@@ -14,6 +14,7 @@ type Repository interface {
 	GetByUserAndType(ctx context.Context, tenantID, userID uuid.UUID, flowType string) (*model.Flow, error)
 	UpdateFlow(ctx context.Context, tenantID uuid.UUID, flow *model.Flow) error
 	UpdateStep(ctx context.Context, tenantID uuid.UUID, step *model.FlowStep) error
+	ReplaceSteps(ctx context.Context, tenantID uuid.UUID, flow *model.Flow, steps []model.FlowStep) error
 }
 
 type flowRepository struct {
