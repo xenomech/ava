@@ -180,12 +180,24 @@ func (a *App) pair(ctx context.Context) (*api.HubTokens, error) {
 }
 
 func (a *App) persist(tokens *api.HubTokens) error {
-	a.state = &state.State{
+	next := &state.State{
 		HubID:        tokens.Hub.ID,
 		HubName:      tokens.Hub.Name,
 		TenantSlug:   tokens.Tenant.Slug,
 		RefreshToken: tokens.RefreshToken,
 	}
+
+	if a.state != nil {
+		next.BrokerUsername = a.state.BrokerUsername
+		next.BrokerPassword = a.state.BrokerPassword
+	}
+
+	if tokens.Broker != nil {
+		next.BrokerUsername = tokens.Broker.Username
+		next.BrokerPassword = tokens.Broker.Password
+	}
+
+	a.state = next
 
 	return state.Save(a.cfg.StateFile, a.state)
 }

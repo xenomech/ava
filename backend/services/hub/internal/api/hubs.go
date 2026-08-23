@@ -31,12 +31,18 @@ type Hub struct {
 	Status string `json:"status"`
 }
 
+type BrokerCredentials struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
 type HubTokens struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-	ExpiresIn    int64  `json:"expires_in"`
-	Hub          Hub    `json:"hub"`
-	Tenant       Tenant `json:"tenant"`
+	AccessToken  string             `json:"access_token"`
+	RefreshToken string             `json:"refresh_token"`
+	ExpiresIn    int64              `json:"expires_in"`
+	Hub          Hub                `json:"hub"`
+	Tenant       Tenant             `json:"tenant"`
+	Broker       *BrokerCredentials `json:"broker,omitempty"`
 }
 
 func (c *Client) RequestActivationCode(ctx context.Context, hubName string) (*ActivationCode, error) {
