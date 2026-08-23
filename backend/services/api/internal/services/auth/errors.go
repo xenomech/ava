@@ -14,7 +14,6 @@ var (
 	ErrNoTenantMembership      = serrors.NewCoded("no_tenant_membership", "user does not belong to any tenant")
 	ErrTenantAlreadyExists     = serrors.NewCoded("tenant_already_exists", "tenant slug is already taken")
 	ErrTenantSelectionRequired = serrors.NewCoded("tenant_selection_required", "multiple tenants available, specify tenant_slug")
-	ErrInvalidSlug             = serrors.NewCoded("invalid_slug", "tenant slug must be lowercase alphanumeric words separated by hyphens")
 	ErrInviteInvalid           = serrors.NewCoded("invite_invalid", "invitation is invalid or has expired")
 	ErrEmailNotVerified        = serrors.NewCoded("email_not_verified", "email not verified")
 	ErrPasswordMismatch        = serrors.NewCoded("password_mismatch", "current password is incorrect")

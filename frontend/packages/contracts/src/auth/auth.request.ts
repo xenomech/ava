@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-import { tenantSlugSchema } from "../tenant/tenant.request";
-
 export const passwordSchema = z.string().min(8, "Must be at least 8 characters");
 
 export const loginRequest = z.object({
@@ -12,14 +10,12 @@ export const loginRequest = z.object({
 
 export type LoginRequest = z.infer<typeof loginRequest>;
 
+// Three fields. A username and a home slug are machine identifiers the server
+// derives; the home is named during onboarding, not here.
 export const registerRequest = z.object({
-  email: z.email(),
-  username: z.string().min(3).max(30),
   name: z.string().min(1, "Name is required"),
+  email: z.email(),
   password: passwordSchema,
-  phone: z.string().optional(),
-  tenant_name: z.string().min(1, "Workspace name is required"),
-  tenant_slug: tenantSlugSchema,
 });
 
 export type RegisterRequest = z.infer<typeof registerRequest>;
