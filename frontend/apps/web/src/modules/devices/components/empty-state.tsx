@@ -16,8 +16,8 @@ export function NoDevices({ hasHub }: { hasHub: boolean }) {
 
         <p className="text-small text-muted">
           {hasHub
-            ? "Your hub is paired but has not reported any devices. It scans the network every minute — make sure your lights are powered on and on the same Wi-Fi."
-            : "Ava finds your lights through a hub running on a Raspberry Pi. Pair one and its devices will appear here automatically."}
+            ? "Your hub is paired and sweeping the network every minute. Check your lights are switched on at the wall and joined to the same Wi-Fi — they will appear here on their own."
+            : "Ava reaches your lights through a hub on your home network. Pair one and its devices show up here by themselves."}
         </p>
 
         {hasHub ? null : (
