@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"ava/hub/internal/device"
+	"ava/pkg/wire"
 )
 
 var _ device.Device = (*Light)(nil)
@@ -68,8 +69,8 @@ func TestSetPowerEncodesSetPilot(t *testing.T) {
 	fake := &fakeTransport{}
 	light := newTestLight(fake)
 
-	if err := light.SetPower(context.Background(), true); err != nil {
-		t.Fatalf("SetPower: %v", err)
+	if err := light.Apply(context.Background(), wire.TraitPower, wire.Bool(true)); err != nil {
+		t.Fatalf("Apply power: %v", err)
 	}
 
 	req := lastRequest(t, fake)
@@ -107,8 +108,8 @@ func TestSetBrightnessClamps(t *testing.T) {
 			fake := &fakeTransport{}
 			light := newTestLight(fake)
 
-			if err := light.SetBrightness(context.Background(), tc.in); err != nil {
-				t.Fatalf("SetBrightness: %v", err)
+			if err := light.Apply(context.Background(), wire.TraitBrightness, wire.Number(float64(tc.in))); err != nil {
+				t.Fatalf("Apply brightness: %v", err)
 			}
 
 			params := lastRequest(t, fake)["params"].(map[string]any)
@@ -123,8 +124,8 @@ func TestSetBrightnessTurnsTheLightOn(t *testing.T) {
 	fake := &fakeTransport{}
 	light := newTestLight(fake)
 
-	if err := light.SetBrightness(context.Background(), 60); err != nil {
-		t.Fatalf("SetBrightness: %v", err)
+	if err := light.Apply(context.Background(), wire.TraitBrightness, wire.Number(60)); err != nil {
+		t.Fatalf("Apply brightness: %v", err)
 	}
 
 	params := lastRequest(t, fake)["params"].(map[string]any)
@@ -137,16 +138,16 @@ func TestSetColorTempClamps(t *testing.T) {
 	fake := &fakeTransport{}
 	light := newTestLight(fake)
 
-	if err := light.SetColorTemp(context.Background(), 1000); err != nil {
-		t.Fatalf("SetColorTemp: %v", err)
+	if err := light.Apply(context.Background(), wire.TraitColorTemp, wire.Number(1000)); err != nil {
+		t.Fatalf("Apply color temp: %v", err)
 	}
 
 	if got := lastRequest(t, fake)["params"].(map[string]any)["temp"]; got != float64(MinKelvin) {
 		t.Errorf("temp = %v, want %d", got, MinKelvin)
 	}
 
-	if err := light.SetColorTemp(context.Background(), 9000); err != nil {
-		t.Fatalf("SetColorTemp: %v", err)
+	if err := light.Apply(context.Background(), wire.TraitColorTemp, wire.Number(9000)); err != nil {
+		t.Fatalf("Apply color temp: %v", err)
 	}
 
 	if got := lastRequest(t, fake)["params"].(map[string]any)["temp"]; got != float64(MaxKelvin) {
@@ -164,8 +165,13 @@ func TestStateParsesGetPilot(t *testing.T) {
 		t.Fatalf("State: %v", err)
 	}
 
-	if !state.Power || state.Brightness != 42 || state.ColorTemp != 2700 {
-		t.Errorf("state = %+v", state)
+	assertNumber(t, state, wire.TraitBrightness, 42)
+	assertNumber(t, state, wire.TraitColorTemp, 2700)
+
+	if on, ok := state.Get(wire.TraitPower); !ok {
+		t.Error("power missing")
+	} else if flag, _ := on.Bool(); !flag {
+		t.Error("power = false, want true")
 	}
 
 	if lastRequest(t, fake)["method"] != "getPilot" {
@@ -197,7 +203,7 @@ func TestIdentifyFillsIdentity(t *testing.T) {
 func TestDeviceErrorIsReported(t *testing.T) {
 	fake := &fakeTransport{reply: []byte(`{"error":{"code":-32601,"message":"Method not found"}}`)}
 
-	err := newTestLight(fake).SetPower(context.Background(), true)
+	err := newTestLight(fake).Apply(context.Background(), wire.TraitPower, wire.Bool(true))
 	if err == nil {
 		t.Fatal("expected an error")
 	}
@@ -208,33 +214,48 @@ func TestDeviceErrorIsReported(t *testing.T) {
 }
 
 func TestCapabilitiesExcludeColor(t *testing.T) {
-	caps := newTestLight(&fakeTransport{}).Capabilities()
+	capabilities := newTestLight(&fakeTransport{}).Capabilities()
 
-	if !caps.Has(device.CapabilityBrightness) || !caps.Has(device.CapabilityColorTemp) {
-		t.Errorf("caps = %s", caps)
+	if !capabilities.Has(wire.TraitBrightness) || !capabilities.Has(wire.TraitColorTemp) {
+		t.Errorf("capabilities = %v", capabilities)
 	}
 
-	if caps.Has(device.CapabilityColor) {
+	if capabilities.Has(wire.TraitColor) {
 		t.Error("wiz battens are tunable white only")
 	}
 }
 
-func TestCapabilitiesComeFromTheModuleName(t *testing.T) {
+func TestTraitsComeFromTheModuleName(t *testing.T) {
 	tests := []struct {
 		module string
-		want   device.Capability
+		want   []wire.Trait
 	}{
-		{"ESP25_SHTW_01", device.CapabilityBrightness | device.CapabilityColorTemp},
-		{"ESP01_SHRGB1C_31", device.CapabilityBrightness | device.CapabilityColorTemp | device.CapabilityColor},
-		{"ESP01_SHDW1C_31", device.CapabilityBrightness},
-		{"ESP10_SOCKET_06", 0},
-		{"nonsense", device.CapabilityBrightness | device.CapabilityColorTemp},
+		{"ESP25_SHTW_01", []wire.Trait{wire.TraitPower, wire.TraitBrightness, wire.TraitColorTemp}},
+		{"ESP01_SHRGB1C_31", []wire.Trait{wire.TraitPower, wire.TraitBrightness, wire.TraitColorTemp, wire.TraitColor}},
+		{"ESP01_SHDW1C_31", []wire.Trait{wire.TraitPower, wire.TraitBrightness}},
+		{"ESP10_SOCKET_06", []wire.Trait{wire.TraitPower}},
+		{"nonsense", []wire.Trait{wire.TraitPower, wire.TraitBrightness, wire.TraitColorTemp}},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.module, func(t *testing.T) {
-			if got := capabilitiesFor(tc.module); got != tc.want {
-				t.Errorf("%s -> %s, want %s", tc.module, got, tc.want)
+			fake := &fakeTransport{}
+			fake.replyFor = func([]byte) string { return `{"error":{"code":-32601,"message":"Method not found"}}` }
+
+			got := newTestLight(fake).describe(context.Background(), tc.module)
+
+			if err := got.Verify(); err != nil {
+				t.Fatalf("Verify: %v", err)
+			}
+
+			if len(got) != len(tc.want) {
+				t.Fatalf("%s -> %d traits, want %d", tc.module, len(got), len(tc.want))
+			}
+
+			for _, trait := range tc.want {
+				if !got.Has(trait) {
+					t.Errorf("%s is missing %s", tc.module, trait)
+				}
 			}
 		})
 	}
@@ -265,17 +286,10 @@ func TestIdentifyLearnsLimitsFromTheDevice(t *testing.T) {
 		t.Fatalf("Identify: %v", err)
 	}
 
-	limits := light.Limits()
+	assertRange(t, light.Capabilities(), wire.TraitColorTemp, 2700, 6500)
+	assertRange(t, light.Capabilities(), wire.TraitBrightness, 10, 100)
 
-	if limits.KelvinMin != 2700 || limits.KelvinMax != 6500 {
-		t.Errorf("kelvin range = %d-%d, want 2700-6500", limits.KelvinMin, limits.KelvinMax)
-	}
-
-	if limits.BrightnessMin != 10 {
-		t.Errorf("brightness min = %d, want 10", limits.BrightnessMin)
-	}
-
-	if light.Capabilities().Has(device.CapabilityColor) {
+	if light.Capabilities().Has(wire.TraitColor) {
 		t.Error("a tunable white bulb must not claim colour")
 	}
 }
@@ -283,10 +297,14 @@ func TestIdentifyLearnsLimitsFromTheDevice(t *testing.T) {
 func TestColorTempClampsToTheDeviceRangeNotTheDefault(t *testing.T) {
 	fake := &fakeTransport{}
 	light := newTestLight(fake)
-	light.limits = device.Limits{BrightnessMin: 10, BrightnessMax: 100, KelvinMin: 2700, KelvinMax: 6500}
+	light.capabilities = wire.Capabilities{
+		device.Switch(wire.TraitPower),
+		device.Bounded(wire.TraitBrightness, 10, 100, "%"),
+		device.Bounded(wire.TraitColorTemp, 2700, 6500, "K"),
+	}
 
-	if err := light.SetColorTemp(context.Background(), 2200); err != nil {
-		t.Fatalf("SetColorTemp: %v", err)
+	if err := light.Apply(context.Background(), wire.TraitColorTemp, wire.Number(2200)); err != nil {
+		t.Fatalf("Apply color temp: %v", err)
 	}
 
 	if got := lastRequest(t, fake)["params"].(map[string]any)["temp"]; got != float64(2700) {
@@ -296,9 +314,62 @@ func TestColorTempClampsToTheDeviceRangeNotTheDefault(t *testing.T) {
 
 func TestASocketRejectsBrightness(t *testing.T) {
 	light := newTestLight(&fakeTransport{})
-	light.capabilities = 0
+	light.capabilities = wire.Capabilities{device.Switch(wire.TraitPower)}
 
-	if err := light.SetBrightness(context.Background(), 50); !errors.Is(err, device.ErrUnsupported) {
+	if err := light.Apply(context.Background(), wire.TraitBrightness, wire.Number(50)); !errors.Is(err, device.ErrUnsupported) {
 		t.Errorf("got %v", err)
+	}
+}
+
+func TestASocketStillReportsOnlyPower(t *testing.T) {
+	fake := &fakeTransport{}
+	fake.replyFor = func([]byte) string {
+		return `{"result":{"state":true,"dimming":100,"temp":2700}}`
+	}
+
+	light := newTestLight(fake)
+	light.capabilities = wire.Capabilities{device.Switch(wire.TraitPower)}
+
+	state, err := light.State(context.Background())
+	if err != nil {
+		t.Fatalf("State: %v", err)
+	}
+
+	if _, ok := state.Get(wire.TraitBrightness); ok {
+		t.Error("a socket reported brightness")
+	}
+}
+
+func assertNumber(t *testing.T, state wire.State, trait wire.Trait, want float64) {
+	t.Helper()
+
+	value, ok := state.Get(trait)
+	if !ok {
+		t.Errorf("%s missing", trait)
+
+		return
+	}
+
+	if got, _ := value.Number(); got != want {
+		t.Errorf("%s = %g, want %g", trait, got, want)
+	}
+}
+
+func assertRange(t *testing.T, capabilities wire.Capabilities, trait wire.Trait, low, high float64) {
+	t.Helper()
+
+	capability, ok := capabilities.Find(trait)
+	if !ok {
+		t.Errorf("%s missing", trait)
+
+		return
+	}
+
+	if capability.Min == nil || *capability.Min != low {
+		t.Errorf("%s min = %v, want %g", trait, capability.Min, low)
+	}
+
+	if capability.Max == nil || *capability.Max != high {
+		t.Errorf("%s max = %v, want %g", trait, capability.Max, high)
 	}
 }

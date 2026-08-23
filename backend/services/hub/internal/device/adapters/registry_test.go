@@ -19,11 +19,6 @@ func TestOpenReturnsTheRightAdapterPerVendor(t *testing.T) {
 			spec:   device.Spec{Vendor: device.VendorWiz, IP: "192.168.1.50"},
 			vendor: "wiz",
 		},
-		{
-			name:   "tuya",
-			spec:   device.Spec{Vendor: device.VendorTuya, ID: "bf01", IP: "192.168.1.60", LocalKey: "0123456789abcdef"},
-			vendor: "tuya",
-		},
 	}
 
 	for _, tc := range tests {
@@ -58,26 +53,10 @@ func TestOpenRejectsANilSpec(t *testing.T) {
 	}
 }
 
-func TestOpenPropagatesAdapterValidation(t *testing.T) {
-	_, err := adapters.Open(&device.Spec{Vendor: device.VendorTuya, ID: "bf01", LocalKey: "short"})
-
-	if err == nil {
-		t.Fatal("a bad local key must not produce a device")
-	}
-}
-
-func TestCapabilitiesFlowThroughTheSpec(t *testing.T) {
-	dev, err := adapters.Open(&device.Spec{
-		Vendor:       device.VendorTuya,
-		ID:           "bf01",
-		LocalKey:     "0123456789abcdef",
-		Capabilities: device.CapabilityBrightness,
-	})
-	if err != nil {
-		t.Fatalf("Open: %v", err)
-	}
-
-	if !dev.Capabilities().Has(device.CapabilityBrightness) {
-		t.Error("capabilities did not reach the adapter")
+func TestEveryListedVendorCanBeOpened(t *testing.T) {
+	for _, vendor := range adapters.Vendors() {
+		if _, err := adapters.Open(&device.Spec{Vendor: vendor, IP: "192.168.1.50"}); err != nil {
+			t.Errorf("%s is listed but cannot be opened: %v", vendor, err)
+		}
 	}
 }

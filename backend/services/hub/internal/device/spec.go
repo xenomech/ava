@@ -1,12 +1,15 @@
 package device
 
-import "time"
+import (
+	"time"
+
+	"ava/pkg/wire"
+)
 
 type Vendor string
 
 const (
-	VendorWiz  Vendor = "wiz"
-	VendorTuya Vendor = "tuya"
+	VendorWiz Vendor = "wiz"
 )
 
 type Spec struct {
@@ -14,7 +17,6 @@ type Spec struct {
 	ID           string
 	Name         string
 	IP           string
-	LocalKey     string
-	Capabilities Capability
+	Capabilities wire.Capabilities
 	Timeout      time.Duration
 }

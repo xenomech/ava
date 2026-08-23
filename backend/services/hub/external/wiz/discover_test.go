@@ -6,6 +6,8 @@ import (
 	"net"
 	"testing"
 	"time"
+
+	"ava/pkg/wire"
 )
 
 func replyingBulb(t *testing.T, replies []string) (net.PacketConn, *net.UDPAddr) {
@@ -84,7 +86,14 @@ func TestCollectDeduplicatesAndSkipsGarbage(t *testing.T) {
 		t.Errorf("ip = %s", found[0].Info.IP)
 	}
 
-	if !found[0].State.Power || found[0].State.Brightness != 80 || found[0].State.ColorTemp != 2700 {
+	power, _ := found[0].State.Get(wire.TraitPower)
+	on, _ := power.Bool()
+	brightness, _ := found[0].State.Get(wire.TraitBrightness)
+	level, _ := brightness.Number()
+	kelvin, _ := found[0].State.Get(wire.TraitColorTemp)
+	temp, _ := kelvin.Number()
+
+	if !on || level != 80 || temp != 2700 {
 		t.Errorf("state = %+v", found[0].State)
 	}
 }

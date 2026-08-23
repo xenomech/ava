@@ -2,62 +2,12 @@ package device
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
+
+	"ava/pkg/wire"
 )
-
-type Capability uint8
-
-const (
-	CapabilityBrightness Capability = 1 << iota
-	CapabilityColorTemp
-	CapabilityColor
-)
-
-var capabilityNames = []struct {
-	capability Capability
-	name       string
-}{
-	{CapabilityBrightness, "brightness"},
-	{CapabilityColorTemp, "color_temp"},
-	{CapabilityColor, "color"},
-}
-
-func (c Capability) Has(other Capability) bool {
-	return c&other == other
-}
-
-func (c Capability) Names() []string {
-	names := make([]string, 0, len(capabilityNames))
-
-	for _, entry := range capabilityNames {
-		if c.Has(entry.capability) {
-			names = append(names, entry.name)
-		}
-	}
-
-	return names
-}
-
-func (c Capability) String() string {
-	names := c.Names()
-	if len(names) == 0 {
-		return "none"
-	}
-
-	out := names[0]
-	for _, name := range names[1:] {
-		out += "," + name
-	}
-
-	return out
-}
-
-func (c Capability) MarshalJSON() ([]byte, error) {
-	return json.Marshal(c.Names())
-}
 
 type Info struct {
 	ID       string    `json:"id"`
@@ -66,66 +16,40 @@ type Info struct {
 	Model    string    `json:"model,omitempty"`
 	IP       string    `json:"ip,omitempty"`
 	MAC      string    `json:"mac,omitempty"`
+	Parent   string    `json:"parent,omitempty"`
 	LastSeen time.Time `json:"last_seen,omitempty"`
-}
-
-type State struct {
-	Power      bool `json:"power"`
-	Brightness int  `json:"brightness,omitempty"`
-	ColorTemp  int  `json:"color_temp,omitempty"`
 }
 
 type Device interface {
 	Info() Info
-	Capabilities() Capability
-	Limits() Limits
-	State(ctx context.Context) (State, error)
-	SetPower(ctx context.Context, on bool) error
-	SetBrightness(ctx context.Context, percent int) error
-	SetColorTemp(ctx context.Context, kelvin int) error
+	Capabilities() wire.Capabilities
+	State(ctx context.Context) (wire.State, error)
+	Apply(ctx context.Context, trait wire.Trait, value wire.Value) error
 }
 
-var ErrUnsupported = errors.New("capability not supported")
+var ErrUnsupported = errors.New("device: trait not supported")
 
-func Unsupported(vendor string, capability Capability) error {
-	return fmt.Errorf("%s: %s: %w", vendor, capability, ErrUnsupported)
+func Unsupported(vendor string, trait wire.Trait) error {
+	return fmt.Errorf("%s: %s: %w", vendor, trait, ErrUnsupported)
 }
 
-func Clamp(value, low, high int) int {
-	if value < low {
-		return low
-	}
+func Bounded(trait wire.Trait, lowest, highest float64, unit string) wire.Capability {
+	low, high := lowest, highest
 
-	if value > high {
-		return high
+	return wire.Capability{
+		Trait:  trait,
+		Kind:   wire.KindNumber,
+		Access: wire.AccessReadWrite,
+		Min:    &low,
+		Max:    &high,
+		Unit:   unit,
 	}
-
-	return value
 }
 
-type Limits struct {
-	BrightnessMin int `json:"brightness_min"`
-	BrightnessMax int `json:"brightness_max"`
-	KelvinMin     int `json:"kelvin_min,omitempty"`
-	KelvinMax     int `json:"kelvin_max,omitempty"`
+func Switch(trait wire.Trait) wire.Capability {
+	return wire.Capability{Trait: trait, Kind: wire.KindBool, Access: wire.AccessReadWrite}
 }
 
-func (l Limits) WithDefaults(brightnessMin, brightnessMax, kelvinMin, kelvinMax int) Limits {
-	if l.BrightnessMin <= 0 {
-		l.BrightnessMin = brightnessMin
-	}
-
-	if l.BrightnessMax <= 0 {
-		l.BrightnessMax = brightnessMax
-	}
-
-	if l.KelvinMin <= 0 {
-		l.KelvinMin = kelvinMin
-	}
-
-	if l.KelvinMax <= 0 {
-		l.KelvinMax = kelvinMax
-	}
-
-	return l
+func Reading(trait wire.Trait, unit string) wire.Capability {
+	return wire.Capability{Trait: trait, Kind: wire.KindNumber, Access: wire.AccessRead, Unit: unit}
 }

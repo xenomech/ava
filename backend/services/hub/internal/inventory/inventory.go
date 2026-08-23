@@ -2,16 +2,14 @@ package inventory
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
 
 	"ava/pkg/logger"
+	"ava/pkg/wire"
 
-	"ava/hub/external/tuya"
 	"ava/hub/external/wiz"
-	"ava/hub/internal/api"
 	"ava/hub/internal/device"
 )
 
@@ -23,11 +21,10 @@ const (
 )
 
 type Entry struct {
-	Spec   device.Spec
-	State  device.State
-	Limits device.Limits
-	Kind   string
-	Name   string
+	Spec  device.Spec
+	State wire.State
+	Kind  string
+	Name  string
 }
 
 func Discover(ctx context.Context, timeout time.Duration) []Entry {
@@ -42,40 +39,19 @@ func Discover(ctx context.Context, timeout time.Duration) []Entry {
 		entries = append(entries, describeWiz(ctx, &lights[at], timeout))
 	}
 
-	plugs, err := tuya.Discover(ctx, timeout)
-	if err != nil {
-		logger.Warn("TUYA_DISCOVERY_FAILED", logger.String("error", err.Error()))
-	}
-
-	for at := range plugs {
-		if !plugs[at].Supported() {
-			logger.Warn("TUYA_PROTOCOL_UNSUPPORTED",
-				logger.String("device_id", plugs[at].Info.ID),
-				logger.String("ip", plugs[at].Info.IP),
-				logger.String("version", plugs[at].Version),
-			)
-
-			continue
-		}
-
-		entries = append(entries, fromTuya(&plugs[at]))
-	}
-
 	return entries
 }
 
 func describeWiz(ctx context.Context, found *wiz.Found, timeout time.Duration) Entry {
 	entry := Entry{
 		Spec: device.Spec{
-			Vendor:       device.VendorWiz,
-			ID:           found.Info.ID,
-			IP:           found.Info.IP,
-			Capabilities: device.CapabilityBrightness | device.CapabilityColorTemp,
+			Vendor: device.VendorWiz,
+			ID:     found.Info.ID,
+			IP:     found.Info.IP,
 		},
-		State:  found.State,
-		Limits: device.Limits{}.WithDefaults(wiz.MinDimming, wiz.MaxDimming, wiz.MinKelvin, wiz.MaxKelvin),
-		Kind:   KindBulb,
-		Name:   friendlyName("WiZ", found.Info.ID),
+		State: found.State,
+		Kind:  KindBulb,
+		Name:  friendlyName("WiZ", found.Info.ID),
 	}
 
 	light := wiz.New(found.Info.IP, timeout)
@@ -91,7 +67,7 @@ func describeWiz(ctx context.Context, found *wiz.Found, timeout time.Duration) E
 	}
 
 	entry.Spec.Capabilities = light.Capabilities()
-	entry.Limits = light.Limits()
+	entry.Kind = kindFor(entry.Spec.Capabilities)
 	entry.Name = friendlyName("WiZ", info.MAC)
 
 	if info.Model != "" {
@@ -101,16 +77,12 @@ func describeWiz(ctx context.Context, found *wiz.Found, timeout time.Duration) E
 	return entry
 }
 
-func fromTuya(found *tuya.Found) Entry {
-	return Entry{
-		Spec: device.Spec{
-			Vendor: device.VendorTuya,
-			ID:     found.Info.ID,
-			IP:     found.Info.IP,
-		},
-		Kind: KindPlug,
-		Name: friendlyName("Wipro", found.Info.ID),
+func kindFor(capabilities wire.Capabilities) string {
+	if capabilities.Has(wire.TraitBrightness) {
+		return KindBulb
 	}
+
+	return KindPlug
 }
 
 func friendlyName(vendor, id string) string {
@@ -122,49 +94,24 @@ func friendlyName(vendor, id string) string {
 	return fmt.Sprintf("%s %s", vendor, strings.ToUpper(trimmed))
 }
 
-func ToSyncItems(entries []Entry) []api.SyncDeviceItem {
-	items := make([]api.SyncDeviceItem, 0, len(entries))
+func ToSyncItems(entries []Entry) []wire.DeviceReport {
+	items := make([]wire.DeviceReport, 0, len(entries))
 
 	for at := range entries {
 		entry := &entries[at]
 
-		payload := statePayload{
-			Power:        entry.State.Power,
-			Brightness:   entry.State.Brightness,
-			ColorTemp:    entry.State.ColorTemp,
-			Capabilities: entry.Spec.Capabilities.Names(),
-			Limits:       entry.Limits,
-			Model:        entry.Spec.Name,
+		items = append(items, wire.DeviceReport{
+			ExternalID:   entry.Spec.ID,
+			Name:         entry.Name,
+			Kind:         entry.Kind,
+			Status:       StatusOnline,
 			Vendor:       string(entry.Spec.Vendor),
+			Model:        entry.Spec.Name,
 			IP:           entry.Spec.IP,
-		}
-
-		raw, err := json.Marshal(payload)
-		if err != nil {
-			logger.Warn("DEVICE_STATE_ENCODE_FAILED", logger.String("device_id", entry.Spec.ID))
-
-			continue
-		}
-
-		items = append(items, api.SyncDeviceItem{
-			ExternalID: entry.Spec.ID,
-			Name:       entry.Name,
-			Kind:       entry.Kind,
-			Status:     StatusOnline,
-			State:      raw,
+			Capabilities: entry.Spec.Capabilities,
+			State:        entry.State,
 		})
 	}
 
 	return items
-}
-
-type statePayload struct {
-	Limits       device.Limits `json:"limits"`
-	Power        bool          `json:"power"`
-	Brightness   int           `json:"brightness,omitempty"`
-	ColorTemp    int           `json:"color_temp,omitempty"`
-	Capabilities []string      `json:"capabilities"`
-	Model        string        `json:"model,omitempty"`
-	Vendor       string        `json:"vendor"`
-	IP           string        `json:"ip,omitempty"`
 }
