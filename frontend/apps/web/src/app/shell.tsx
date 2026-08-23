@@ -19,7 +19,6 @@ import {
   LayoutGridIcon,
   LogOutIcon,
   MoonIcon,
-  PlusIcon,
   RadioIcon,
   SettingsIcon,
   SunIcon,
@@ -36,13 +35,14 @@ import { AvaSocketProvider } from "@/shared/realtime";
 import { AvaEvents } from "./ava-events";
 
 const NAV = [
-  { to: "/", label: "Console", icon: HomeIcon },
+  { to: "/", label: "Home", icon: HomeIcon },
   { to: "/rooms", label: "Rooms", icon: LayoutGridIcon },
-  { to: "/activate", label: "Hubs", icon: RadioIcon },
+  { to: "/activate", label: "Hub", icon: RadioIcon },
   { to: "/settings/members", label: "People", icon: UsersIcon },
   { to: "/settings", label: "Settings", icon: SettingsIcon },
 ] as const;
 
+// People lives under Settings on a phone; four tabs stay tappable, five do not.
 const MOBILE_NAV = NAV.filter((item) => item.to !== "/settings/members");
 
 export function AppShell() {
@@ -172,17 +172,6 @@ export function AppShell() {
                 <span className="hidden lg:inline">{label}</span>
               </Link>
             ))}
-
-            <Link
-              to="/activate"
-              className={cn(
-                "mt-2 flex h-10 items-center justify-center gap-3 rounded-sm px-3 text-small font-medium lg:justify-start",
-                "border border-border-strong text-fg transition-colors duration-150 ease-out hover:bg-surface",
-              )}
-            >
-              <PlusIcon className="size-[18px] shrink-0" aria-hidden />
-              <span className="hidden lg:inline">Add hub</span>
-            </Link>
           </nav>
 
           <main className="min-w-0 overflow-y-auto">
@@ -192,7 +181,7 @@ export function AppShell() {
 
         <nav
           aria-label="Main"
-          className="grid grid-cols-5 items-stretch border-t border-border pb-[env(safe-area-inset-bottom)] md:hidden"
+          className="grid grid-cols-4 items-stretch border-t border-border pb-[env(safe-area-inset-bottom)] md:hidden"
         >
           {MOBILE_NAV.map(({ to, label, icon: Icon }) => (
             <Link
@@ -209,16 +198,6 @@ export function AppShell() {
               <span className="leading-none">{label}</span>
             </Link>
           ))}
-
-          <Link
-            to="/activate"
-            className="grid h-14 place-items-center gap-1 text-caption text-subtle"
-          >
-            <span className="grid size-[19px] place-items-center rounded-xs bg-accent text-accent-fg">
-              <PlusIcon className="size-3.5" aria-hidden />
-            </span>
-            <span className="leading-none">Add</span>
-          </Link>
         </nav>
 
         <CommandPalette />
