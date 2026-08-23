@@ -3,7 +3,16 @@ import type { CSSProperties } from "react";
 import { cn } from "../lib/utils";
 import { Materials, coilPath, useMaterials } from "./materials";
 
-export type DeviceKind = "bulb" | "tube" | "strip" | "lamp" | "plug" | "sensor";
+export type DeviceKind =
+  | "bulb"
+  | "tube"
+  | "strip"
+  | "lamp"
+  | "plug"
+  | "sensor"
+  | "fan"
+  | "heater"
+  | "speaker";
 
 export type DeviceProps = {
   kind: DeviceKind;
@@ -32,7 +41,9 @@ type ShapeProps = {
   style?: CSSProperties;
 };
 
-const litCore = { opacity: "calc(var(--level) / 100 * 0.9)" } satisfies CSSProperties;
+const litCore = {
+  opacity: "calc(var(--level) / 100 * var(--level) / 100 * 0.30)",
+} satisfies CSSProperties;
 const litSoft = { opacity: "calc(0.05 + var(--level) / 100 * 0.6)" } satisfies CSSProperties;
 const litSource = { opacity: "calc(0.14 + var(--level) / 100 * 0.86)" } satisfies CSSProperties;
 
@@ -46,16 +57,6 @@ function Bulb({ m, className, style }: ShapeProps) {
   return (
     <svg viewBox="0 0 220 366" aria-hidden className={className} style={style}>
       <Materials m={m} />
-
-      <ellipse
-        cx="110"
-        cy="124"
-        rx="92"
-        ry="96"
-        fill={`url(#${m.core})`}
-        filter={`url(#${m.soft})`}
-        style={{ ...litCore, ...TRANSITION }}
-      />
 
       <path d={glass} fill={`url(#${m.env})`} />
 
@@ -151,15 +152,6 @@ function Strip({ m, className, style }: ShapeProps) {
   return (
     <svg viewBox="0 0 320 366" aria-hidden className={className} style={style}>
       <Materials m={m} />
-      <ellipse
-        cx="160"
-        cy="190"
-        rx="146"
-        ry="58"
-        fill={`url(#${m.core})`}
-        filter={`url(#${m.soft})`}
-        style={{ ...litCore, ...TRANSITION }}
-      />
 
       <g transform="rotate(-6 160 184)">
         <rect x="30" y="160" width="260" height="38" rx="19" fill={`url(#${m.dark})`} />
@@ -215,7 +207,7 @@ function Lamp({ m, className, style }: ShapeProps) {
     <svg viewBox="0 0 260 366" aria-hidden className={className} style={style}>
       <Materials m={m} />
       <path
-        d="M76 152h108l66 158H10Z"
+        d="M80 152h100l46 146H34Z"
         fill="var(--lit)"
         filter={`url(#${m.soft})`}
         style={{ ...litCore, ...TRANSITION }}
@@ -247,15 +239,6 @@ function Plug({ m, className, style }: ShapeProps) {
   return (
     <svg viewBox="0 0 260 366" aria-hidden className={className} style={style}>
       <Materials m={m} />
-      <ellipse
-        cx="130"
-        cy="200"
-        rx="98"
-        ry="82"
-        fill={`url(#${m.core})`}
-        filter={`url(#${m.soft})`}
-        style={{ ...litCore, ...TRANSITION }}
-      />
 
       <rect x="104" y="72" width="14" height="42" rx="4" fill={`url(#${m.metal})`} />
       <rect x="142" y="72" width="14" height="42" rx="4" fill={`url(#${m.metal})`} />
@@ -288,15 +271,6 @@ function Sensor({ m, className, style }: ShapeProps) {
   return (
     <svg viewBox="0 0 260 366" aria-hidden className={className} style={style}>
       <Materials m={m} />
-      <ellipse
-        cx="130"
-        cy="186"
-        rx="94"
-        ry="82"
-        fill={`url(#${m.core})`}
-        filter={`url(#${m.soft})`}
-        style={{ ...litCore, ...TRANSITION }}
-      />
 
       <circle cx="130" cy="186" r="78" fill={`url(#${m.dark})`} />
       <path d="M52 186a78 78 0 0 1 156 0Z" fill="#fff" opacity="0.07" />
@@ -352,16 +326,6 @@ function Tube({ m, className, style }: ShapeProps) {
         </radialGradient>
       </defs>
 
-      <ellipse
-        cx="190"
-        cy="190"
-        rx="184"
-        ry="60"
-        fill={`url(#${m.core})`}
-        filter={`url(#${m.soft})`}
-        style={{ ...litCore, ...TRANSITION }}
-      />
-
       <rect x="16" y="156" width="348" height="46" rx="15" fill={`url(#${m.env})`} />
       <rect x="16" y="156" width="348" height="15" rx="7" fill="#fff" opacity="0.11" />
       <rect x="16" y="190" width="348" height="12" rx="6" fill="#000" opacity="0.28" />
@@ -410,6 +374,253 @@ function Tube({ m, className, style }: ShapeProps) {
   );
 }
 
+function Fan({ m, className, style }: ShapeProps) {
+  const spokes = Array.from({ length: 20 }, (_, i) => (i * 360) / 20);
+  const blade = "M130 148 C168 128 176 92 158 58 C140 74 116 92 130 148 Z";
+
+  return (
+    <svg viewBox="0 0 260 366" aria-hidden className={className} style={style}>
+      <Materials m={m} />
+
+      <ellipse cx="130" cy="338" rx="70" ry="9" fill="#000" opacity=".5" />
+
+      <rect x="121" y="230" width="18" height="88" rx="4" fill={`url(#${m.metal})`} />
+      <rect x="126" y="230" width="3" height="88" fill="#fff" opacity=".2" />
+      <ellipse cx="130" cy="318" rx="46" ry="11" fill={`url(#${m.metal})`} />
+      <ellipse cx="130" cy="314" rx="46" ry="11" fill={`url(#${m.dark})`} />
+
+      <circle cx="130" cy="148" r="86" fill="#0a0b0d" />
+
+      <g style={{ opacity: "calc(var(--level) / 100 * .55)", ...TRANSITION }}>
+        <circle
+          cx="130"
+          cy="148"
+          r="72"
+          fill="none"
+          stroke="#8a8a94"
+          strokeOpacity=".3"
+          strokeWidth="30"
+        />
+      </g>
+
+      <g>
+        {[0, 120, 240].map((a) => (
+          <g key={a} transform={`rotate(${a} 130 148)`}>
+            <path d={blade} fill="#2b3038" />
+            <path d={blade} fill={`url(#${m.env})`} opacity=".7" />
+            <path
+              d="M130 148 C156 130 164 102 152 74"
+              fill="none"
+              stroke="#fff"
+              strokeOpacity=".16"
+              strokeWidth="2"
+            />
+          </g>
+        ))}
+      </g>
+
+      <circle cx="130" cy="148" r="20" fill={`url(#${m.metal})`} />
+      <circle
+        cx="130"
+        cy="148"
+        r="20"
+        fill="none"
+        stroke="#000"
+        strokeOpacity=".45"
+        strokeWidth="1.6"
+      />
+      <circle cx="124" cy="142" r="5" fill="#fff" opacity=".28" />
+
+      <g stroke="#aeb5bf" fill="none" strokeLinecap="round" opacity=".55">
+        {spokes.map((a) => (
+          <path key={a} d="M130 66 V148" strokeWidth="1.6" transform={`rotate(${a} 130 148)`} />
+        ))}
+        <circle cx="130" cy="148" r="58" strokeWidth="1.8" />
+        <circle cx="130" cy="148" r="32" strokeWidth="1.8" />
+      </g>
+
+      <circle cx="130" cy="148" r="86" fill="none" stroke={`url(#${m.metal})`} strokeWidth="7" />
+      <circle
+        cx="130"
+        cy="148"
+        r="86"
+        fill="none"
+        stroke="#000"
+        strokeOpacity=".35"
+        strokeWidth="1.4"
+      />
+
+      <circle
+        cx="130"
+        cy="322"
+        r="4"
+        fill="#4ade80"
+        style={{ opacity: "calc(var(--level) / 100)", ...TRANSITION }}
+      />
+    </svg>
+  );
+}
+
+function Heater({ m, className, style }: ShapeProps) {
+  return (
+    <svg viewBox="0 0 260 366" aria-hidden className={className} style={style}>
+      <Materials m={m} />
+
+      <rect x="42" y="58" width="176" height="238" rx="18" fill={`url(#${m.env})`} />
+      <rect x="42" y="58" width="176" height="16" rx="8" fill="#fff" opacity=".1" />
+
+      <g style={{ ...litSource, ...TRANSITION }}>
+        {[0, 1, 2, 3, 4].map((i) => {
+          const y = 96 + i * 40;
+          return (
+            <g key={i}>
+              <rect
+                x="66"
+                y={y}
+                width="128"
+                height="12"
+                rx="6"
+                fill="var(--lit)"
+                filter={`url(#${m.glow})`}
+                opacity=".7"
+              />
+              <rect x="66" y={y} width="128" height="12" rx="6" fill="var(--lit)" />
+              <rect x="72" y={y + 3} width="116" height="3" rx="1.5" fill="#fff" opacity=".5" />
+            </g>
+          );
+        })}
+      </g>
+
+      <g stroke={`url(#${m.metal})`} strokeWidth="4" fill="none">
+        {[0, 1, 2, 3, 4, 5].map((i) => (
+          <path key={i} d={`M${58 + i * 29} 58 V296`} strokeOpacity=".5" />
+        ))}
+      </g>
+
+      <rect
+        x="42"
+        y="58"
+        width="176"
+        height="238"
+        rx="18"
+        fill="none"
+        stroke={`url(#${m.rim})`}
+        strokeWidth="1.6"
+      />
+      <path d="M58 296h144l10 24H48Z" fill={`url(#${m.dark})`} />
+    </svg>
+  );
+}
+
+function Speaker({ m, className, style }: ShapeProps) {
+  return (
+    <svg viewBox="0 0 260 366" aria-hidden className={className} style={style}>
+      <Materials m={m} />
+
+      <ellipse cx="130" cy="322" rx="76" ry="9" fill="#000" opacity=".45" />
+
+      <rect x="52" y="46" width="156" height="272" rx="8" fill={`url(#${m.dark})`} />
+      <rect x="52" y="46" width="156" height="272" rx="8" fill={`url(#${m.env})`} opacity=".5" />
+      <rect x="52" y="46" width="156" height="7" rx="3" fill="#fff" opacity=".12" />
+      <rect x="52" y="311" width="156" height="7" rx="3" fill="#000" opacity=".4" />
+
+      <circle cx="130" cy="212" r="62" fill="#0d0f12" />
+      <circle
+        cx="130"
+        cy="212"
+        r="62"
+        fill="none"
+        stroke="#fff"
+        strokeOpacity=".07"
+        strokeWidth="2"
+      />
+      <circle cx="130" cy="212" r="52" fill={`url(#${m.env})`} opacity=".5" />
+      <circle
+        cx="130"
+        cy="212"
+        r="52"
+        fill="none"
+        stroke="#000"
+        strokeOpacity=".55"
+        strokeWidth="7"
+      />
+      <circle cx="130" cy="212" r="38" fill="#15181c" />
+      <circle
+        cx="130"
+        cy="212"
+        r="38"
+        fill="none"
+        stroke="#fff"
+        strokeOpacity=".05"
+        strokeWidth="1.5"
+      />
+      <circle cx="130" cy="212" r="17" fill={`url(#${m.metal})`} />
+      <ellipse
+        cx="123"
+        cy="204"
+        rx="6"
+        ry="9"
+        fill="#fff"
+        opacity=".22"
+        transform="rotate(-24 123 204)"
+      />
+
+      {[0, 1, 2, 3].map((i) => (
+        <circle
+          key={i}
+          cx={130 + 52 * Math.cos(((45 + i * 90) * Math.PI) / 180)}
+          cy={212 + 52 * Math.sin(((45 + i * 90) * Math.PI) / 180)}
+          r="3.4"
+          fill={`url(#${m.metal})`}
+        />
+      ))}
+
+      <circle cx="130" cy="104" r="26" fill="#0d0f12" />
+      <circle
+        cx="130"
+        cy="104"
+        r="26"
+        fill="none"
+        stroke="#fff"
+        strokeOpacity=".07"
+        strokeWidth="2"
+      />
+      <circle cx="130" cy="104" r="13" fill={`url(#${m.metal})`} />
+      <ellipse
+        cx="125"
+        cy="99"
+        rx="4"
+        ry="6"
+        fill="#fff"
+        opacity=".24"
+        transform="rotate(-24 125 99)"
+      />
+
+      <circle cx="196" cy="104" r="7" fill="#08090b" />
+      <circle cx="196" cy="104" r="7" fill="none" stroke="#fff" strokeOpacity=".06" />
+
+      <rect
+        x="52"
+        y="46"
+        width="156"
+        height="272"
+        rx="8"
+        fill="none"
+        stroke={`url(#${m.rim})`}
+        strokeWidth="1.6"
+      />
+
+      <circle
+        cx="64"
+        cy="304"
+        r="3.6"
+        fill="#4ade80"
+        style={{ opacity: "calc(var(--level) / 100)", ...TRANSITION }}
+      />
+    </svg>
+  );
+}
+
 const SHAPES: Record<DeviceKind, (props: ShapeProps) => React.ReactElement> = {
   bulb: Bulb,
   tube: Tube,
@@ -417,6 +628,9 @@ const SHAPES: Record<DeviceKind, (props: ShapeProps) => React.ReactElement> = {
   lamp: Lamp,
   plug: Plug,
   sensor: Sensor,
+  fan: Fan,
+  heater: Heater,
+  speaker: Speaker,
 };
 
 export function DeviceHalo({ className }: { className?: string }) {
@@ -424,12 +638,12 @@ export function DeviceHalo({ className }: { className?: string }) {
     <span
       aria-hidden
       className={cn(
-        "pointer-events-none absolute aspect-square rounded-full blur-[46px]",
+        "pointer-events-none absolute aspect-square rounded-full blur-[52px]",
         className,
       )}
       style={{
         background: "radial-gradient(circle, var(--lit) 0%, transparent 68%)",
-        opacity: "calc(var(--level) / 100 * 0.22)",
+        opacity: "calc(var(--level) / 100 * var(--level) / 100 * 0.2)",
         transition: "opacity 500ms var(--motion-out-soft)",
       }}
     />
