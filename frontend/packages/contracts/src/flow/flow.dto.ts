@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-import { tenantRoleSchema } from "../tenant/tenant.dto";
-
 export const FLOW_STATUSES = ["pending", "in_progress", "completed", "failed"] as const;
 export const flowStatusSchema = z.enum(FLOW_STATUSES);
 export type FlowStatus = z.infer<typeof flowStatusSchema>;
@@ -38,8 +36,6 @@ export const flowStateDto = z.object({
 
 export type FlowStateDto = z.infer<typeof flowStateDto>;
 
-export const onboardingMetadataDto = z.object({
-  invite_roles: z.array(z.object({ value: tenantRoleSchema, label: z.string() })),
-});
+export const onboardingMetadataDto = z.object({});
 
 export type OnboardingMetadataDto = z.infer<typeof onboardingMetadataDto>;

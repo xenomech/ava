@@ -35,7 +35,7 @@ func NewService(repo *repository.Repository, commander devicesvc.Commander, prov
 	return &Service{
 		Auth:   authsvc.NewService(repo.User, repo.Tenant, repo.Membership, repo.Session, repo.Token),
 		Tenant: tenantService,
-		Flow:   flowsvc.NewService(repo.Flow, tenantService, repo.User, repo.Membership),
+		Flow:   flowsvc.NewService(repo.Flow, tenantService, repo.Membership, repo.Hub),
 		Room:   roomsvc.NewService(repo.Room),
 		Hub:    hubsvc.NewService(repo.Hub, repo.Tenant, eventService, deviceService, provisioner),
 		Device: deviceService,

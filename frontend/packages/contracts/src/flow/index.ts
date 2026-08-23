@@ -15,18 +15,8 @@ export type {
   OnboardingMetadataDto,
 } from "./flow.dto";
 
-export {
-  ONBOARDING_STEP_SCHEMAS,
-  inviteTeamStepData,
-  profileStepData,
-  workspaceStepData,
-} from "./flow.steps";
-export type {
-  InviteTeamStepData,
-  OnboardingStepId,
-  ProfileStepData,
-  WorkspaceStepData,
-} from "./flow.steps";
+export { ONBOARDING_STEP_SCHEMAS, homeStepData, hubStepData } from "./flow.steps";
+export type { HomeStepData, HubStepData, OnboardingStepId } from "./flow.steps";
 
 export { submitStepRequest } from "./flow.request";
 export type { SubmitStepRequest } from "./flow.request";
