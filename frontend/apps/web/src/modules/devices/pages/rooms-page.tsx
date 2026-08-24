@@ -6,7 +6,7 @@ import { Link } from "@tanstack/react-router";
 import { hubQueries } from "@/modules/hub";
 import { NewRoom, RoomHeading, useRoomActions, useRooms } from "@/modules/rooms";
 import { Loader } from "@/shared/components/loader";
-import { deviceColor, deviceKind, deviceLevel } from "../device-view";
+import { deviceColor, deviceKind, deviceLevel } from "../components/device-stage";
 import { NoDevices } from "../components/empty-state";
 import { deviceQueries } from "../queries";
 import { useDeviceControl, useDevices, useRoomPower } from "../use-devices";
@@ -43,7 +43,7 @@ export function RoomsPage() {
   ];
 
   return (
-    <div className="mx-auto grid w-full max-w-[1180px] gap-8 p-5 sm:p-6">
+    <div className="grid gap-8 p-5 sm:p-6">
       <header className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-display font-semibold">Rooms</h1>
@@ -77,7 +77,7 @@ export function RoomsPage() {
                 ) : (
                   <h2 className="text-title font-semibold text-muted">{group.name}</h2>
                 )}
-                <span className="text-caption text-muted tabular">
+                <span className="font-mono text-caption text-subtle tabular">
                   {inRoom.length === 0 ? "empty" : `${on} of ${inRoom.length} on`}
                 </span>
               </div>
@@ -145,7 +145,7 @@ function DeviceCard({
       <div className="flex items-end justify-between gap-3">
         <span className="min-w-0">
           <span className="block truncate text-body font-semibold">{device.name}</span>
-          <span className="block text-caption text-muted tabular">
+          <span className="block font-mono text-caption text-subtle tabular">
             {device.status === "offline" ? "Offline" : level > 0 ? `${level}%` : "Off"}
           </span>
         </span>
