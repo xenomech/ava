@@ -155,6 +155,7 @@
   --animate-fade-in: fade-in 160ms var(--ease-out-soft);
   --animate-scale-in: scale-in 160ms var(--ease-out-soft);
   --animate-slide-up: slide-up 220ms var(--ease-out-soft);
+  --animate-slide-in-end: slide-in-end 260ms var(--ease-drawer);
 
   /* First-run only. Marketing pacing rather than product pacing: this is seen
      once, so it is allowed to take its time. */
@@ -227,6 +228,14 @@
   from {
     opacity: 0;
     transform: translateY(6px);
+  }
+}
+
+/* A panel arriving from the inline end of the row it sits in. */
+@keyframes slide-in-end {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
   }
 }
 

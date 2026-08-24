@@ -1,4 +1,4 @@
-import { cn } from "@ava/ui";
+import { Device, DeviceHalo, cn } from "@ava/ui";
 import {
   TRAIT_COLOR_TEMP,
   TRAIT_POWER,
@@ -8,39 +8,58 @@ import {
   supports,
   type DeviceDto,
 } from "@ava/contracts";
-import { Link, useParams } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
+import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
+import { hubQueries } from "@/modules/hub";
 import { RoomHeading, rememberRoom, useRoomActions, useRooms } from "@/modules/rooms";
 import { Loader } from "@/shared/components/loader";
+import { useMediaQuery } from "@/shared/hooks/use-media-query";
 import { parseColor, warmth } from "@/shared/lib/color";
 import { kelvinToCss } from "@/shared/lib/kelvin";
+import { deviceColor, deviceKind, deviceLevel } from "../components/device-stage";
+import { DeviceSheet, ROOM_HEIGHT } from "../components/device-sheet";
+import { DeviceStrip } from "../components/device-strip";
 import { Missing } from "../components/empty-state";
 import { LightSweep } from "../components/light-sweep";
 import { RoomSwitch } from "../components/room-switch";
-import { deviceColor, deviceKind, deviceLabel } from "../components/device-stage";
 import { deviceQueries } from "../queries";
 import { useDevices, useRoomPower } from "../use-devices";
 
 /** The room's own light, averaged, for the switch and the sweep to borrow. */
 const DEFAULT_KELVIN = 2700;
 
+/** Below this the controls arrive as a sheet; above it, as a column. */
+const BESIDE = "(min-width: 1024px)";
+
 /**
- * A room, as one surface: every device at once, a switch in the middle, and the
- * individual devices reduced to a strip you can swipe rather than a grid you
- * have to read.
+ * A room, as one surface.
+ *
+ * Nothing here navigates away. Picking a device out of the strip swaps the
+ * middle of the room from its switch to the device itself and opens that
+ * device's controls, but the room, its colours and its strip all stay put. The
+ * selection lives in the URL, so it stays addressable and the back button
+ * closes it.
  */
 export function RoomPage() {
   const { roomId } = useParams({ from: "/_protected/rooms/$roomId" });
+  const { device: selectedId } = useSearch({ from: "/_protected/rooms/$roomId" });
+  const navigate = useNavigate();
+
   const { rooms, isPending: roomsPending } = useRooms();
   const { devices, isPending } = useDevices();
+  const hubs = useQuery(hubQueries.list());
   const queryClient = useQueryClient();
   const setRoomPower = useRoomPower();
+  const beside = useMediaQuery(BESIDE);
 
   /* The sweep is fire-and-forget: `play` remounts it so a second flick
      restarts the animation instead of being swallowed mid-flight. */
   const [sweep, setSweep] = useState({ play: 0, direction: "on" as "on" | "off" });
+  /* The in-flight brightness of whichever device is being dragged, so the
+     stage lights up before the hub has answered. */
+  const [dragging, setDragging] = useState<number | null>(null);
 
   const actions = useRoomActions({
     onDevicesMoved: () => void queryClient.invalidateQueries({ queryKey: deviceQueries.all() }),
@@ -56,10 +75,7 @@ export function RoomPage() {
 
   if (!room) {
     return (
-      <Missing
-        title="That room is gone"
-        detail="It may have been deleted from another device."
-      />
+      <Missing title="That room is gone" detail="It may have been deleted from another device." />
     );
   }
 
@@ -70,6 +86,10 @@ export function RoomPage() {
     (device) => device.status !== "offline" && supports(device, TRAIT_POWER),
   );
 
+  const selected = inRoom.find((device) => device.id === selectedId);
+  const hub = (hubs.data ?? []).find((entry) => entry.id === selected?.hub_id);
+  const hubOffline = hub !== undefined && !hub.online;
+
   const kelvin = roomKelvin(inRoom);
   const lit = kelvinToCss(kelvin);
   const palette = roomPalette(inRoom, lit);
@@ -79,12 +99,30 @@ export function RoomPage() {
     void setRoomPower(inRoom, next);
   };
 
-  return (
-    <div className="relative grid h-full grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden">
-      <LightSweep colors={palette} direction={sweep.direction} play={sweep.play} />
+  const close = () => void navigate({ to: "/rooms/$roomId", params: { roomId }, replace: true });
 
-      <header className="z-raised flex items-start justify-between gap-4 p-5 pt-16 sm:p-6 md:pt-6">
-        <div className="min-w-0">
+  const strip = (
+    <DeviceStrip
+      devices={inRoom}
+      roomId={room.id}
+      selectedId={selected?.id}
+      label={`Devices in ${room.name}`}
+    />
+  );
+
+  return (
+    <div className="relative flex h-full overflow-hidden">
+      <div
+        className={cn(
+          "relative grid min-h-0 min-w-0 flex-1 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden",
+          /* The phone sheet rests over the lower half, so the room gives up
+             that half rather than centring the device behind it. */
+          selected && !beside && ROOM_HEIGHT,
+        )}
+      >
+        <LightSweep colors={palette} direction={sweep.direction} play={sweep.play} />
+
+        <header className="z-raised p-5 pt-16 sm:p-6 md:pt-6">
           <span className="font-mono text-caption uppercase tracking-caps text-subtle">Room</span>
           <div className="mt-1 flex min-w-0 items-center gap-2">
             <RoomHeading
@@ -97,88 +135,104 @@ export function RoomPage() {
               onDelete={() => actions.remove.mutate(room.id)}
             />
           </div>
-        </div>
-      </header>
+        </header>
 
-      {inRoom.length === 0 ? (
-        <div className="z-raised grid place-items-center p-6">
-          <p className="text-small text-muted">No devices in here yet.</p>
-        </div>
-      ) : (
-        <>
-          <div className="z-raised grid min-h-0 place-items-center px-5 sm:px-6">
-            <RoomSwitch
-              on={on > 0}
-              disabled={switchable.length === 0}
-              color={lit}
-              label={`${room.name} lights`}
-              onFlick={flick}
-            />
+        {inRoom.length === 0 ? (
+          <div className="z-raised grid place-items-center p-6">
+            <p className="text-small text-muted">No devices in here yet.</p>
           </div>
-
-          <footer className="z-raised grid gap-4 p-5 pt-0 sm:p-6 sm:pt-0">
-            <div className="flex items-end justify-between gap-4">
-              <p className="flex items-baseline gap-2">
-                {on === 0 ? (
-                  <b className="text-hero font-semibold text-subtle">Off</b>
-                ) : (
-                  <>
-                    <b className="text-hero font-semibold tabular">{on}</b>
-                    <span className="font-mono text-small text-subtle tabular">
-                      of {inRoom.length} on
-                    </span>
-                  </>
-                )}
-              </p>
-
-              <p className="text-right font-mono text-caption leading-relaxed text-subtle">
-                flick the switch
-                <br />
-                up on · down off
-              </p>
+        ) : (
+          <>
+            <div className="z-raised grid min-h-0 place-items-center px-5 sm:px-6">
+              {selected ? (
+                <DeviceOnStage key={selected.id} device={selected} level={dragging} />
+              ) : (
+                <RoomSwitch
+                  on={on > 0}
+                  disabled={switchable.length === 0}
+                  color={lit}
+                  label={`${room.name} lights`}
+                  onFlick={flick}
+                />
+              )}
             </div>
 
-            <div
-              className="-mx-5 flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-5 pb-1 sm:-mx-6 sm:px-6"
-              aria-label={`Devices in ${room.name}`}
-            >
-              {inRoom.map((device) => (
-                <DeviceChip key={device.id} device={device} />
-              ))}
-            </div>
-          </footer>
-        </>
-      )}
+            {/* Room mode's own furniture. On a phone the sheet takes the lower
+                half of the screen, so the count, the hint and the strip all
+                travel into it rather than sitting on top of the device. */}
+            {selected && !beside ? null : (
+              <footer className="z-raised grid gap-4 p-5 pt-0 sm:p-6 sm:pt-0">
+                <div className="flex items-end justify-between gap-4">
+                  <p className="flex items-baseline gap-2">
+                    {on === 0 ? (
+                      <b className="text-hero font-semibold text-subtle">Off</b>
+                    ) : (
+                      <>
+                        <b className="text-hero font-semibold tabular">{on}</b>
+                        <span className="font-mono text-small text-subtle tabular">
+                          of {inRoom.length} on
+                        </span>
+                      </>
+                    )}
+                  </p>
+
+                  <p className="text-right font-mono text-caption leading-relaxed text-subtle">
+                    {selected ? (
+                      <>
+                        tap the card again
+                        <br />
+                        to leave the device
+                      </>
+                    ) : (
+                      <>
+                        flick the switch
+                        <br />
+                        up on · down off
+                      </>
+                    )}
+                  </p>
+                </div>
+
+                {strip}
+              </footer>
+            )}
+          </>
+        )}
+      </div>
+
+      {selected ? (
+        <DeviceSheet
+          device={selected}
+          offline={selected.status === "offline" || hubOffline}
+          hubOffline={hubOffline}
+          strip={strip}
+          beside={beside}
+          onClose={close}
+          onLevelChange={setDragging}
+        />
+      ) : null}
     </div>
   );
 }
 
-/** A device reduced to what you need to pick it out: a lit dot and a name. */
-function DeviceChip({ device }: { device: DeviceDto }) {
-  const live = isOn(device) && device.status !== "offline";
+/** The device itself, standing where the room's switch was. */
+function DeviceOnStage({ device, level }: { device: DeviceDto; level: number | null }) {
+  const shown = level ?? deviceLevel(device);
+  const color = deviceColor(device);
 
   return (
-    <Link
-      to="/devices/$deviceId"
-      params={{ deviceId: device.id }}
-      className={cn(
-        "grid w-[168px] shrink-0 snap-start content-start gap-1.5 rounded-lg p-3",
-        "border border-border bg-surface transition-colors duration-150 ease-out",
-        "hover:border-border-strong focus-visible:outline-none focus-visible:ring-2",
-        "focus-visible:ring-fg",
-        device.status === "offline" && "opacity-55",
-      )}
+    <div
+      className="relative grid size-full animate-fade-in place-items-center"
+      style={{ "--level": shown, "--lit": color } as React.CSSProperties}
     >
-      <span className="flex items-center gap-2">
-        <span
-          aria-hidden
-          className={cn("size-1.5 shrink-0 rounded-full", !live && "bg-border-strong")}
-          style={live ? { background: deviceColor(device) } : undefined}
-        />
-        <span className="truncate text-small font-semibold">{device.name}</span>
-      </span>
-      <span className="font-mono text-caption text-subtle tabular">{deviceLabel(device)}</span>
-    </Link>
+      {emitsLight(deviceKind(device)) ? <DeviceHalo className="w-[46%]" /> : null}
+      <Device
+        kind={deviceKind(device)}
+        level={shown}
+        color={color}
+        className={cn("h-[58%] max-h-[380px]", device.status === "offline" && "opacity-50")}
+      />
+    </div>
   );
 }
 
