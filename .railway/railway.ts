@@ -1,4 +1,4 @@
-import { defineRailway, github, postgres, preserve, project, service } from "railway/iac";
+import { defineRailway, github, postgres, preserve, project, service, volume } from "railway/iac";
 
 /**
  * The whole Ava project, one environment at a time.
@@ -54,9 +54,16 @@ export default defineRailway(() => {
    *
    * Credentials are `preserve()`: set once in the Railway UI, never written
    * here. The broker bootstraps its dynamic-security file on first boot from
-   * MQTT_ADMIN_PASSWORD, so changing it later does nothing until the config
-   * volume is wiped.
+   * MQTT_ADMIN_PASSWORD, so changing it later does nothing until the volume is
+   * wiped.
+   *
+   * One volume, mounted where the broker writes. It cannot go on
+   * /mosquitto/config: the image bakes mosquitto.conf in there and a mount
+   * would hide it. Both the dynamic-security file and the persistence data are
+   * therefore under /mosquitto/data.
    */
+  const brokerData = volume("mosquitto-data", { sizeMB: 1024 });
+
   const broker = service("mosquitto", {
     source: github(repo, { branch }),
     build: {
@@ -65,6 +72,7 @@ export default defineRailway(() => {
       watchPatterns: ["docker/mosquitto/**"],
     },
     tcp: [1883],
+    volumeMounts: { "mosquitto-data": { mountPath: "/mosquitto/data" } },
     env: {
       MQTT_ADMIN_USERNAME: "ava-api",
       MQTT_ADMIN_PASSWORD: preserve(),
@@ -144,5 +152,5 @@ export default defineRailway(() => {
     },
   });
 
-  return project("ava", { resources: [db, broker, web, api] });
+  return project("ava", { resources: [db, brokerData, broker, web, api] });
 });
