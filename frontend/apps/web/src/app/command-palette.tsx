@@ -60,10 +60,11 @@ export function CommandPalette() {
         <CommandGroup>
           {(
             [
-              { label: "Console", to: "/" },
-              { label: "Rooms", to: "/rooms" },
-              { label: "Hubs", to: "/activate" },
-              { label: "People", to: "/settings/members" },
+              { label: "Home", to: "/" },
+              { label: "Hubs", to: "/settings/hubs" },
+              { label: "People", to: "/settings/people" },
+              { label: "Appearance", to: "/settings/appearance" },
+              { label: "Account", to: "/settings/account" },
               { label: "Settings", to: "/settings" },
             ] as const
           ).map(({ label, to }) => (

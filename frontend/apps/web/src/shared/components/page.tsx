@@ -8,7 +8,8 @@ export function Page({
   children,
   className,
 }: {
-  title: string;
+  /** Omitted when a parent layout already owns the heading, as Settings does. */
+  title?: string;
   description?: string;
   actions?: ReactNode;
   children: ReactNode;
@@ -16,13 +17,15 @@ export function Page({
 }) {
   return (
     <div className={cn("mx-auto grid max-w-[720px] gap-6 px-5 py-8 sm:px-8", className)}>
-      <header className="flex items-start justify-between gap-4">
-        <div className="grid gap-1">
-          <h1 className="text-title font-semibold">{title}</h1>
-          {description ? <p className="text-small text-muted">{description}</p> : null}
-        </div>
-        {actions}
-      </header>
+      {title || description || actions ? (
+        <header className="flex items-start justify-between gap-4">
+          <div className="grid gap-1">
+            {title ? <h1 className="text-title font-semibold">{title}</h1> : null}
+            {description ? <p className="text-small text-muted">{description}</p> : null}
+          </div>
+          {actions}
+        </header>
+      ) : null}
 
       {children}
     </div>

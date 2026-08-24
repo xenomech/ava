@@ -55,7 +55,7 @@ export function MembersPage() {
   });
 
   return (
-    <Page title="People" description="Everyone who can control this home.">
+    <Page description="Everyone who can control this home.">
       {isAdmin ? (
         <Section title="Invite someone" description="They get an email with a link to join.">
           <form

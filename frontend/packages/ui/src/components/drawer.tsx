@@ -25,8 +25,16 @@ export {
 function DrawerContent({
   className,
   children,
+  grabber = true,
   ...props
-}: ComponentProps<typeof Vaul.Content> & { children: ReactNode }) {
+}: ComponentProps<typeof Vaul.Content> & {
+  children: ReactNode;
+  /**
+   * The drag handle only makes sense on a sheet you pull up. A drawer coming in
+   * from the side has nothing to grab, and the pill reads as a stray artefact.
+   */
+  grabber?: boolean;
+}) {
   return (
     <Vaul.Portal>
       <Vaul.Overlay className="fixed inset-0 z-overlay bg-scrim" />
@@ -39,10 +47,12 @@ function DrawerContent({
         )}
         {...props}
       >
-        <div
-          aria-hidden
-          className="mx-auto mt-3 h-[5px] w-10 shrink-0 rounded-full bg-border-strong"
-        />
+        {grabber ? (
+          <div
+            aria-hidden
+            className="mx-auto mt-3 h-[5px] w-10 shrink-0 rounded-full bg-border-strong"
+          />
+        ) : null}
         {children}
       </Vaul.Content>
     </Vaul.Portal>

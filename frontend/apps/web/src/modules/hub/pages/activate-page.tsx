@@ -42,7 +42,7 @@ export function ActivatePage() {
   });
 
   return (
-    <Page title="Hubs" description="Pair the box that talks to your devices.">
+    <Page description="Pair the box that talks to your devices.">
       <Section title="Add a hub" description="Start Ava on the hub and enter the code it prints.">
         <form
           className="grid gap-4 p-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"

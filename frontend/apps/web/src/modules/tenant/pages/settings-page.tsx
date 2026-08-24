@@ -1,7 +1,5 @@
 import { Button, Chip, Field, Input } from "@ava/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
-import { ChevronRightIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -34,7 +32,6 @@ export function SettingsPage() {
 
   return (
     <Page
-      title="Settings"
       description={tenant.data ? `ava.app/${tenant.data.slug}` : "Loading…"}
       actions={
         tenant.data ? (
@@ -77,26 +74,6 @@ export function SettingsPage() {
             <p className="text-small text-muted">Only owners and admins can rename this home.</p>
           )}
         </form>
-      </Section>
-
-      <Section title="People" description="Who can control this home.">
-        <Link
-          to="/settings/members"
-          className="flex items-center justify-between gap-4 p-5 text-body transition-colors duration-150 ease-out hover:bg-raised"
-        >
-          Manage people
-          <ChevronRightIcon className="size-4 text-muted" aria-hidden />
-        </Link>
-      </Section>
-
-      <Section title="Hubs" description="The boxes that talk to your devices.">
-        <Link
-          to="/activate"
-          className="flex items-center justify-between gap-4 p-5 text-body transition-colors duration-150 ease-out hover:bg-raised"
-        >
-          Manage hubs
-          <ChevronRightIcon className="size-4 text-muted" aria-hidden />
-        </Link>
       </Section>
 
       <Section title="You">
