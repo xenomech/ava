@@ -25,6 +25,7 @@ export {
 export { Field, type FieldProps } from "./components/field";
 export { Input, type InputProps } from "./components/input";
 export { Label } from "./components/label";
+export { Menu, MenuTrigger, MenuContent, MenuItem, MenuSeparator } from "./components/menu";
 export { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "./components/select";
 export { Slider, type SliderProps } from "./components/slider";
 export { Switch } from "./components/switch";
