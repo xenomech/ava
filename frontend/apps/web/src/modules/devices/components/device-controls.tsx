@@ -16,8 +16,6 @@ import {
   type DeviceDto,
   type TraitValue,
 } from "@ava/contracts";
-import { ChevronDownIcon } from "lucide-react";
-import { useState } from "react";
 
 import { AppliancePicker } from "./appliance-picker";
 import { ColorControl } from "./color-control";
@@ -48,14 +46,13 @@ function Fact({ label, value, mono }: { label: string; value: string; mono?: boo
 }
 
 /**
- * Everything you touch on a device, and nothing you don't.
+ * Everything about one device: what it is doing at the top, what it is at the
+ * bottom, a rule between them.
  *
- * The old device page put power, brightness and colour in the same column as
- * the room assignment, the appliance type and the vendor id. Those are used at
- * completely different rates — several times a day against once, ever — and
- * mixing them is what made the panel too tall to fit a phone sheet without
- * scrolling inside something that also drags to dismiss. Configuration is
- * folded away behind Details.
+ * The two halves are used at completely different rates — power and brightness
+ * several times a day, the room assignment and the vendor id once ever — so
+ * they are separated rather than interleaved. They are not hidden: a disclosure
+ * costs a tap every time and saves nothing that a divider does not.
  *
  * `onLevelChange` reports the in-flight slider value so the caller can light
  * the device on the stage while a drag is still happening.
@@ -70,7 +67,6 @@ export function DeviceControls({
   onLevelChange?: (level: number | null) => void;
 }) {
   const control = useDeviceControl();
-  const [details, setDetails] = useState(false);
 
   const dimming = brightnessRange(device) ?? { min: 0, max: 100, step: 1, unit: "%" };
   const warmth = kelvinRange(device);
@@ -173,49 +169,14 @@ export function DeviceControls({
         </div>
       ) : null}
 
-      <div className="border-t border-border pt-2">
-        <button
-          type="button"
-          aria-expanded={details}
-          onClick={() => setDetails((open) => !open)}
-          className={cn(
-            "-mx-2 flex min-h-11 w-[calc(100%+1rem)] items-center justify-between gap-4 rounded-sm px-2",
-            "text-small font-semibold text-muted",
-            "transition-colors duration-150 ease-out hover:text-fg",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fg",
-          )}
-        >
-          Details
-          <ChevronDownIcon
-            aria-hidden
-            className={cn(
-              "size-4 shrink-0 transition-transform duration-200 ease-out",
-              details && "rotate-180",
-            )}
-          />
-        </button>
+      <div className="grid gap-5 border-t border-border pt-6">
+        <RoomPicker device={device} />
+        {device.kind === "plug" ? <AppliancePicker device={device} /> : null}
 
-        {/* Animating grid-template-rows from 0fr to 1fr is the one way to slide
-            a panel of unknown height open without measuring it in JavaScript. */}
-        <div
-          className={cn(
-            "grid transition-[grid-template-rows] duration-300 ease-out-soft",
-            "motion-reduce:transition-none",
-            details ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
-          )}
-        >
-          <div className="overflow-hidden">
-            <div className="grid gap-5 pb-1 pt-4">
-              <RoomPicker device={device} />
-              {device.kind === "plug" ? <AppliancePicker device={device} /> : null}
-
-              <div className="grid gap-2.5 rounded-md border border-border bg-surface p-3.5">
-                <Fact label="Type" value={profile.form} />
-                {device.vendor ? <Fact label="Vendor" value={device.vendor} /> : null}
-                <Fact label="ID" value={device.external_id} mono />
-              </div>
-            </div>
-          </div>
+        <div className="grid gap-2.5 rounded-md border border-border bg-surface p-3.5">
+          <Fact label="Type" value={profile.form} />
+          {device.vendor ? <Fact label="Vendor" value={device.vendor} /> : null}
+          <Fact label="ID" value={device.external_id} mono />
         </div>
       </div>
     </div>
