@@ -1,8 +1,11 @@
 import { cn } from "@ava/ui";
 import { useRef, type KeyboardEvent, type PointerEvent } from "react";
 
-/** Plate is 288 tall with 12 of padding; the paddle is 130, so it travels 134. */
-const TRAVEL = 134;
+/**
+ * The rail is 260 tall inside the plate's 14 of padding. The paddle is half of
+ * that less its own clearance, so it rests 6 from one end and travels 128.
+ */
+const TRAVEL = 128;
 /** Past this the drag counts as a flick rather than a tap. */
 const FLICK = 12;
 /** How far the paddle gives under a finger. It rocks, it does not slide. */
@@ -15,6 +18,12 @@ const NUDGE = 16;
  * the only honest gestures are up and down. Both fire unconditionally: flicking
  * up in a room that is already half on means "all of it", not "no change".
  * A tap alternates, for anyone who would rather not gesture at all.
+ *
+ * Three layers, not two. The plate is the housing, the rail is a recess sunk
+ * into it, and the paddle travels inside the rail and is clipped by it. Without
+ * that middle layer the paddle floats on the front of the plate and the whole
+ * thing reads as a picture of a switch rather than a mechanism with a moving
+ * part.
  */
 export function RoomSwitch({
   on,
@@ -98,6 +107,9 @@ export function RoomSwitch({
       className="relative grid place-items-center"
       style={{ "--lit": color } as React.CSSProperties}
     >
+      {/* The room's light, thrown from behind the plate. The paddle's own glow
+          is clipped by the rail, which is right — a recessed lamp spills around
+          its housing, not through it. */}
       <span
         aria-hidden
         className={cn(
@@ -119,30 +131,42 @@ export function RoomSwitch({
         onPointerCancel={cancel}
         onKeyDown={key}
         className={cn(
-          "relative h-[288px] w-[180px] touch-none select-none rounded-[36px] p-3",
-          "border border-white/10 bg-gradient-to-b from-white/8 to-black/40",
-          "shadow-[inset_0_1px_0_rgb(255_255_255/0.08),0_24px_60px_-20px_rgb(0_0_0/0.9)]",
+          "relative h-[288px] w-[180px] cursor-grab touch-none select-none p-[14px]",
+          "rounded-[40px] border border-border-strong",
+          "bg-gradient-to-b from-raised to-surface",
+          "shadow-[0_18px_44px_-12px_rgb(0_0_0/0.6),inset_0_1px_0_rgb(255_255_255/0.06)]",
           "outline-none focus-visible:ring-2 focus-visible:ring-fg focus-visible:ring-offset-4",
-          "focus-visible:ring-offset-bg disabled:cursor-not-allowed disabled:opacity-40",
+          "focus-visible:ring-offset-bg active:cursor-grabbing",
+          "disabled:cursor-not-allowed disabled:opacity-40",
         )}
       >
         <span
-          ref={paddle}
           className={cn(
-            "absolute inset-x-3 top-3 block h-[130px] rounded-[26px]",
-            "transition-transform duration-[190ms] ease-spring will-change-transform",
-            on
-              ? "translate-y-0 bg-[var(--lit)] shadow-[0_0_44px_-4px_var(--lit),inset_0_2px_0_rgb(255_255_255/0.5)]"
-              : "translate-y-[134px] bg-gradient-to-b from-neutral-800 to-neutral-950 shadow-[inset_0_1px_0_rgb(255_255_255/0.06)]",
+            "relative block size-full overflow-hidden rounded-[30px] bg-bg",
+            "shadow-[inset_0_2px_10px_rgb(0_0_0/0.8)]",
           )}
         >
           <span
-            aria-hidden
+            ref={paddle}
             className={cn(
-              "absolute left-1/2 top-1/2 h-[3px] w-7 -translate-x-1/2 -translate-y-1/2 rounded-full",
-              on ? "bg-black/25" : "bg-white/15",
+              "absolute inset-x-[6px] top-[6px] grid h-[120px] place-items-center rounded-[22px]",
+              "transition-transform duration-[190ms] ease-spring will-change-transform",
+              on
+                ? "translate-y-0 bg-[var(--lit)] shadow-[0_0_26px_-2px_var(--lit),inset_0_1px_0_rgb(255_255_255/0.4)]"
+                : cn(
+                    "translate-y-[128px] bg-gradient-to-b from-border-strong to-raised",
+                    "shadow-[0_4px_12px_rgb(0_0_0/0.5),inset_0_1px_0_rgb(255_255_255/0.08)]",
+                  ),
             )}
-          />
+          >
+            <span
+              aria-hidden
+              className={cn(
+                "h-[3px] w-9 rounded-full transition-colors duration-[400ms] ease-out",
+                on ? "bg-black/35" : "bg-white/20",
+              )}
+            />
+          </span>
         </span>
       </button>
     </div>
