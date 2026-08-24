@@ -30,3 +30,7 @@ dist/
 .DS_Store
 .idea/
 .vscode/
+
+# Working notes, not part of the repo.
+docs/design-decisions.md
+docs/session-handoff.md
