@@ -211,6 +211,33 @@
   z-index: var(--z-tooltip);
 }
 
+/* A carousel should show that it scrolls by having a card half off the edge,
+   not by drawing a bar under it. Touch surfaces have no bar anyway, so this
+   only removes one that desktop would have added. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Room to breathe under the notch and above the home indicator. Zero in a
+   browser tab, so these are safe to apply unconditionally. */
+@utility pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+@utility pl-safe {
+  padding-left: env(safe-area-inset-left);
+}
+@utility pr-safe {
+  padding-right: env(safe-area-inset-right);
+}
+
 @keyframes fade-in {
   from {
     opacity: 0;
@@ -349,6 +376,9 @@
     line-height: 1.45;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+    /* Installed on a phone this is an app, not a page. Rubber-banding the whole
+       document behind a fixed layout looks like the app has come loose. */
+    overscroll-behavior: none;
   }
 
   .tabular,

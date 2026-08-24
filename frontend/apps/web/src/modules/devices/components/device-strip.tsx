@@ -1,17 +1,27 @@
-import { cn } from "@ava/ui";
-import { isOn, type DeviceDto } from "@ava/contracts";
+import { Device, cn } from "@ava/ui";
+import type { DeviceDto } from "@ava/contracts";
 import { Link } from "@tanstack/react-router";
 
-import { OnAPlug, deviceColor, deviceLabel } from "./device-stage";
+import { OnAPlug, deviceColor, deviceKind, deviceLabel, deviceLevel } from "./device-stage";
 
 /**
- * The room's devices as a row you can thumb through.
+ * The room's devices as a carousel you can thumb through.
+ *
+ * Every card is the same width and shows the device itself, lit at whatever it
+ * is actually doing, so the row is scannable at arm's length without reading a
+ * word. Names truncate rather than wrap: a card that grows to fit its label
+ * breaks the rhythm of the row and lands the next card somewhere different
+ * every time.
+ *
+ * The scrollbar is hidden. A card left half off the edge already says the row
+ * scrolls, and that is the only affordance a touch screen was ever going to
+ * get.
  *
  * On a phone this row is also the sheet's handle: selecting a device lifts the
- * strip and unfolds the controls beneath it, so the way you browse devices and
- * the way you close the sheet are the same object. That is why the cards are
- * links rather than buttons — the selection lives in the URL, so the back
- * button closes the sheet and a device is still addressable on its own.
+ * strip and unfolds the controls beneath it, so browsing devices and dismissing
+ * the sheet are the same object. That is why the cards are links rather than
+ * buttons — the selection lives in the URL, so the back button closes it and a
+ * device stays addressable on its own.
  */
 export function DeviceStrip({
   devices,
@@ -33,10 +43,10 @@ export function DeviceStrip({
          this the row cannot be scrolled sideways without the sheet following. */
       data-vaul-no-drag
       className={cn(
+        "no-scrollbar -mx-5 flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-5 pb-1",
         /* scroll-padding, not padding: opening the sheet scrolls the selected
            card into view, and without this it lands flush against the edge
            with the padding scrolled out of sight. */
-        "-mx-5 flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-5 pb-1",
         "scroll-pl-5 sm:-mx-6 sm:scroll-pl-6 sm:px-6",
         className,
       )}
@@ -53,7 +63,6 @@ export function DeviceStrip({
   );
 }
 
-/** A device reduced to what you need to pick it out: a lit dot and a name. */
 function DeviceCard({
   device,
   roomId,
@@ -63,7 +72,8 @@ function DeviceCard({
   roomId: string;
   selected: boolean;
 }) {
-  const live = isOn(device) && device.status !== "offline";
+  const level = deviceLevel(device);
+  const color = deviceColor(device);
 
   return (
     <Link
@@ -72,8 +82,9 @@ function DeviceCard({
       search={selected ? {} : { device: device.id }}
       replace={selected}
       aria-current={selected ? "true" : undefined}
+      style={{ "--level": level, "--lit": color } as React.CSSProperties}
       className={cn(
-        "relative grid w-[168px] shrink-0 snap-start content-start gap-1.5 rounded-lg p-3",
+        "relative grid w-[126px] shrink-0 snap-start content-start gap-1.5 rounded-lg p-2.5",
         "border bg-surface transition-colors duration-150 ease-out",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fg",
         selected ? "border-fg" : "border-border hover:border-border-strong",
@@ -84,15 +95,14 @@ function DeviceCard({
         <OnAPlug className="absolute right-2 top-2 size-5" />
       ) : null}
 
-      <span className="flex items-center gap-2 pr-6">
-        <span
-          aria-hidden
-          className={cn("size-1.5 shrink-0 rounded-full", !live && "bg-border-strong")}
-          style={live ? { background: deviceColor(device) } : undefined}
-        />
-        <span className="truncate text-small font-semibold">{device.name}</span>
+      <span className="grid h-14 w-full place-items-center">
+        <Device kind={deviceKind(device)} level={level} color={color} className="h-full" />
       </span>
-      <span className="font-mono text-caption text-subtle tabular">{deviceLabel(device)}</span>
+
+      <span className="w-full truncate text-small font-semibold">{device.name}</span>
+      <span className="w-full truncate font-mono text-caption text-subtle tabular">
+        {deviceLabel(device)}
+      </span>
     </Link>
   );
 }

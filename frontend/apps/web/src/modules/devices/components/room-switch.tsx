@@ -1,11 +1,6 @@
 import { cn } from "@ava/ui";
 import { useRef, type KeyboardEvent, type PointerEvent } from "react";
 
-/**
- * The rail is 260 tall inside the plate's 14 of padding. The paddle is half of
- * that less its own clearance, so it rests 6 from one end and travels 128.
- */
-const TRAVEL = 128;
 /** Past this the drag counts as a flick rather than a tap. */
 const FLICK = 12;
 /** How far the paddle gives under a finger. It rocks, it does not slide. */
@@ -24,6 +19,11 @@ const NUDGE = 16;
  * that middle layer the paddle floats on the front of the plate and the whole
  * thing reads as a picture of a switch rather than a mechanism with a moving
  * part.
+ *
+ * Everything is sized from `--plate-h`, which shrinks on a short screen. A
+ * paddle that is exactly half the rail less its clearance travels exactly its
+ * own height, so the resting positions are `top-1.5` and `translate-y-full` at
+ * any size and there is no magic number to keep in step with the CSS.
  */
 export function RoomSwitch({
   on,
@@ -49,7 +49,7 @@ export function RoomSwitch({
     if (!node) return;
 
     node.style.transitionDuration = "0ms";
-    node.style.transform = `translate3d(0, ${(on ? 0 : TRAVEL) + offset}px, 0)`;
+    node.style.transform = `translate3d(0, ${(on ? 0 : node.offsetHeight) + offset}px, 0)`;
   };
 
   const release = () => {
@@ -104,7 +104,13 @@ export function RoomSwitch({
 
   return (
     <div
-      className="relative grid place-items-center"
+      className={cn(
+        "relative grid place-items-center",
+        /* A phone in portrait has to fit a header, this, a readout and a
+           carousel. On anything short the plate gives up height first. */
+        "[--plate-h:288px] [@media(max-height:760px)]:[--plate-h:240px]",
+        "[@media(max-height:640px)]:[--plate-h:200px]",
+      )}
       style={{ "--lit": color } as React.CSSProperties}
     >
       {/* The room's light, thrown from behind the plate. The paddle's own glow
@@ -113,7 +119,7 @@ export function RoomSwitch({
       <span
         aria-hidden
         className={cn(
-          "pointer-events-none absolute size-[300px] rounded-full blur-[64px]",
+          "pointer-events-none absolute size-[calc(var(--plate-h)*1.05)] rounded-full blur-[64px]",
           "bg-[var(--lit)] transition-opacity duration-[320ms] ease-out",
           on && !disabled ? "opacity-25" : "opacity-0",
         )}
@@ -131,9 +137,9 @@ export function RoomSwitch({
         onPointerCancel={cancel}
         onKeyDown={key}
         className={cn(
-          "relative h-[288px] w-[180px] cursor-grab touch-none select-none p-[14px]",
-          "rounded-[40px] border border-border-strong",
-          "bg-gradient-to-b from-raised to-surface",
+          "relative h-[var(--plate-h)] w-[calc(var(--plate-h)*0.625)] p-[max(10px,calc(var(--plate-h)*0.049))]",
+          "cursor-grab touch-none select-none rounded-[calc(var(--plate-h)*0.14)]",
+          "border border-border-strong bg-gradient-to-b from-raised to-surface",
           "shadow-[0_18px_44px_-12px_rgb(0_0_0/0.6),inset_0_1px_0_rgb(255_255_255/0.06)]",
           "outline-none focus-visible:ring-2 focus-visible:ring-fg focus-visible:ring-offset-4",
           "focus-visible:ring-offset-bg active:cursor-grabbing",
@@ -142,19 +148,20 @@ export function RoomSwitch({
       >
         <span
           className={cn(
-            "relative block size-full overflow-hidden rounded-[30px] bg-bg",
+            "relative block size-full overflow-hidden rounded-[calc(var(--plate-h)*0.105)] bg-bg",
             "shadow-[inset_0_2px_10px_rgb(0_0_0/0.8)]",
           )}
         >
           <span
             ref={paddle}
             className={cn(
-              "absolute inset-x-[6px] top-[6px] grid h-[120px] place-items-center rounded-[22px]",
+              "absolute inset-x-1.5 top-1.5 grid h-[calc(50%-6px)] place-items-center",
+              "rounded-[calc(var(--plate-h)*0.077)]",
               "transition-transform duration-[190ms] ease-spring will-change-transform",
               on
                 ? "translate-y-0 bg-[var(--lit)] shadow-[0_0_26px_-2px_var(--lit),inset_0_1px_0_rgb(255_255_255/0.4)]"
                 : cn(
-                    "translate-y-[128px] bg-gradient-to-b from-border-strong to-raised",
+                    "translate-y-full bg-gradient-to-b from-border-strong to-raised",
                     "shadow-[0_4px_12px_rgb(0_0_0/0.5),inset_0_1px_0_rgb(255_255_255/0.08)]",
                   ),
             )}

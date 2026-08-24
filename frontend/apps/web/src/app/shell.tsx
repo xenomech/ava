@@ -27,8 +27,16 @@ export function AppShell() {
     <AvaSocketProvider>
       <AvaEvents />
 
-      <div className="grid h-dvh md:grid-cols-[208px_minmax(0,1fr)] xl:grid-cols-[262px_minmax(0,1fr)] bg-surface">
-        <aside className="hidden min-h-0 bg-surface px-4 py-8 md:block xl:px-6 xl:py-10">
+      {/* pl/pr-safe rather than a blanket inset: the top and bottom are handled
+          by the surfaces that actually touch them, so a landscape notch does not
+          steal height from a portrait screen. */}
+      <div
+        className={cn(
+          "grid h-dvh bg-surface pl-safe pr-safe",
+          "md:grid-cols-[208px_minmax(0,1fr)] xl:grid-cols-[262px_minmax(0,1fr)]",
+        )}
+      >
+        <aside className="hidden min-h-0 bg-surface px-4 pb-8 pt-8 md:block xl:px-6 xl:pb-10 xl:pt-10">
           <NavContent />
         </aside>
 
@@ -40,7 +48,10 @@ export function AppShell() {
               type="button"
               aria-label="Open menu"
               className={cn(
-                "fixed left-3 top-3 z-sticky grid size-11 place-items-center rounded-full md:hidden",
+                /* 44px is the smallest target a thumb finds reliably, and the
+                   inset keeps it clear of the notch on a standalone install. */
+                "fixed left-3 z-sticky grid size-11 place-items-center rounded-full md:hidden",
+                "top-[max(0.75rem,calc(env(safe-area-inset-top)+0.25rem))]",
                 "border border-border bg-surface/80 text-fg backdrop-blur-sm",
               )}
             >
@@ -50,18 +61,23 @@ export function AppShell() {
 
           <DrawerContent
             grabber={false}
-            className="inset-y-0 left-0 right-auto mt-0 h-full w-[280px] max-w-[85vw] rounded-none rounded-r-2xl border-r border-t-0"
+            className="inset-y-0 left-0 right-auto mt-0 h-full w-70 max-w-[85vw] rounded-none rounded-r-2xl border-r border-t-0"
           >
             <DrawerTitle className="sr-only">Menu</DrawerTitle>
             <DrawerDescription className="sr-only">Rooms and account</DrawerDescription>
 
-            <div className="min-h-0 flex-1 px-4 py-8">
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(2rem,env(safe-area-inset-top))]">
               <NavContent onNavigate={() => setMenuOpen(false)} />
             </div>
           </DrawerContent>
         </Drawer>
 
-        <main className="min-h-0 min-w-0 overflow-y-auto bg-bg m-2 rounded-2xl">
+        <main
+          className={cn(
+            "m-2 min-h-0 min-w-0 overflow-y-auto rounded-2xl bg-bg",
+            "mb-[max(0.5rem,env(safe-area-inset-bottom))] mt-[max(0.5rem,env(safe-area-inset-top))]",
+          )}
+        >
           <Outlet />
         </main>
 

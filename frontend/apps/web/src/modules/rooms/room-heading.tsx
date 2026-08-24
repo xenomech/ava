@@ -66,7 +66,12 @@ export function RoomHeading({
         <button
           type="button"
           onClick={() => setEditing(true)}
-          className="rounded-sm px-1.5 py-0.5 text-title font-semibold -mx-1.5 hover:bg-raised"
+          /* A thumb needs 44; a pointer does not, and shrinking it back keeps
+             the desktop heading tight against its controls. */
+          className={cn(
+            "-mx-1.5 flex min-h-11 items-center rounded-sm px-1.5 text-title font-semibold",
+            "hover:bg-raised [@media(hover:hover)]:min-h-0 [@media(hover:hover)]:py-0.5",
+          )}
           aria-label={`Rename ${room.name}`}
         >
           {room.name}
@@ -83,7 +88,8 @@ export function RoomHeading({
       >
         <Button
           variant="ghost"
-          size="icon-sm"
+          size="icon"
+          className="[@media(hover:hover)]:size-9"
           disabled={isFirst}
           onClick={() => onMove(-1)}
           aria-label={`Move ${room.name} up`}
@@ -92,7 +98,8 @@ export function RoomHeading({
         </Button>
         <Button
           variant="ghost"
-          size="icon-sm"
+          size="icon"
+          className="[@media(hover:hover)]:size-9"
           disabled={isLast}
           onClick={() => onMove(1)}
           aria-label={`Move ${room.name} down`}
@@ -101,7 +108,8 @@ export function RoomHeading({
         </Button>
         <Button
           variant="ghost"
-          size="icon-sm"
+          size="icon"
+          className="[@media(hover:hover)]:size-9"
           onClick={onDelete}
           aria-label={
             deviceCount === 0
