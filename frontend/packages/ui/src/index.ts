@@ -29,5 +29,6 @@ export { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from ".
 export { Slider, type SliderProps } from "./components/slider";
 export { Switch } from "./components/switch";
 export { Tabs, TabsList, TabsTrigger, TabsContent } from "./components/tabs";
+export { Toaster } from "./components/toaster";
 
 export { Device, DeviceHalo, type DeviceKind, type DeviceProps } from "./devices/device";
