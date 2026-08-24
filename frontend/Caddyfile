@@ -20,6 +20,21 @@
 		-Server
 	}
 
+	# The API is served from this same origin rather than its own domain.
+	#
+	# Session cookies are SameSite=Lax, so a browser will not attach them to a
+	# request aimed at a different site. Railway gives each service its own
+	# *.up.railway.app host, and because up.railway.app is a public suffix those
+	# hosts are different sites and cannot share a cookie domain either. Split
+	# across two origins, signing in appears to work and every request after it
+	# comes back 401.
+	#
+	# Proxying here keeps the browser on one origin, which also means no CORS
+	# preflights and no third-party cookie to be blocked later. Caddy upgrades
+	# websockets through reverse_proxy, so /api/v1/socket rides along.
+	@api path /api/*
+	reverse_proxy @api {$API_UPSTREAM}
+
 	try_files {path} /index.html
 	file_server
 }
