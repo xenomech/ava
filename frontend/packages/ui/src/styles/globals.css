@@ -295,10 +295,10 @@
      inside 200ms while it was still climbing, so it arrives fast, holds long
      enough to be read as light, and only then leaves. */
   12% {
-    opacity: 0.42;
+    opacity: 0.52;
   }
   42% {
-    opacity: 0.3;
+    opacity: 0.38;
   }
   100% {
     opacity: 0;
@@ -312,10 +312,10 @@
     transform: translate3d(-50%, -6%, 0);
   }
   12% {
-    opacity: 0.34;
+    opacity: 0.42;
   }
   42% {
-    opacity: 0.24;
+    opacity: 0.3;
   }
   100% {
     opacity: 0;

@@ -102,7 +102,7 @@ export function RoomSwitch({
         aria-hidden
         className={cn(
           "pointer-events-none absolute size-[300px] rounded-full blur-[64px]",
-          "bg-[var(--lit)] transition-opacity duration-500 ease-out",
+          "bg-[var(--lit)] transition-opacity duration-[320ms] ease-out",
           on && !disabled ? "opacity-25" : "opacity-0",
         )}
       />
@@ -130,7 +130,7 @@ export function RoomSwitch({
           ref={paddle}
           className={cn(
             "absolute inset-x-3 top-3 block h-[130px] rounded-[26px]",
-            "transition-transform duration-[420ms] ease-spring will-change-transform",
+            "transition-transform duration-[190ms] ease-spring will-change-transform",
             on
               ? "translate-y-0 bg-[var(--lit)] shadow-[0_0_44px_-4px_var(--lit),inset_0_2px_0_rgb(255_255_255/0.5)]"
               : "translate-y-[134px] bg-gradient-to-b from-neutral-800 to-neutral-950 shadow-[inset_0_1px_0_rgb(255_255_255/0.06)]",
