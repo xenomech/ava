@@ -23,8 +23,12 @@ const ENVIRONMENTS = {
   production: { branch: "main" },
 } as const;
 
-/** Railway's private network addresses a service by its own name. */
+/**
+ * Railway's private network addresses a service by its own name, so these are
+ * stable without a reference.
+ */
 const API_INTERNAL = "http://api.railway.internal:8000";
+const BROKER_INTERNAL = "tcp://mosquitto.railway.internal:1883";
 
 export default defineRailway(() => {
   const name = process.env.AVA_ENV;
@@ -120,15 +124,17 @@ export default defineRailway(() => {
       JWT_ACCESS_EXPIRY: "15m",
       JWT_REFRESH_EXPIRY: "168h",
 
-      /* Railway assigns the *.up.railway.app host and IaC can neither register
-         nor request one — `domains` covers custom domains only. Referencing it
-         leaves the value to be resolved at deploy time rather than guessing a
-         name here and baking a wrong one into verification emails. */
-      CORS_ALLOWED_ORIGINS: `https://${web.env.RAILWAY_PUBLIC_DOMAIN}`,
-      APP_URL: `https://${web.env.RAILWAY_PUBLIC_DOMAIN}`,
+      /* Railway's own interpolation, not a JS template. A `service.env.X`
+         reference is an object that only survives as a whole value — dropped
+         into a template literal it stringifies to "[object Object]", which is
+         exactly what the first deploy of this file shipped. The host is
+         assigned by Railway and is not name-derivable, so it has to be resolved
+         at deploy time rather than written here. */
+      CORS_ALLOWED_ORIGINS: "https://${{web.RAILWAY_PUBLIC_DOMAIN}}",
+      APP_URL: "https://${{web.RAILWAY_PUBLIC_DOMAIN}}",
       COOKIE_DOMAIN: "",
 
-      MQTT_BROKER_URL: `tcp://${broker.env.RAILWAY_PRIVATE_DOMAIN}:1883`,
+      MQTT_BROKER_URL: BROKER_INTERNAL,
       MQTT_USERNAME: "ava-api",
       MQTT_PASSWORD: preserve(),
 
