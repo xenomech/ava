@@ -27,8 +27,8 @@ export function AppShell() {
     <AvaSocketProvider>
       <AvaEvents />
 
-      <div className="grid h-dvh bg-bg md:grid-cols-[208px_minmax(0,1fr)] xl:grid-cols-[262px_minmax(0,1fr)]">
-        <aside className="hidden min-h-0 border-r border-border bg-surface px-4 py-8 md:block xl:px-6 xl:py-10">
+      <div className="grid h-dvh md:grid-cols-[208px_minmax(0,1fr)] xl:grid-cols-[262px_minmax(0,1fr)] bg-surface">
+        <aside className="hidden min-h-0 bg-surface px-4 py-8 md:block xl:px-6 xl:py-10">
           <NavContent />
         </aside>
 
@@ -61,7 +61,7 @@ export function AppShell() {
           </DrawerContent>
         </Drawer>
 
-        <main className="min-h-0 min-w-0 overflow-y-auto">
+        <main className="min-h-0 min-w-0 overflow-y-auto bg-bg m-2 rounded-2xl">
           <Outlet />
         </main>
 
