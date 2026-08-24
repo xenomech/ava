@@ -162,6 +162,12 @@
   --animate-bloom-in: bloom-in 1400ms var(--ease-out-expo) both;
   --animate-breathe: breathe 7s ease-in-out infinite;
   --animate-sweep: sweep 2.8s var(--ease-out-quart) infinite;
+
+  /* A room answering a flick of its switch. Long for product UI, but this is
+     the confirmation for the one gesture the room has, and it plays over the
+     whole surface rather than on a control. */
+  --animate-light-up: light-up 1500ms var(--ease-out-quart) both;
+  --animate-light-down: light-down 1500ms var(--ease-out-quart) both;
 }
 
 @theme inline {
@@ -274,6 +280,46 @@
   to {
     opacity: 0;
     transform: scale(1.9);
+  }
+}
+
+/* Light travelling out from the switch. It never rests anywhere: the bands
+   pass across the room and leave, so the surface behind them is unchanged
+   once the room has settled at its new state. */
+@keyframes light-up {
+  0% {
+    opacity: 0;
+    transform: translate3d(-50%, 100%, 0);
+  }
+  /* Opacity is keyed separately from travel. On one curve the band was gone
+     inside 200ms while it was still climbing, so it arrives fast, holds long
+     enough to be read as light, and only then leaves. */
+  12% {
+    opacity: 0.42;
+  }
+  42% {
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(-50%, 16%, 0);
+  }
+}
+
+@keyframes light-down {
+  0% {
+    opacity: 0;
+    transform: translate3d(-50%, -6%, 0);
+  }
+  12% {
+    opacity: 0.34;
+  }
+  42% {
+    opacity: 0.24;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(-50%, 82%, 0);
   }
 }
 

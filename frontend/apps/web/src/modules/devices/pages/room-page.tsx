@@ -1,22 +1,43 @@
-import { Button, Chip, Device, DeviceHalo, Switch, cn } from "@ava/ui";
-import { TRAIT_POWER, isOn, supports, type DeviceDto } from "@ava/contracts";
+import { Button, cn } from "@ava/ui";
+import {
+  TRAIT_COLOR_TEMP,
+  TRAIT_POWER,
+  isOn,
+  numberOf,
+  supports,
+  type DeviceDto,
+} from "@ava/contracts";
 import { Link, useParams } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 
 import { RoomHeading, useRoomActions, useRooms } from "@/modules/rooms";
 import { Loader } from "@/shared/components/loader";
-import { deviceColor, deviceKind, deviceLevel } from "../components/device-stage";
+import { kelvinToCss } from "@/shared/lib/kelvin";
+import { LightSweep } from "../components/light-sweep";
+import { RoomSwitch } from "../components/room-switch";
+import { deviceColor, deviceLabel } from "../components/device-stage";
 import { deviceQueries } from "../queries";
-import { useDeviceControl, useDevices, useRoomPower } from "../use-devices";
+import { useDevices, useRoomPower } from "../use-devices";
 
-/** One room at a time, reached from the sidebar. */
+/** The room's own light, averaged, for the switch and the sweep to borrow. */
+const DEFAULT_KELVIN = 2700;
+
+/**
+ * A room, as one surface: every device at once, a switch in the middle, and the
+ * individual devices reduced to a strip you can swipe rather than a grid you
+ * have to read.
+ */
 export function RoomPage() {
   const { roomId } = useParams({ from: "/_protected/rooms/$roomId" });
   const { rooms, isPending: roomsPending } = useRooms();
   const { devices, isPending } = useDevices();
   const queryClient = useQueryClient();
-  const control = useDeviceControl();
   const setRoomPower = useRoomPower();
+
+  /* The sweep is fire-and-forget: `play` remounts it so a second flick
+     restarts the animation instead of being swallowed mid-flight. */
+  const [sweep, setSweep] = useState({ play: 0, direction: "on" as "on" | "off" });
 
   const actions = useRoomActions({
     onDevicesMoved: () => void queryClient.invalidateQueries({ queryKey: deviceQueries.all() }),
@@ -47,112 +68,125 @@ export function RoomPage() {
     (device) => device.status !== "offline" && supports(device, TRAIT_POWER),
   );
 
-  return (
-    <div className="mx-auto grid w-full max-w-[1180px] gap-6 p-5 pt-16 sm:p-6 md:pt-6">
-      <header className="flex items-center justify-between gap-4">
-        <div className="flex min-w-0 items-center gap-3">
-          <RoomHeading
-            room={room}
-            deviceCount={inRoom.length}
-            isFirst={at === 0}
-            isLast={at === rooms.length - 1}
-            onRename={(name) => actions.rename.mutate({ id: room.id, name })}
-            onMove={(direction) => actions.reorder.mutate(moved(rooms, at, direction))}
-            onDelete={() => actions.remove.mutate(room.id)}
-          />
-          <span className="text-caption text-muted tabular">
-            {inRoom.length === 0 ? "empty" : `${on} of ${inRoom.length} on`}
-          </span>
-        </div>
+  const kelvin = roomKelvin(inRoom);
+  const lit = kelvinToCss(kelvin);
 
-        {switchable.length >= 2 ? (
-          <div className="flex shrink-0 gap-1.5">
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={on === 0}
-              onClick={() => void setRoomPower(inRoom, false)}
-            >
-              All off
-            </Button>
-            <Button variant="secondary" size="sm" onClick={() => void setRoomPower(inRoom, true)}>
-              All on
-            </Button>
+  const flick = (next: boolean) => {
+    setSweep((current) => ({ play: current.play + 1, direction: next ? "on" : "off" }));
+    void setRoomPower(inRoom, next);
+  };
+
+  return (
+    <div className="relative grid h-full grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden">
+      <LightSweep kelvin={kelvin} direction={sweep.direction} play={sweep.play} />
+
+      <header className="z-raised flex items-start justify-between gap-4 p-5 pt-16 sm:p-6 md:pt-6">
+        <div className="min-w-0">
+          <span className="font-mono text-caption uppercase tracking-caps text-subtle">Room</span>
+          <div className="mt-1 flex min-w-0 items-center gap-2">
+            <RoomHeading
+              room={room}
+              deviceCount={inRoom.length}
+              isFirst={at === 0}
+              isLast={at === rooms.length - 1}
+              onRename={(name) => actions.rename.mutate({ id: room.id, name })}
+              onMove={(direction) => actions.reorder.mutate(moved(rooms, at, direction))}
+              onDelete={() => actions.remove.mutate(room.id)}
+            />
           </div>
-        ) : null}
+        </div>
       </header>
 
       {inRoom.length === 0 ? (
-        <p className="text-small text-muted">No devices in here yet.</p>
-      ) : (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-3">
-          {inRoom.map((device) => (
-            <DeviceCard
-              key={device.id}
-              device={device}
-              disabled={device.status === "offline"}
-              onToggle={() => control(device, TRAIT_POWER, !isOn(device))}
-            />
-          ))}
+        <div className="z-raised grid place-items-center p-6">
+          <p className="text-small text-muted">No devices in here yet.</p>
         </div>
+      ) : (
+        <>
+          <div className="z-raised grid min-h-0 place-items-center px-5 sm:px-6">
+            <RoomSwitch
+              on={on > 0}
+              disabled={switchable.length === 0}
+              color={lit}
+              label={`${room.name} lights`}
+              onFlick={flick}
+            />
+          </div>
+
+          <footer className="z-raised grid gap-4 p-5 pt-0 sm:p-6 sm:pt-0">
+            <div className="flex items-end justify-between gap-4">
+              <p className="flex items-baseline gap-2">
+                {on === 0 ? (
+                  <b className="text-hero font-semibold text-subtle">Off</b>
+                ) : (
+                  <>
+                    <b className="text-hero font-semibold tabular">{on}</b>
+                    <span className="font-mono text-small text-subtle tabular">
+                      of {inRoom.length} on
+                    </span>
+                  </>
+                )}
+              </p>
+
+              <p className="text-right font-mono text-caption leading-relaxed text-subtle">
+                flick the switch
+                <br />
+                up on · down off
+              </p>
+            </div>
+
+            <div
+              className="-mx-5 flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-5 pb-1 sm:-mx-6 sm:px-6"
+              aria-label={`Devices in ${room.name}`}
+            >
+              {inRoom.map((device) => (
+                <DeviceChip key={device.id} device={device} />
+              ))}
+            </div>
+          </footer>
+        </>
       )}
     </div>
   );
 }
 
-function DeviceCard({
-  device,
-  disabled,
-  onToggle,
-}: {
-  device: DeviceDto;
-  disabled: boolean;
-  onToggle: () => void;
-}) {
-  const level = deviceLevel(device);
-  const color = deviceColor(device);
+/** A device reduced to what you need to pick it out: a lit dot and a name. */
+function DeviceChip({ device }: { device: DeviceDto }) {
+  const live = isOn(device) && device.status !== "offline";
 
   return (
-    <article
+    <Link
+      to="/"
+      search={{ device: device.id }}
       className={cn(
-        "grid gap-3 rounded-lg border border-border bg-surface p-4",
-        "transition-colors duration-150 ease-out",
-        isOn(device) && "border-border-strong",
-        device.status === "offline" && "opacity-60",
+        "grid w-[168px] shrink-0 snap-start content-start gap-1.5 rounded-lg p-3",
+        "border border-border bg-surface transition-colors duration-150 ease-out",
+        "hover:border-border-strong focus-visible:outline-none focus-visible:ring-2",
+        "focus-visible:ring-fg",
+        device.status === "offline" && "opacity-55",
       )}
-      style={{ "--level": level, "--lit": color } as React.CSSProperties}
     >
-      <Link
-        to="/"
-        search={{ device: device.id }}
-        className="relative grid h-32 place-items-center rounded-sm"
-        aria-label={`Open ${device.name}`}
-      >
-        <DeviceHalo className="w-3/4" />
-        <Device kind={deviceKind(device)} level={level} color={color} className="h-[86%]" />
-      </Link>
-
-      <div className="flex items-end justify-between gap-3">
-        <span className="min-w-0">
-          <span className="block truncate text-body font-semibold">{device.name}</span>
-          <span className="block font-mono text-caption text-subtle tabular">
-            {device.status === "offline" ? "Offline" : level > 0 ? `${level}%` : "Off"}
-          </span>
-        </span>
-
-        {device.status === "offline" ? (
-          <Chip tone="warning">Offline</Chip>
-        ) : (
-          <Switch
-            checked={isOn(device)}
-            disabled={disabled}
-            onCheckedChange={onToggle}
-            aria-label={device.name}
-          />
-        )}
-      </div>
-    </article>
+      <span className="flex items-center gap-2">
+        <span
+          aria-hidden
+          className={cn("size-1.5 shrink-0 rounded-full", !live && "bg-border-strong")}
+          style={live ? { background: deviceColor(device) } : undefined}
+        />
+        <span className="truncate text-small font-semibold">{device.name}</span>
+      </span>
+      <span className="font-mono text-caption text-subtle tabular">{deviceLabel(device)}</span>
+    </Link>
   );
+}
+
+function roomKelvin(devices: DeviceDto[]): number {
+  const temps = devices
+    .map((device) => numberOf(device, TRAIT_COLOR_TEMP))
+    .filter((value): value is number => typeof value === "number");
+
+  if (temps.length === 0) return DEFAULT_KELVIN;
+
+  return Math.round(temps.reduce((sum, value) => sum + value, 0) / temps.length);
 }
 
 function moved<T>(list: T[], index: number, direction: -1 | 1): T[] {

@@ -30,6 +30,7 @@ import {
   OnAPlug,
   deviceColor,
   deviceKind,
+  deviceLabel,
   deviceLevel,
 } from "../components/device-stage";
 import { NoDevices } from "../components/empty-state";
@@ -272,7 +273,7 @@ function DeviceTile({
       </span>
       <span className="w-full truncate text-left text-small font-semibold">{device.name}</span>
       <span className="font-mono text-caption font-normal text-subtle tabular">
-        {tileStatus(device, level)}
+        {deviceLabel(device)}
       </span>
     </Button>
   );
@@ -280,12 +281,4 @@ function DeviceTile({
 
 function clamp(value: number, low: number, high: number) {
   return Math.min(Math.max(value, low), high);
-}
-
-function tileStatus(device: DeviceDto, level: number) {
-  if (device.status === "offline") return "Offline";
-  if (!isOn(device)) return "Off";
-  if (!supports(device, TRAIT_BRIGHTNESS)) return "On";
-
-  return `${level}%`;
 }
