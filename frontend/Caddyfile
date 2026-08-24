@@ -5,14 +5,7 @@
 }
 
 :{$PORT:8080} {
-	root * /srv
 	encode zstd gzip
-
-	@immutable path /assets/*
-	header @immutable Cache-Control "public, max-age=31536000, immutable"
-
-	@revalidate not path /assets/*
-	header @revalidate Cache-Control "no-cache, must-revalidate"
 
 	header {
 		X-Content-Type-Options nosniff
@@ -29,12 +22,28 @@
 	# across two origins, signing in appears to work and every request after it
 	# comes back 401.
 	#
-	# Proxying here keeps the browser on one origin, which also means no CORS
-	# preflights and no third-party cookie to be blocked later. Caddy upgrades
-	# websockets through reverse_proxy, so /api/v1/socket rides along.
-	@api path /api/*
-	reverse_proxy @api {$API_UPSTREAM}
+	# These have to be `handle` blocks rather than bare directives. Caddy sorts
+	# directives by its own order, not by the order they are written, and
+	# try_files sorts ahead of reverse_proxy — so an /api request was rewritten
+	# to /index.html before the proxy ever saw it and the SPA answered 200 with
+	# HTML. `handle` blocks are mutually exclusive and run in source order.
+	#
+	# Caddy upgrades websockets through reverse_proxy, so /api/v1/socket rides
+	# along.
+	handle /api/* {
+		reverse_proxy {$API_UPSTREAM}
+	}
 
-	try_files {path} /index.html
-	file_server
+	handle {
+		root * /srv
+
+		@immutable path /assets/*
+		header @immutable Cache-Control "public, max-age=31536000, immutable"
+
+		@revalidate not path /assets/*
+		header @revalidate Cache-Control "no-cache, must-revalidate"
+
+		try_files {path} /index.html
+		file_server
+	}
 }
