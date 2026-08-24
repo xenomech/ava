@@ -155,37 +155,19 @@ export function RoomPage() {
                 half of the screen, so the count, the hint and the strip all
                 travel into it rather than sitting on top of the device. */}
             {selected && !beside ? null : (
-              <footer className="z-raised grid gap-4 p-5 pt-0 sm:p-6 sm:pt-0">
-                <div className="flex items-end justify-between gap-4">
-                  <p className="flex items-baseline gap-2">
-                    {on === 0 ? (
-                      <b className="text-hero font-semibold text-subtle">Off</b>
-                    ) : (
-                      <>
-                        <b className="text-hero font-semibold tabular">{on}</b>
-                        <span className="font-mono text-small text-subtle tabular">
-                          of {inRoom.length} on
-                        </span>
-                      </>
-                    )}
-                  </p>
-
-                  <p className="text-right font-mono text-caption leading-relaxed text-subtle">
-                    {selected ? (
-                      <>
-                        tap the card again
-                        <br />
-                        to leave the device
-                      </>
-                    ) : (
-                      <>
-                        flick the switch
-                        <br />
-                        up on · down off
-                      </>
-                    )}
-                  </p>
-                </div>
+              <footer className="z-raised grid gap-5 p-5 pt-0 sm:p-6 sm:pt-0">
+                <p className="flex items-baseline gap-2">
+                  {on === 0 ? (
+                    <b className="text-hero font-semibold text-subtle">Off</b>
+                  ) : (
+                    <>
+                      <b className="text-hero font-semibold tabular">{on}</b>
+                      <span className="font-mono text-small text-subtle tabular">
+                        of {inRoom.length} on
+                      </span>
+                    </>
+                  )}
+                </p>
 
                 {strip}
               </footer>

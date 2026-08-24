@@ -87,7 +87,7 @@ export function DeviceSheet({
             onClick={onClose}
             aria-label="Close controls"
             className={cn(
-              "grid size-8 shrink-0 place-items-center rounded-full text-muted",
+              "grid size-9 shrink-0 place-items-center rounded-full text-muted",
               "transition-colors duration-150 ease-out hover:bg-raised hover:text-fg",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fg",
             )}
@@ -96,7 +96,7 @@ export function DeviceSheet({
           </button>
         </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6">{controls}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-8">{controls}</div>
       </aside>
     );
   }
@@ -106,14 +106,14 @@ export function DeviceSheet({
       <DrawerContent className="h-[94dvh] max-h-[94dvh] px-0">
         <DrawerTitle className="sr-only">{device.name}</DrawerTitle>
 
-        <div className="shrink-0 px-5 pt-4">{strip}</div>
+        <div className="shrink-0 px-5 pt-3">{strip}</div>
 
-        <div className="flex shrink-0 items-baseline gap-2 px-5 pb-1 pt-4">
-          <h2 className="truncate text-body font-semibold">{device.name}</h2>
+        <div className="flex shrink-0 items-center gap-2 px-5 pb-4 pt-5">
+          <h2 className="min-w-0 truncate text-body font-semibold">{device.name}</h2>
           {status}
         </div>
 
-        <DrawerBody className="px-5">{controls}</DrawerBody>
+        <DrawerBody className="px-5 pb-8">{controls}</DrawerBody>
       </DrawerContent>
     </Drawer>
   );

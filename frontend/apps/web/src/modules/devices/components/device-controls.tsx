@@ -1,4 +1,4 @@
-import { Button, Slider, Switch, cn } from "@ava/ui";
+import { Slider, Switch, cn } from "@ava/ui";
 import {
   TRAIT_BRIGHTNESS,
   TRAIT_COLOR,
@@ -35,6 +35,18 @@ function Heading({ children }: { children: string }) {
   );
 }
 
+/** A fact about the device rather than something you can change. */
+function Fact({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="flex items-baseline justify-between gap-4">
+      <span className="shrink-0 text-caption text-subtle">{label}</span>
+      <span className={cn("min-w-0 truncate text-small text-muted", mono && "font-mono")}>
+        {value}
+      </span>
+    </div>
+  );
+}
+
 /**
  * Everything you touch on a device, and nothing you don't.
  *
@@ -45,8 +57,8 @@ function Heading({ children }: { children: string }) {
  * scrolling inside something that also drags to dismiss. Configuration is
  * folded away behind Details.
  *
- * `levelOverride` reports the in-flight slider value so the caller can light the
- * device on the stage while a drag is still happening.
+ * `onLevelChange` reports the in-flight slider value so the caller can light
+ * the device on the stage while a drag is still happening.
  */
 export function DeviceControls({
   device,
@@ -66,10 +78,7 @@ export function DeviceControls({
   const send = (trait: string, value: TraitValue) => control(device, trait, value);
 
   const brightness = useLiveSlider(
-    Math.min(
-      Math.max(numberOf(device, TRAIT_BRIGHTNESS) ?? dimming.max, dimming.min),
-      dimming.max,
-    ),
+    Math.min(Math.max(numberOf(device, TRAIT_BRIGHTNESS) ?? dimming.max, dimming.min), dimming.max),
     (value) => {
       onLevelChange?.(value);
       send(TRAIT_BRIGHTNESS, value);
@@ -92,8 +101,8 @@ export function DeviceControls({
   const profile = deviceProfile(device);
 
   return (
-    <div className="grid gap-5">
-      <div className="flex items-center justify-between">
+    <div className="grid gap-6">
+      <div className="flex min-h-11 items-center justify-between gap-4">
         <Heading>Power</Heading>
         <Switch
           checked={on}
@@ -104,8 +113,8 @@ export function DeviceControls({
       </div>
 
       {dimmable ? (
-        <div className="grid gap-2.5">
-          <div className="flex items-baseline justify-between">
+        <div className="grid gap-3">
+          <div className="flex items-baseline justify-between gap-4">
             <Heading>Brightness</Heading>
             <output className="font-mono text-small tabular">{brightness.value}%</output>
           </div>
@@ -126,7 +135,7 @@ export function DeviceControls({
       ) : null}
 
       {warmth ? (
-        <div className="grid gap-2.5">
+        <div className="grid gap-3">
           <Heading>Colour</Heading>
           <ColorControl
             color={deviceColor(device)}
@@ -153,7 +162,7 @@ export function DeviceControls({
       ))}
 
       {sensors.length > 0 ? (
-        <div className="grid gap-2 border-t border-border pt-4">
+        <div className="grid gap-3 border-t border-border pt-6">
           {sensors.map((capability) => (
             <TraitReading
               key={capability.trait}
@@ -164,35 +173,50 @@ export function DeviceControls({
         </div>
       ) : null}
 
-      <div className="grid gap-4 border-t border-border pt-4">
-        <Button
-          variant="ghost"
-          size="sm"
+      <div className="border-t border-border pt-2">
+        <button
+          type="button"
           aria-expanded={details}
           onClick={() => setDetails((open) => !open)}
-          className="justify-between px-0 hover:bg-transparent"
+          className={cn(
+            "-mx-2 flex min-h-11 w-[calc(100%+1rem)] items-center justify-between gap-4 rounded-sm px-2",
+            "text-small font-semibold text-muted",
+            "transition-colors duration-150 ease-out hover:text-fg",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fg",
+          )}
         >
           Details
           <ChevronDownIcon
             aria-hidden
             className={cn(
-              "size-4 transition-transform duration-200 ease-out",
+              "size-4 shrink-0 transition-transform duration-200 ease-out",
               details && "rotate-180",
             )}
           />
-        </Button>
+        </button>
 
-        {details ? (
-          <div className="grid gap-5">
-            <RoomPicker device={device} />
-            {device.kind === "plug" ? <AppliancePicker device={device} /> : null}
-            <div className="grid gap-1 text-caption text-subtle">
-              <span>{profile.form}</span>
-              <span className="font-mono">{device.external_id}</span>
-              {device.vendor ? <span>{device.vendor}</span> : null}
+        {/* Animating grid-template-rows from 0fr to 1fr is the one way to slide
+            a panel of unknown height open without measuring it in JavaScript. */}
+        <div
+          className={cn(
+            "grid transition-[grid-template-rows] duration-300 ease-out-soft",
+            "motion-reduce:transition-none",
+            details ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+          )}
+        >
+          <div className="overflow-hidden">
+            <div className="grid gap-5 pb-1 pt-4">
+              <RoomPicker device={device} />
+              {device.kind === "plug" ? <AppliancePicker device={device} /> : null}
+
+              <div className="grid gap-2.5 rounded-md border border-border bg-surface p-3.5">
+                <Fact label="Type" value={profile.form} />
+                {device.vendor ? <Fact label="Vendor" value={device.vendor} /> : null}
+                <Fact label="ID" value={device.external_id} mono />
+              </div>
             </div>
           </div>
-        ) : null}
+        </div>
       </div>
     </div>
   );
