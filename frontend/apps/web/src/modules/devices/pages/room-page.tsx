@@ -81,7 +81,6 @@ export function RoomPage() {
 
   const inRoom = devices.filter((device) => device.room_id === room.id);
   const on = inRoom.filter(isOn).length;
-  const at = rooms.findIndex((entry) => entry.id === room.id);
   const switchable = inRoom.filter(
     (device) => device.status !== "offline" && supports(device, TRAIT_POWER),
   );
@@ -127,12 +126,7 @@ export function RoomPage() {
           <div className="mt-1 flex min-w-0 items-center gap-2">
             <RoomHeading
               room={room}
-              deviceCount={inRoom.length}
-              isFirst={at === 0}
-              isLast={at === rooms.length - 1}
               onRename={(name) => actions.rename.mutate({ id: room.id, name })}
-              onMove={(direction) => actions.reorder.mutate(moved(rooms, at, direction))}
-              onDelete={() => actions.remove.mutate(room.id)}
             />
           </div>
         </header>
@@ -270,15 +264,4 @@ function roomKelvin(devices: DeviceDto[]): number {
   if (temps.length === 0) return DEFAULT_KELVIN;
 
   return Math.round(temps.reduce((sum, value) => sum + value, 0) / temps.length);
-}
-
-function moved<T>(list: T[], index: number, direction: -1 | 1): T[] {
-  const target = index + direction;
-  if (target < 0 || target >= list.length) return list;
-
-  const next = [...list];
-  const [lifted] = next.splice(index, 1);
-  if (lifted !== undefined) next.splice(target, 0, lifted);
-
-  return next;
 }

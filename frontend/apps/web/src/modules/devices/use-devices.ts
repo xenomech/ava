@@ -1,5 +1,7 @@
 import {
   TRAIT_BRIGHTNESS,
+  TRAIT_COLOR,
+  TRAIT_COLOR_TEMP,
   TRAIT_POWER,
   supports,
   type DeviceDto,
@@ -31,6 +33,13 @@ function applyLocally(device: DeviceDto, trait: string, value: TraitValue): Devi
   if (trait === TRAIT_BRIGHTNESS && typeof value === "number") {
     state[TRAIT_POWER] = value > 0;
   }
+
+  /* A light shows a colour or a temperature, never both, and the hub clears
+     whichever one you did not set. The optimistic copy has to say the same
+     thing: while it claimed a light had both, the colour panel read the stale
+     temperature, stayed on the White tab, and so refused to switch back to it. */
+  if (trait === TRAIT_COLOR) delete state[TRAIT_COLOR_TEMP];
+  if (trait === TRAIT_COLOR_TEMP) delete state[TRAIT_COLOR];
 
   return { ...device, state };
 }

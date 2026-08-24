@@ -1,41 +1,20 @@
 import type { RoomDto } from "@ava/contracts";
-import {
-  Button,
-  Menu,
-  MenuContent,
-  MenuItem,
-  MenuSeparator,
-  MenuTrigger,
-  cn,
-} from "@ava/ui";
-import { ChevronDownIcon, ChevronUpIcon, MoreHorizontalIcon, PencilIcon, Trash2Icon } from "lucide-react";
+import { cn } from "@ava/ui";
 import { useEffect, useRef, useState } from "react";
 
 /**
- * The room's name, and everything you can do to the room itself.
+ * The room's name, and only that.
  *
- * Renaming, reordering and deleting used to sit in a row beside the title. On a
- * phone that meant three permanent buttons crowding the heading, with a
- * delete — which takes the room and unassigns everything in it — a thumb's
- * width from the name. They are behind one control now, so the heading is the
- * name and nothing else until you ask for more.
+ * Reordering and deleting belong to the list of rooms, not to the room you are
+ * standing in, so they live on the sidebar row instead. Renaming stays here
+ * because the name is the thing you are renaming — tap it and type.
  */
 export function RoomHeading({
   room,
-  deviceCount,
-  isFirst,
-  isLast,
   onRename,
-  onMove,
-  onDelete,
 }: {
   room: RoomDto;
-  deviceCount: number;
-  isFirst: boolean;
-  isLast: boolean;
   onRename: (name: string) => void;
-  onMove: (direction: -1 | 1) => void;
-  onDelete: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(room.name);
@@ -85,56 +64,17 @@ export function RoomHeading({
   }
 
   return (
-    <div className="flex min-w-0 items-center gap-1">
-      {/* Tapping the name still renames it — the fastest path stays the
-          shortest one, and the menu repeats it for anyone who would not guess. */}
-      <button
-        type="button"
-        onClick={() => setEditing(true)}
-        aria-label={`Rename ${room.name}`}
-        className={cn(
-          "-mx-1.5 flex min-h-11 min-w-0 items-center rounded-sm px-1.5",
-          "text-title font-semibold hover:bg-raised",
-          "[@media(hover:hover)]:min-h-0 [@media(hover:hover)]:py-0.5",
-        )}
-      >
-        <span className="truncate">{room.name}</span>
-      </button>
-
-      <Menu>
-        <MenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={`Actions for ${room.name}`}
-            className="shrink-0 text-muted [@media(hover:hover)]:size-9"
-          >
-            <MoreHorizontalIcon className="size-4" aria-hidden />
-          </Button>
-        </MenuTrigger>
-
-        <MenuContent>
-          <MenuItem onSelect={() => setEditing(true)}>
-            <PencilIcon aria-hidden />
-            Rename
-          </MenuItem>
-          <MenuItem disabled={isFirst} onSelect={() => onMove(-1)}>
-            <ChevronUpIcon aria-hidden />
-            Move up
-          </MenuItem>
-          <MenuItem disabled={isLast} onSelect={() => onMove(1)}>
-            <ChevronDownIcon aria-hidden />
-            Move down
-          </MenuItem>
-
-          <MenuSeparator />
-
-          <MenuItem tone="danger" onSelect={onDelete}>
-            <Trash2Icon aria-hidden />
-            {deviceCount === 0 ? "Delete room" : `Delete, freeing ${deviceCount}`}
-          </MenuItem>
-        </MenuContent>
-      </Menu>
-    </div>
+    <button
+      type="button"
+      onClick={() => setEditing(true)}
+      aria-label={`Rename ${room.name}`}
+      className={cn(
+        "-mx-1.5 flex min-h-11 min-w-0 items-center rounded-sm px-1.5",
+        "text-title font-semibold hover:bg-raised",
+        "[@media(hover:hover)]:min-h-0 [@media(hover:hover)]:py-0.5",
+      )}
+    >
+      <span className="truncate">{room.name}</span>
+    </button>
   );
 }
