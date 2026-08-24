@@ -62,7 +62,12 @@ export default defineRailway(() => {
    * would hide it. Both the dynamic-security file and the persistence data are
    * therefore under /mosquitto/data.
    */
-  const brokerData = volume("mosquitto-data", { sizeMB: 1024 });
+  /* Pinned to the region the services already run in. Left unset, a plan
+     proposes nulling it, which counts as destroying the volume. */
+  const brokerData = volume("mosquitto-data", {
+    sizeMB: 1024,
+    region: "asia-southeast1-eqsg3a",
+  });
 
   const broker = service("mosquitto", {
     source: github(repo, { branch }),
@@ -72,7 +77,10 @@ export default defineRailway(() => {
       watchPatterns: ["docker/mosquitto/**"],
     },
     tcp: [1883],
-    volumeMounts: { "mosquitto-data": { mountPath: "/mosquitto/data" } },
+    /* Keyed by mount path, valued with the volume itself — the shape the
+       normaliser turns into an attachment. Naming the volume as the key instead
+       is accepted without complaint and attaches nothing. */
+    volumeMounts: { "/mosquitto/data": brokerData },
     env: {
       MQTT_ADMIN_USERNAME: "ava-api",
       MQTT_ADMIN_PASSWORD: preserve(),
