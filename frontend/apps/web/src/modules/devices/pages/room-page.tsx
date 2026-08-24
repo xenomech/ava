@@ -2,6 +2,7 @@ import { Button, cn } from "@ava/ui";
 import {
   TRAIT_COLOR_TEMP,
   TRAIT_POWER,
+  emitsLight,
   isOn,
   numberOf,
   supports,
@@ -13,10 +14,11 @@ import { useState } from "react";
 
 import { RoomHeading, useRoomActions, useRooms } from "@/modules/rooms";
 import { Loader } from "@/shared/components/loader";
+import { parseColor, warmth } from "@/shared/lib/color";
 import { kelvinToCss } from "@/shared/lib/kelvin";
 import { LightSweep } from "../components/light-sweep";
 import { RoomSwitch } from "../components/room-switch";
-import { deviceColor, deviceLabel } from "../components/device-stage";
+import { deviceColor, deviceKind, deviceLabel } from "../components/device-stage";
 import { deviceQueries } from "../queries";
 import { useDevices, useRoomPower } from "../use-devices";
 
@@ -70,6 +72,7 @@ export function RoomPage() {
 
   const kelvin = roomKelvin(inRoom);
   const lit = kelvinToCss(kelvin);
+  const palette = roomPalette(inRoom, lit);
 
   const flick = (next: boolean) => {
     setSweep((current) => ({ play: current.play + 1, direction: next ? "on" : "off" }));
@@ -78,7 +81,7 @@ export function RoomPage() {
 
   return (
     <div className="relative grid h-full grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden">
-      <LightSweep kelvin={kelvin} direction={sweep.direction} play={sweep.play} />
+      <LightSweep colors={palette} direction={sweep.direction} play={sweep.play} />
 
       <header className="z-raised flex items-start justify-between gap-4 p-5 pt-16 sm:p-6 md:pt-6">
         <div className="min-w-0">
@@ -177,6 +180,32 @@ function DeviceChip({ device }: { device: DeviceDto }) {
       <span className="font-mono text-caption text-subtle tabular">{deviceLabel(device)}</span>
     </Link>
   );
+}
+
+/**
+ * The colours the room will be holding once the switch settles, warmest first.
+ *
+ * Every light in the room, not only the ones currently on — flicking up turns
+ * all of them on, so the sweep should be showing what is about to be true.
+ * Plugs and fans are left out: they have a power state but no colour, and
+ * including them would wash the ramp towards whatever `deviceColor` falls back
+ * to rather than towards anything the room actually emits.
+ */
+function roomPalette(devices: DeviceDto[], fallback: string): string[] {
+  const lights = devices
+    .filter((device) => emitsLight(deviceKind(device)))
+    .map((device) => deviceColor(device));
+
+  const seen = new Set<string>();
+  const unique = lights.filter((color) => !seen.has(color) && seen.add(color));
+
+  if (unique.length === 0) return [fallback];
+
+  return unique
+    .map((color) => ({ color, rgb: parseColor(color) }))
+    .filter((entry) => entry.rgb !== null)
+    .sort((a, b) => warmth(b.rgb ?? [0, 0, 0]) - warmth(a.rgb ?? [0, 0, 0]))
+    .map((entry) => entry.color);
 }
 
 function roomKelvin(devices: DeviceDto[]): number {

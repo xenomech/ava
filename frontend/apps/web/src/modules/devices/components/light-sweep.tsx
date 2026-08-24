@@ -1,26 +1,38 @@
 import { cn } from "@ava/ui";
 
-import { KELVIN_MAX, KELVIN_MIN, kelvinToRgb, mix, type Rgb } from "@/shared/lib/kelvin";
+import { hslToRgb, mix, parseColor, rgbToCss, rgbToHsl, type Rgb } from "@/shared/lib/color";
 
 /**
  * The light a room throws when its switch is flicked: it rises on the way up,
  * falls on the way down, and leaves nothing behind either way.
  *
- * Each stop starts as the room's own temperature, offset along the kelvin
- * scale, and is then pulled part of the way towards a chroma anchor. Kelvin
- * alone was the honest answer and the wrong one: between 2200K and 6100K every
- * stop is a shade of orange-to-white, so at the opacity this can afford they
- * collapsed into one indistinct smudge. The anchors put the colour back, the
- * kelvin base keeps it the room's colour, and a warm living room still sweeps
- * warmer than a cool kitchen.
+ * This is the shape of the ramp, not its colour. Every stop is a transform of a
+ * colour the room actually holds: the hue rotates a little across the sweep,
+ * the middle sits at the bulb's own colour, and the two ends fall away into it.
+ *
+ * `shade` is a move towards black, or towards white when negative. Doing the
+ * darkening this way rather than by cutting HSL lightness is what keeps two
+ * rooms apart: a 5000K white sits at lightness 0.9 with saturation near 1, so
+ * halving its lightness turns it into a vivid red indistinguishable from an
+ * actual red bulb. Mixing towards black instead keeps a pale colour pale and a
+ * saturated one saturated.
+ *
+ * An earlier version mixed towards fixed pink/orange/blue anchors. It looked
+ * right in one room and like somebody else's palette in every other, because at
+ * those mix amounts the anchor, not the bulb, was deciding the colour. Nothing
+ * here names a colour, so a red lamp sweeps red and a 2200K filament sweeps
+ * amber without either being special-cased.
  */
-const STOPS: { offset: number; anchor: Rgb; amount: number; at: number }[] = [
-  { offset: -700, anchor: [252, 43, 163], amount: 0.46, at: 22 },
-  { offset: -200, anchor: [252, 109, 53], amount: 0.4, at: 37 },
-  { offset: 500, anchor: [249, 200, 61], amount: 0.3, at: 52 },
-  { offset: 1600, anchor: [194, 214, 225], amount: 0.34, at: 67 },
-  { offset: 3200, anchor: [20, 78, 197], amount: 0.62, at: 82 },
+const SHAPE = [
+  { hue: -14, shade: 0.46, at: 22 },
+  { hue: -5, shade: 0.18, at: 37 },
+  { hue: 0, shade: -0.1, at: 52 },
+  { hue: 10, shade: 0.24, at: 67 },
+  { hue: 24, shade: 0.58, at: 82 },
 ];
+
+const BLACK: Rgb = [0, 0, 0];
+const WHITE: Rgb = [255, 255, 255];
 
 /**
  * Fades the left and right of the plume so it reads as light rather than as a
@@ -31,30 +43,52 @@ const STOPS: { offset: number; anchor: Rgb; amount: number; at: number }[] = [
 const MASK =
   "linear-gradient(to right, rgb(0 0 0 / 0) 0%, rgb(0 0 0) 24%, rgb(0 0 0) 76%, rgb(0 0 0 / 0) 100%)";
 
+const clamp = (value: number, low: number, high: number) => Math.min(Math.max(value, low), high);
+
+/** Reads the palette at a position from 0 to 1, blending between neighbours. */
+function sample(palette: Rgb[], position: number): Rgb {
+  const first = palette[0] ?? [255, 255, 255];
+  if (palette.length === 1) return first;
+
+  const span = (palette.length - 1) * clamp(position, 0, 1);
+  const index = Math.min(Math.floor(span), palette.length - 2);
+
+  return mix(palette[index] ?? first, palette[index + 1] ?? first, span - index);
+}
+
 export function LightSweep({
-  kelvin,
+  colors,
   direction,
   /** Bumped on every flick. Remounts the element so the animation replays. */
   play,
 }: {
-  kelvin: number;
+  /** The room's own colours, warmest first. */
+  colors: string[];
   direction: "on" | "off";
   play: number;
 }) {
   if (play === 0) return null;
 
-  /* Going off, the cool end leads: the warm light is what drains away last. */
-  const order = direction === "on" ? STOPS : [...STOPS].reverse();
+  const palette = colors.map(parseColor).filter((color): color is Rgb => color !== null);
 
-  const ramp = order.flatMap((stop, index) => {
-    const base = Math.min(Math.max(kelvin + stop.offset, KELVIN_MIN), KELVIN_MAX);
-    const [r, g, b] = mix(kelvinToRgb(base), stop.anchor, stop.amount);
-    const color = `rgb(${r} ${g} ${b})`;
-    const at = STOPS[index]?.at ?? 0;
+  if (palette.length === 0) return null;
+
+  /* Going off, the cool end leads: the warm light is what drains away last. */
+  const shape = direction === "on" ? SHAPE : [...SHAPE].reverse();
+
+  const ramp = shape.flatMap((step, index) => {
+    const source = rgbToHsl(sample(palette, index / (SHAPE.length - 1)));
+    const rotated = hslToRgb({ ...source, h: source.h + step.hue });
+
+    const [r, g, b] =
+      step.shade >= 0 ? mix(rotated, BLACK, step.shade) : mix(rotated, WHITE, -step.shade);
+
+    const color = rgbToCss([r, g, b]);
+    const at = SHAPE[index]?.at ?? 0;
 
     /* Both ends run out to zero alpha so the element's own edge never shows. */
     if (index === 0) return [`rgb(${r} ${g} ${b} / 0) 0%`, `${color} ${at}%`];
-    if (index === order.length - 1) return [`${color} ${at}%`, `rgb(${r} ${g} ${b} / 0) 100%`];
+    if (index === shape.length - 1) return [`${color} ${at}%`, `rgb(${r} ${g} ${b} / 0) 100%`];
 
     return [`${color} ${at}%`];
   });
