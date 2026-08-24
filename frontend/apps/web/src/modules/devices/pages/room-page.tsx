@@ -1,4 +1,4 @@
-import { Button, cn } from "@ava/ui";
+import { cn } from "@ava/ui";
 import {
   TRAIT_COLOR_TEMP,
   TRAIT_POWER,
@@ -10,12 +10,13 @@ import {
 } from "@ava/contracts";
 import { Link, useParams } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-import { RoomHeading, useRoomActions, useRooms } from "@/modules/rooms";
+import { RoomHeading, rememberRoom, useRoomActions, useRooms } from "@/modules/rooms";
 import { Loader } from "@/shared/components/loader";
 import { parseColor, warmth } from "@/shared/lib/color";
 import { kelvinToCss } from "@/shared/lib/kelvin";
+import { Missing } from "../components/empty-state";
 import { LightSweep } from "../components/light-sweep";
 import { RoomSwitch } from "../components/room-switch";
 import { deviceColor, deviceKind, deviceLabel } from "../components/device-stage";
@@ -45,21 +46,20 @@ export function RoomPage() {
     onDevicesMoved: () => void queryClient.invalidateQueries({ queryKey: deviceQueries.all() }),
   });
 
+  /* So `/` can come back here next time. Writing it on view rather than on
+     click means a bookmark or a shared link counts too. */
+  useEffect(() => rememberRoom(roomId), [roomId]);
+
   if (isPending || roomsPending) return <Loader label="Loading room" />;
 
   const room = rooms.find((entry) => entry.id === roomId);
 
   if (!room) {
     return (
-      <div className="grid min-h-full place-items-center p-6">
-        <div className="grid max-w-[360px] justify-items-center gap-3 text-center">
-          <h1 className="text-title font-semibold">That room is gone</h1>
-          <p className="text-small text-muted">It may have been deleted from another device.</p>
-          <Link to="/" className="mt-2">
-            <Button>Back home</Button>
-          </Link>
-        </div>
-      </div>
+      <Missing
+        title="That room is gone"
+        detail="It may have been deleted from another device."
+      />
     );
   }
 
@@ -159,8 +159,8 @@ function DeviceChip({ device }: { device: DeviceDto }) {
 
   return (
     <Link
-      to="/"
-      search={{ device: device.id }}
+      to="/devices/$deviceId"
+      params={{ deviceId: device.id }}
       className={cn(
         "grid w-[168px] shrink-0 snap-start content-start gap-1.5 rounded-lg p-3",
         "border border-border bg-surface transition-colors duration-150 ease-out",

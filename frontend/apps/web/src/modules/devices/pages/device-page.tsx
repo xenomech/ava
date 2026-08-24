@@ -18,7 +18,7 @@ import {
 } from "@ava/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { Device } from "@ava/ui";
-import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useNavigate, useParams } from "@tanstack/react-router";
 
 import { hubQueries } from "@/modules/hub";
 import { Loader } from "@/shared/components/loader";
@@ -33,21 +33,22 @@ import {
   deviceLabel,
   deviceLevel,
 } from "../components/device-stage";
-import { NoDevices } from "../components/empty-state";
+import { Missing, NoDevices } from "../components/empty-state";
 import { TraitControl, TraitReading } from "../components/trait-control";
 import { HubOfflineNotice } from "../components/hub-notice";
 import { useDeviceControl, useDevices } from "../use-devices";
 import { useLiveSlider } from "../use-live-slider";
 
-export function ConsolePage() {
+/** One device, reached from a room's strip or from the tray along the foot. */
+export function DevicePage() {
+  const { deviceId } = useParams({ from: "/_protected/devices/$deviceId" });
   const { devices, isPending } = useDevices();
   const hubs = useQuery(hubQueries.list());
   const control = useDeviceControl();
 
   const navigate = useNavigate();
-  const search = useSearch({ strict: false }) as { device?: string };
 
-  const device = devices.find((entry) => entry.id === search.device) ?? devices[0];
+  const device = devices.find((entry) => entry.id === deviceId);
 
   const dimming = brightnessRange(device) ?? { min: 0, max: 100, step: 1, unit: "%" };
   const warmth = kelvinRange(device);
@@ -65,12 +66,21 @@ export function ConsolePage() {
   );
 
   const focus = (id: string) => {
-    void navigate({ to: "/", search: { device: id }, replace: true });
+    void navigate({ to: "/devices/$deviceId", params: { deviceId: id }, replace: true });
   };
 
-  if (isPending) return <Loader label="Loading devices" />;
+  if (isPending) return <Loader label="Loading device" />;
 
-  if (!device) return <NoDevices hasHub={(hubs.data ?? []).length > 0} />;
+  if (!device) {
+    return devices.length === 0 ? (
+      <NoDevices hasHub={(hubs.data ?? []).length > 0} />
+    ) : (
+      <Missing
+        title="That device is gone"
+        detail="It may have been removed, or it belongs to a hub you no longer have."
+      />
+    );
+  }
 
   const on = isOn(device);
   const dimmable = supports(device, TRAIT_BRIGHTNESS);
