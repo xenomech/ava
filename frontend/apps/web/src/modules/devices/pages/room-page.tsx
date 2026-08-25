@@ -103,7 +103,9 @@ export function RoomPage() {
   const strip = (
     <DeviceStrip
       devices={inRoom}
+      elsewhere={devices.filter((device) => device.room_id !== room.id)}
       roomId={room.id}
+      roomName={room.name}
       selectedId={selected?.id}
       label={`Devices in ${room.name}`}
     />
@@ -132,9 +134,17 @@ export function RoomPage() {
         </header>
 
         {inRoom.length === 0 ? (
-          <div className="z-raised grid place-items-center p-6">
-            <p className="text-small text-muted">No devices in here yet.</p>
-          </div>
+          /* An empty room still gets the strip, because the strip is the only
+             way to put something in it. Without it the room is a dead end. */
+          <>
+            <div className="z-raised grid place-items-center px-6">
+              <p className="max-w-[280px] text-center text-small text-muted">
+                Nothing in here yet. Add a device to give this room a switch.
+              </p>
+            </div>
+
+            <footer className="z-raised p-5 sm:p-6">{strip}</footer>
+          </>
         ) : (
           <>
             <div className="z-raised grid min-h-0 place-items-center px-5 sm:px-6">

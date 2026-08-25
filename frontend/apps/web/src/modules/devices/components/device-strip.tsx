@@ -2,6 +2,7 @@ import { Device, cn } from "@ava/ui";
 import type { DeviceDto } from "@ava/contracts";
 import { Link } from "@tanstack/react-router";
 
+import { AddDevices } from "./add-devices";
 import { OnAPlug, deviceColor, deviceKind, deviceLabel, deviceLevel } from "./device-stage";
 
 /**
@@ -25,13 +26,18 @@ import { OnAPlug, deviceColor, deviceKind, deviceLabel, deviceLevel } from "./de
  */
 export function DeviceStrip({
   devices,
+  elsewhere,
   roomId,
+  roomName,
   selectedId,
   label,
   className,
 }: {
   devices: DeviceDto[];
+  /** Everything not in this room, offered by the trailing add card. */
+  elsewhere: DeviceDto[];
   roomId: string;
+  roomName: string;
   selectedId?: string;
   label: string;
   className?: string;
@@ -59,6 +65,11 @@ export function DeviceStrip({
           selected={device.id === selectedId}
         />
       ))}
+
+      {/* Last in the row rather than a button in the header: adding a device is
+          the same kind of act as picking one, and it belongs where the room's
+          devices already are. */}
+      <AddDevices roomId={roomId} roomName={roomName} candidates={elsewhere} />
     </div>
   );
 }

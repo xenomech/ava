@@ -1,10 +1,21 @@
 import { cn } from "@ava/ui";
 import { useRef, type KeyboardEvent, type PointerEvent } from "react";
 
-/** Past this the drag counts as a flick rather than a tap. */
-const FLICK = 12;
-/** How far the paddle gives under a finger. It rocks, it does not slide. */
-const NUDGE = 16;
+/**
+ * Under this much movement the gesture was a tap, not a drag.
+ *
+ * A thumb rarely lands still — a deliberate tap on a phone drifts several
+ * pixels. The old threshold was 12px in either direction, so an ordinary tap
+ * regularly registered as a flick, and which way it went depended on which way
+ * the thumb happened to slide.
+ */
+const TAP_SLOP = 8;
+
+/**
+ * A throw this fast commits in its own direction regardless of how far it got.
+ * Pixels per millisecond, measured over the last move of the drag.
+ */
+const FLING = 0.45;
 
 /**
  * The one control a room has.
@@ -40,16 +51,18 @@ export function RoomSwitch({
   onFlick: (on: boolean) => void;
 }) {
   const paddle = useRef<HTMLSpanElement>(null);
-  const start = useRef<number | null>(null);
+  const drag = useRef<{ startY: number; lastY: number; lastAt: number; speed: number } | null>(
+    null,
+  );
 
-  /* Written straight to the node. A pointermove fires far too often to be
-     worth a render, and nothing else on the page reads the offset. */
-  const rock = (offset: number) => {
+  /* Written straight to the node. A pointermove fires far too often to be worth
+     a render, and nothing else on the page reads the offset. */
+  const place = (offset: number) => {
     const node = paddle.current;
     if (!node) return;
 
     node.style.transitionDuration = "0ms";
-    node.style.transform = `translate3d(0, ${(on ? 0 : node.offsetHeight) + offset}px, 0)`;
+    node.style.transform = `translate3d(0, ${offset}px, 0)`;
   };
 
   const release = () => {
@@ -64,30 +77,64 @@ export function RoomSwitch({
     if (disabled) return;
 
     event.currentTarget.setPointerCapture(event.pointerId);
-    start.current = event.clientY;
+    drag.current = { startY: event.clientY, lastY: event.clientY, lastAt: event.timeStamp, speed: 0 };
   };
 
   const move = (event: PointerEvent<HTMLButtonElement>) => {
-    if (start.current === null) return;
+    const state = drag.current;
+    const node = paddle.current;
+    if (!state || !node) return;
 
-    const dy = event.clientY - start.current;
-    rock(Math.max(-NUDGE, Math.min(NUDGE, dy)));
+    const elapsed = event.timeStamp - state.lastAt;
+
+    if (elapsed > 0) {
+      state.speed = (event.clientY - state.lastY) / elapsed;
+      state.lastY = event.clientY;
+      state.lastAt = event.timeStamp;
+    }
+
+    /* The paddle goes where the finger goes, across its whole travel. It used
+       to give by 16px and no more, so a drag the length of the plate moved it
+       almost not at all and the control felt inert until you let go. */
+    const travel = node.offsetHeight;
+    const from = on ? 0 : travel;
+
+    place(Math.min(Math.max(from + (event.clientY - state.startY), 0), travel));
   };
 
   const up = (event: PointerEvent<HTMLButtonElement>) => {
-    if (start.current === null) return;
+    const state = drag.current;
+    const node = paddle.current;
+    if (!state) return;
 
-    const dy = event.clientY - start.current;
-    start.current = null;
+    drag.current = null;
     release();
 
-    if (dy < -FLICK) onFlick(true);
-    else if (dy > FLICK) onFlick(false);
-    else onFlick(!on);
+    const dy = event.clientY - state.startY;
+
+    if (Math.abs(dy) < TAP_SLOP) {
+      onFlick(!on);
+
+      return;
+    }
+
+    /* A fast throw wins on its own; a slow drag has to actually carry the
+       paddle past the midpoint. Deciding on distance alone made a quick,
+       confident flick feel like it had been ignored. */
+    if (Math.abs(state.speed) >= FLING) {
+      onFlick(state.speed < 0);
+
+      return;
+    }
+
+    const travel = node?.offsetHeight ?? 0;
+    const landed = (on ? 0 : travel) + dy;
+
+    onFlick(landed < travel / 2);
   };
 
   const cancel = () => {
-    start.current = null;
+    drag.current = null;
     release();
   };
 
