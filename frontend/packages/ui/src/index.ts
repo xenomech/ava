@@ -4,6 +4,7 @@ export type { SoundName } from "./lib/sounds.data";
 
 export { Button, buttonVariants, type ButtonProps } from "./components/button";
 export { Chip, ChipToggle, type ChipProps } from "./components/chip";
+export { Confirm } from "./components/confirm";
 export {
   CommandDialog,
   CommandInput,

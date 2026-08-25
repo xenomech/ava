@@ -223,6 +223,17 @@
   }
 }
 
+/* A phone on its side: wide, and far too short to stack anything.
+   The room needs about 450px of vertical run for a header, a switch, its scene
+   carousel, a readout and a device strip, and a landscape handset offers 400.
+   No amount of shrinking closes that, so below this the room stops stacking and
+   lays itself out across instead — which is what the extra width was for. */
+@custom-variant landscape-room {
+  @media (max-height: 540px) and (min-width: 600px) {
+    @slot;
+  }
+}
+
 /* The room switch's depth, written as real CSS.
    Tailwind's `shadow-[...]` builds `box-shadow` out of five custom properties
    and wraps every colour in `var(--tw-shadow-color, ...)`. On these four the
@@ -232,6 +243,13 @@
    the lit paddle. An identical inline `box-shadow` renders correctly, which is
    the whole argument for declaring these here. Layered, colour-bound shadows on
    a bespoke object are not what arbitrary utilities are for. */
+/* Lift for anything floating over the page. Declared here for the same reason
+   the switch's shadows are: Tailwind's `shadow-[...]` composes box-shadow out of
+   five custom properties and quietly resolves to fully transparent for these. */
+@utility dialog-lift {
+  box-shadow: 0 24px 60px -20px rgb(0 0 0 / 0.8);
+}
+
 @utility switch-plate {
   box-shadow:
     0 18px 44px -12px rgb(0 0 0 / 0.6),

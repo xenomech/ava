@@ -247,7 +247,9 @@ func (a *App) heartbeatLoop(ctx context.Context, tokens *api.HubTokens) error {
 	defer ticker.Stop()
 
 	for {
-		if err := a.client.Heartbeat(ctx); err != nil {
+		connected := a.mqtt != nil && a.mqtt.Connected()
+
+		if err := a.client.Heartbeat(ctx, connected); err != nil {
 			logger.Warn("HEARTBEAT_FAILED", logger.String("error", err.Error()))
 		}
 
@@ -257,7 +259,7 @@ func (a *App) heartbeatLoop(ctx context.Context, tokens *api.HubTokens) error {
 		   Nothing else in the system notices the difference — the library is
 		   silent about a refused reconnect, and the API's publish succeeds
 		   whether or not anyone is subscribed. */
-		if a.mqtt != nil && !a.mqtt.Connected() {
+		if a.mqtt != nil && !connected {
 			logger.Warn("COMMAND_CHANNEL_DOWN",
 				logger.String("broker", a.cfg.MQTTBrokerURL),
 				logger.String("detail", "commands cannot reach this hub until it reconnects"),

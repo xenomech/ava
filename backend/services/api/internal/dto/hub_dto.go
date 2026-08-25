@@ -10,6 +10,15 @@ type DeviceCodeRequest struct {
 	HubName string `json:"hub_name" validate:"required,max=100"`
 }
 
+// HubHeartbeatRequest is what a hub says about itself between syncs.
+//
+// BrokerConnected is a pointer so an older hub, which sends no body at all,
+// stays distinguishable from one reporting that it is cut off. Absent means
+// "not saying", and presence is left to the broker's own last will.
+type HubHeartbeatRequest struct {
+	BrokerConnected *bool `json:"broker_connected,omitempty"`
+}
+
 type DeviceCodeResponse struct {
 	DeviceCode      string `json:"device_code"`
 	UserCode        string `json:"user_code"`

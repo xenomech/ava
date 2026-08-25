@@ -152,6 +152,11 @@ export function RoomPage() {
       <div
         className={cn(
           "relative grid min-h-0 min-w-0 flex-1 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden",
+          /* Laid across rather than down when the screen is short and wide. The
+             header keeps the full width; the switch and the room's furniture
+             share what is left, side by side. */
+          "landscape-room:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]",
+          "landscape-room:grid-rows-[auto_minmax(0,1fr)]",
           /* The phone sheet rests over the lower half, so the room gives up
              that half rather than centring the device behind it. */
           selected && !beside && ROOM_HEIGHT,
@@ -159,7 +164,7 @@ export function RoomPage() {
       >
         <LightSweep colors={palette} direction={sweep.direction} play={sweep.play} />
 
-        <header className="z-raised p-5 pt-11 sm:p-6 md:pt-6">
+        <header className="z-raised p-5 pt-11 sm:p-6 md:pt-6 landscape-room:col-span-2 landscape-room:pt-4">
           <span className="font-mono text-caption uppercase tracking-caps text-subtle">Room</span>
           <div className="mt-1 flex min-w-0 items-center gap-2">
             <RoomHeading
@@ -213,7 +218,12 @@ export function RoomPage() {
                 half of the screen, so the count, the hint and the strip all
                 travel into it rather than sitting on top of the device. */}
             {selected && !beside ? null : (
-              <footer className="z-raised grid gap-4 p-5 pt-0 sm:p-6 sm:pt-0">
+              <footer
+                className={cn(
+                  "z-raised grid gap-4 p-5 pt-0 sm:p-6 sm:pt-0",
+                  "landscape-room:content-center landscape-room:pt-5",
+                )}
+              >
                 {/* The first thing to go when the screen is short. Once the
                     carousel is there it is the least load-bearing line on the
                     page: the centred card's lit dot already says whether the

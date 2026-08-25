@@ -78,8 +78,14 @@ func (c *Client) RefreshToken(ctx context.Context, refreshToken string) (*HubTok
 	return &out, nil
 }
 
-func (c *Client) Heartbeat(ctx context.Context) error {
-	return c.do(ctx, "POST", "/hubs/heartbeat", nil, nil)
+// Heartbeat reports that the hub is alive, and whether commands can still
+// reach it. The second half is the useful one: HTTP staying up says nothing
+// about the broker, and for an hour it said exactly that while every command
+// went nowhere.
+func (c *Client) Heartbeat(ctx context.Context, brokerConnected bool) error {
+	body := map[string]bool{"broker_connected": brokerConnected}
+
+	return c.do(ctx, "POST", "/hubs/heartbeat", body, nil)
 }
 
 func (c *Client) Health(ctx context.Context) error {

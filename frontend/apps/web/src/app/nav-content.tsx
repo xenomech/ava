@@ -1,8 +1,17 @@
-import { Button, Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger, cn } from "@ava/ui";
+import {
+  Button,
+  Confirm,
+  Menu,
+  MenuContent,
+  MenuItem,
+  MenuSeparator,
+  MenuTrigger,
+  cn,
+} from "@ava/ui";
 import { isOn, type RoomDto } from "@ava/contracts";
 import { Link } from "@tanstack/react-router";
 import { ChevronDownIcon, ChevronUpIcon, MoreHorizontalIcon, Trash2Icon } from "lucide-react";
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 
 import { useSession } from "@/modules/auth";
 import { deviceColor } from "@/modules/devices/components/device-stage";
@@ -28,8 +37,29 @@ export function NavContent({ onNavigate }: { onNavigate?: () => void }) {
   const { tenant } = useSession();
   const actions = useRoomActions();
 
+  /* One dialog for the whole list rather than one per row: only ever one room
+     is being deleted, and mounting a portal per room to say so is waste. */
+  const [doomed, setDoomed] = useState<RoomDto | null>(null);
+  const inDoomed = doomed ? devices.filter((device) => device.room_id === doomed.id).length : 0;
+
   return (
     <div className="grid h-full grid-rows-[auto_minmax(0,1fr)_auto]">
+      <Confirm
+        open={doomed !== null}
+        onOpenChange={(open) => !open && setDoomed(null)}
+        title={`Delete ${doomed?.name ?? "this room"}?`}
+        description={
+          inDoomed === 0
+            ? "The room goes; nothing else changes."
+            : `Its ${inDoomed === 1 ? "device stays" : `${inDoomed} devices stay`} set up, but ${inDoomed === 1 ? "it moves" : "they move"} out of any room, and any scenes saved here are lost.`
+        }
+        confirmLabel="Delete room"
+        destructive
+        onConfirm={() => {
+          if (doomed) actions.remove.mutate(doomed.id);
+          setDoomed(null);
+        }}
+      />
       <Link to="/" onClick={onNavigate} className="flex items-baseline gap-2.5 px-3 pb-8">
         <b className="text-[1.0625rem] font-semibold tracking-tight">Ava</b>
         <span className="truncate font-mono text-micro text-subtle">{tenant?.name ?? ""}</span>
@@ -47,7 +77,7 @@ export function NavContent({ onNavigate }: { onNavigate?: () => void }) {
               isLast={at === rooms.length - 1}
               onNavigate={onNavigate}
               onMove={(direction) => actions.reorder.mutate(moved(rooms, at, direction))}
-              onDelete={() => actions.remove.mutate(room.id)}
+              onDelete={() => setDoomed(room)}
             />
           ))}
 
