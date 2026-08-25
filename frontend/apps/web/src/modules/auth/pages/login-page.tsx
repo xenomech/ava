@@ -34,7 +34,7 @@ export function LoginPage() {
       footer={
         <>
           New here?{" "}
-          <Link to="/auth/register" className="font-semibold text-fg hover:underline">
+          <Link to="/auth/register" className="tap font-semibold text-fg hover:underline">
             Set up your home
           </Link>
         </>
@@ -65,7 +65,7 @@ export function LoginPage() {
           label="Password"
           error={fieldErrors?.password}
           action={
-            <Link to="/auth/forgot-password" className="text-caption text-muted hover:text-fg">
+            <Link to="/auth/forgot-password" className="tap text-caption text-muted hover:text-fg">
               Forgot?
             </Link>
           }

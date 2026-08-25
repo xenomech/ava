@@ -25,7 +25,7 @@ export function ResetPasswordPage() {
         title="Link incomplete"
         description="This reset link is missing its token. Request a new one."
         footer={
-          <Link to="/auth/forgot-password" className="font-semibold text-fg">
+          <Link to="/auth/forgot-password" className="tap font-semibold text-fg">
             Request a new link
           </Link>
         }

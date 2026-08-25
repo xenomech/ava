@@ -18,7 +18,7 @@ export function ForgotPasswordPage() {
         title="Check your email"
         description={`If an account exists for ${email}, a reset link is on its way. It expires in an hour.`}
         footer={
-          <Link to="/auth/login" className="font-semibold text-fg">
+          <Link to="/auth/login" className="tap font-semibold text-fg">
             Back to sign in
           </Link>
         }
@@ -31,7 +31,7 @@ export function ForgotPasswordPage() {
       title="Reset your password"
       description="We'll email you a link to choose a new one."
       footer={
-        <Link to="/auth/login" className="font-semibold text-fg">
+        <Link to="/auth/login" className="tap font-semibold text-fg">
           Back to sign in
         </Link>
       }

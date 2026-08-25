@@ -24,7 +24,7 @@ export function RegisterPage() {
         title="Check your email"
         description={`We sent a link to ${form.email}. Open it to finish setting up.`}
         footer={
-          <Link to="/auth/login" className="font-semibold text-fg hover:underline">
+          <Link to="/auth/login" className="tap font-semibold text-fg hover:underline">
             Back to sign in
           </Link>
         }
@@ -39,7 +39,7 @@ export function RegisterPage() {
       footer={
         <>
           Already have an account?{" "}
-          <Link to="/auth/login" className="font-semibold text-fg hover:underline">
+          <Link to="/auth/login" className="tap font-semibold text-fg hover:underline">
             Sign in
           </Link>
         </>
