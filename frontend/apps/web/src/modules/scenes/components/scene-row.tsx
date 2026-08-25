@@ -53,6 +53,16 @@ export function SceneRow({
   const [open, setOpen] = useState(false);
   const rail = useRef<HTMLFieldSetElement>(null);
 
+  /* Raised while the rail is being put where it belongs on mount.
+   *
+   * Centring the armed card is itself a scroll, and the scroll listener is what
+   * decides which card is armed — so on a frame where the cards have not
+   * finished sizing, that first programmatic scroll could settle on a
+   * neighbour, arm it, and overwrite the choice it was in the middle of
+   * restoring. The room came back pointed at the wrong scene, occasionally, for
+   * no reason anyone could see. */
+  const settling = useRef(true);
+
   /* `null` is "All on" and "add" is the trailing save card. Neither is a scene
      id, and only the scenes in between can be armed. */
   const stops: (SceneDto | null | "add")[] = [null, ...scenes, "add"];
@@ -75,8 +85,17 @@ export function SceneRow({
     /* scrollIntoView rather than arithmetic on offsetLeft, which is measured
        from the nearest positioned ancestor — the room, not the rail — and left
        the armed card sitting a little to one side of the caret. */
+    settling.current = true;
     card.scrollIntoView({ behavior: "instant", inline: "center", block: "nearest" });
     setCentred(armedStop);
+
+    /* Two frames: one for the scroll to be applied, one for its event to have
+       been delivered. */
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        settling.current = false;
+      }),
+    );
     // Only when the room changes. Scrolling drives it from then on.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId]);
@@ -89,6 +108,8 @@ export function SceneRow({
     if (!node) return;
 
     const settle = () => {
+      if (settling.current) return;
+
       const box = node.getBoundingClientRect();
       const middle = box.left + box.width / 2;
 

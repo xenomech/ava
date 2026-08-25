@@ -2,6 +2,7 @@ package db
 
 import (
 	"errors"
+	"strings"
 	"time"
 
 	"ava/api/internal/model"
@@ -43,6 +44,22 @@ func Migrate(database *gorm.DB) error {
 		logger.Error("DB_MIGRATION_ERROR", logger.Err(err))
 
 		return err
+	}
+
+	/* Uniqueness has to mean "among the rows that still exist". A plain unique
+	   index counts soft deleted rows too, so a room you deleted went on owning
+	   its name for ever: recreating "Kitchen" came back as room_name_taken while
+	   no such room was visible anywhere. The same held for a membership you
+	   revoked, which could never be granted again. */
+	for _, index := range []partialIndex{
+		{table: "rooms", name: "idx_room_tenant_name", columns: "tenant_id, name"},
+		{table: "tenant_memberships", name: "idx_membership_tenant_user", columns: "tenant_id, user_id"},
+	} {
+		if err := onlyLiveRows(database, index); err != nil {
+			logger.Error("DB_MIGRATION_ERROR", logger.Err(err))
+
+			return err
+		}
 	}
 
 	if database.Migrator().HasColumn(&model.Device{}, "room") {
@@ -123,6 +140,51 @@ func Disconnect(database *gorm.DB) error {
 	}
 
 	logger.Info("DB_DISCONNECTED")
+
+	return nil
+}
+
+type partialIndex struct {
+	table   string
+	name    string
+	columns string
+}
+
+// onlyLiveRows makes a unique index ignore soft deleted rows.
+//
+// Rewritten rather than created alongside, because the whole point is that the
+// unconditional one has to stop existing. Checked first so a boot that has
+// nothing to do does nothing: dropping and recreating an index on every start
+// would take a lock on the table for no reason.
+func onlyLiveRows(database *gorm.DB, index partialIndex) error {
+	var definition string
+
+	err := database.Raw(
+		"SELECT indexdef FROM pg_indexes WHERE tablename = ? AND indexname = ?",
+		index.table, index.name,
+	).Scan(&definition).Error
+	if err != nil {
+		return err
+	}
+
+	if strings.Contains(definition, "WHERE") {
+		return nil
+	}
+
+	if definition != "" {
+		if err := database.Exec("DROP INDEX IF EXISTS " + index.name).Error; err != nil {
+			return err
+		}
+	}
+
+	statement := "CREATE UNIQUE INDEX IF NOT EXISTS " + index.name +
+		" ON " + index.table + " (" + index.columns + ") WHERE deleted_at IS NULL"
+
+	if err := database.Exec(statement).Error; err != nil {
+		return err
+	}
+
+	logger.Info("DB_INDEX_NARROWED", logger.String("index", index.name))
 
 	return nil
 }
