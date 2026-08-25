@@ -10,6 +10,7 @@ import (
 	"ava/hub/internal/device"
 	"ava/hub/internal/device/adapters"
 	"ava/hub/internal/inventory"
+	"ava/hub/internal/state"
 )
 
 type registry struct {
@@ -66,7 +67,7 @@ func (a *App) syncOnce(ctx context.Context) {
 
 	a.devices.replace(opened)
 
-	a.lastSeen = entries
+	a.remember(entries)
 
 	items := inventory.ToSyncItems(entries)
 
@@ -112,7 +113,7 @@ func (a *App) recoverMissing(ctx context.Context, found []inventory.Entry) []inv
 			continue
 		}
 
-		state, err := handle.State(ctx)
+		reading, err := handle.State(ctx)
 		if err != nil {
 			logger.Info("DEVICE_UNREACHABLE",
 				logger.String("device_id", previous.Spec.ID),
@@ -124,9 +125,65 @@ func (a *App) recoverMissing(ctx context.Context, found []inventory.Entry) []inv
 
 		logger.Debug("DEVICE_RECOVERED", logger.String("device_id", previous.Spec.ID))
 
-		previous.State = state
+		previous.State = reading
 		found = append(found, previous)
 	}
 
 	return found
+}
+
+func (a *App) remember(entries []inventory.Entry) {
+	a.lastSeen = entries
+
+	if a.state == nil {
+		return
+	}
+
+	known := make([]state.KnownDevice, 0, len(entries))
+
+	for at := range entries {
+		entry := &entries[at]
+
+		known = append(known, state.KnownDevice{
+			Vendor:       string(entry.Spec.Vendor),
+			ID:           entry.Spec.ID,
+			Name:         entry.Spec.Name,
+			IP:           entry.Spec.IP,
+			Kind:         entry.Kind,
+			Capabilities: entry.Spec.Capabilities,
+		})
+	}
+
+	if state.SameDevices(a.state.Devices, known) {
+		return
+	}
+
+	a.state.Devices = known
+
+	if err := state.Save(a.cfg.StateFile, a.state); err != nil {
+		logger.Warn("DEVICE_MEMORY_SAVE_FAILED", logger.String("error", err.Error()))
+	}
+}
+
+func recall(known []state.KnownDevice, timeout time.Duration) []inventory.Entry {
+	entries := make([]inventory.Entry, 0, len(known))
+
+	for at := range known {
+		remembered := &known[at]
+
+		entries = append(entries, inventory.Entry{
+			Spec: device.Spec{
+				Vendor:       device.Vendor(remembered.Vendor),
+				ID:           remembered.ID,
+				Name:         remembered.Name,
+				IP:           remembered.IP,
+				Capabilities: remembered.Capabilities,
+				Timeout:      timeout,
+			},
+			Kind: remembered.Kind,
+			Name: remembered.Name,
+		})
+	}
+
+	return entries
 }

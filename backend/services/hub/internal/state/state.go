@@ -7,15 +7,45 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+
+	"ava/pkg/wire"
 )
 
+type KnownDevice struct {
+	Vendor       string            `json:"vendor"`
+	ID           string            `json:"id"`
+	Name         string            `json:"name"`
+	IP           string            `json:"ip"`
+	Kind         string            `json:"kind"`
+	Capabilities wire.Capabilities `json:"capabilities"`
+}
+
 type State struct {
-	HubID          string `json:"hub_id"`
-	HubName        string `json:"hub_name"`
-	TenantSlug     string `json:"tenant_slug"`
-	RefreshToken   string `json:"refresh_token"`
-	BrokerUsername string `json:"broker_username,omitempty"`
-	BrokerPassword string `json:"broker_password,omitempty"`
+	HubID          string        `json:"hub_id"`
+	HubName        string        `json:"hub_name"`
+	TenantSlug     string        `json:"tenant_slug"`
+	RefreshToken   string        `json:"refresh_token"`
+	BrokerUsername string        `json:"broker_username,omitempty"`
+	BrokerPassword string        `json:"broker_password,omitempty"`
+	Devices        []KnownDevice `json:"devices,omitempty"`
+}
+
+func SameDevices(a, b []KnownDevice) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	for at := range a {
+		if a[at].ID != b[at].ID || a[at].IP != b[at].IP || a[at].Kind != b[at].Kind {
+			return false
+		}
+
+		if len(a[at].Capabilities) != len(b[at].Capabilities) {
+			return false
+		}
+	}
+
+	return true
 }
 
 func Load(path string) (*State, error) {

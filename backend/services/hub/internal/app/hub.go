@@ -117,6 +117,8 @@ func (a *App) Run(ctx context.Context) error {
 		logger.String("tenant", tokens.Tenant.Slug),
 	)
 
+	a.lastSeen = recall(a.state.Devices, a.cfg.DiscoveryTimeout)
+
 	if _, err := a.startCommands(ctx, tokens); err != nil {
 		logger.Warn("MQTT_UNAVAILABLE", logger.Err(err))
 	}
@@ -215,6 +217,7 @@ func (a *App) persist(tokens *api.HubTokens) error {
 	if a.state != nil {
 		next.BrokerUsername = a.state.BrokerUsername
 		next.BrokerPassword = a.state.BrokerPassword
+		next.Devices = a.state.Devices
 	}
 
 	rotated := false
