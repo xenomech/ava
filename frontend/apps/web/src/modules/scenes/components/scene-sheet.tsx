@@ -12,21 +12,25 @@ import type { DeviceDto, SceneDto } from "@ava/contracts";
 import { Trash2Icon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
-import { capture, describe } from "../capture";
+import { capture, describe, matches, scenePreview } from "../capture";
+import { SceneLights } from "./scene-lights";
 import { useSceneActions } from "../use-scenes";
 
 /**
- * Saving the room as a scene, and clearing out the ones you no longer want.
+ * The scenes a room has, and the one it is about to get.
  *
- * The saved scene is described in full before it is saved. A scene is invisible
- * state — a name that stands for eleven trait values — and the one moment it
- * can honestly be shown is now, while the room it came from is still on screen
- * behind the sheet.
+ * Every row here shows the same lit panel the carousel shows, because these are
+ * the same objects seen from a different angle — a list of names with a count
+ * beside them made you hold the mapping in your head, and the whole point of
+ * drawing a scene as its light was to stop having to.
  *
- * There is no renaming and no reordering. Both are real, and neither is worth a
- * screen yet: a scene that has the wrong name has been saved for about ten
- * seconds, and deleting and saving again costs one more tap than renaming
- * would.
+ * The new scene is presented as a row of exactly that shape with its name still
+ * blank: what you are doing is filling in the card that is about to join the
+ * rail, and it is worth being literal about that.
+ *
+ * There is no renaming and no reordering. Both are real, neither is worth a
+ * screen yet: a scene with the wrong name has existed for about ten seconds,
+ * and deleting and saving again costs one more tap than renaming would.
  */
 export function SceneSheet({
   open,
@@ -46,10 +50,11 @@ export function SceneSheet({
   const [name, setName] = useState("");
   const { save, remove } = useSceneActions(roomId);
 
-  /* Recomputed as the room reports, so the list below is the scene that will
+  /* Recomputed as the room reports, so the panel below is the scene that will
      actually be written. Freezing it at open would be steadier to read and
      occasionally a lie. */
   const targets = useMemo(() => capture(devices), [devices]);
+  const preview = useMemo(() => scenePreview(null, devices), [devices]);
 
   useEffect(() => {
     if (open) setName("");
@@ -70,36 +75,35 @@ export function SceneSheet({
       <DrawerContent className="max-h-[85dvh]">
         <DrawerTitle className="px-5 pt-2 text-title font-semibold">Scenes</DrawerTitle>
         <DrawerDescription className="px-5 pb-1 text-small text-muted">
-          A scene remembers how {roomName} is set right now. Flicking the switch up plays whichever
-          one you have chosen.
+          A scene remembers how {roomName} is set. Flicking the switch up plays whichever one you
+          have scrolled to.
         </DrawerDescription>
 
-        <DrawerBody className="grid content-start gap-6 pb-8 pt-3">
+        <DrawerBody className="grid content-start gap-5 pb-8 pt-4">
           {scenes.length > 0 ? (
-            <section className="grid gap-2">
-              <Heading>Saved</Heading>
-
+            /* Hairlines between rows rather than a border around each. Three
+               separately outlined boxes in a column read as three unrelated
+               things; a divided list reads as one. */
+            <ul className="grid divide-y divide-border border-y border-border">
               {scenes.map((scene) => (
-                <div
-                  key={scene.id}
-                  className={cn(
-                    "flex min-h-12 items-center gap-3 rounded-lg border border-border",
-                    "bg-surface px-3.5 py-2",
-                  )}
-                >
-                  <span className="min-w-0 flex-1 truncate text-small font-semibold">
+                <li key={scene.id} className="flex items-center gap-3 py-2.5">
+                  <SceneLights
+                    preview={scenePreview(scene, devices)}
+                    live={matches(scene, devices)}
+                    className="w-[72px] shrink-0"
+                  />
+
+                  <span className="min-w-0 flex-1 truncate text-small font-medium">
                     {scene.name}
                   </span>
-                  <span className="shrink-0 font-mono text-caption text-subtle tabular">
-                    {countOn(scene)} on
-                  </span>
+
                   <button
                     type="button"
                     disabled={remove.isPending && remove.variables === scene.id}
                     onClick={() => remove.mutate(scene.id)}
                     aria-label={`Delete ${scene.name}`}
                     className={cn(
-                      "tap grid size-8 shrink-0 place-items-center rounded-md text-subtle",
+                      "tap grid size-9 shrink-0 place-items-center rounded-md text-subtle",
                       "transition-colors duration-150 ease-out hover:text-danger",
                       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fg",
                       "disabled:opacity-40",
@@ -107,25 +111,32 @@ export function SceneSheet({
                   >
                     <Trash2Icon className="size-4" aria-hidden />
                   </button>
-                </div>
+                </li>
               ))}
-            </section>
+            </ul>
           ) : null}
 
           <section className="grid gap-3">
-            <Heading>Save this arrangement</Heading>
+            <span className="text-caption font-semibold uppercase tracking-caps text-subtle">
+              Save the room as it is
+            </span>
 
-            <Input
-              value={name}
-              maxLength={80}
-              placeholder="Evening"
-              aria-label="Scene name"
-              enterKeyHint="done"
-              onChange={(event) => setName(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") submit();
-              }}
-            />
+            <div className="flex items-center gap-3">
+              <SceneLights preview={preview} live className="w-[72px] shrink-0" />
+
+              <Input
+                value={name}
+                maxLength={80}
+                placeholder="Name this scene"
+                aria-label="Scene name"
+                enterKeyHint="done"
+                className="min-w-0 flex-1"
+                onChange={(event) => setName(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") submit();
+                }}
+              />
+            </div>
 
             {taken ? (
               <p className="text-caption text-danger">
@@ -133,7 +144,10 @@ export function SceneSheet({
               </p>
             ) : null}
 
-            <ul className="grid gap-1.5 rounded-md border border-border bg-surface p-3.5">
+            {/* Plain rows, no box. The exact percentages and temperatures are
+                worth stating — this is the one moment the scene is legible —
+                but they are a caption to the panel above, not a table. */}
+            <ul className="grid gap-1">
               {devices.map((device) => (
                 <li key={device.id} className="flex items-baseline justify-between gap-4">
                   <span className="min-w-0 truncate text-caption text-subtle">{device.name}</span>
@@ -144,7 +158,7 @@ export function SceneSheet({
               ))}
             </ul>
 
-            <Button onClick={submit} disabled={!saveable || save.isPending}>
+            <Button onClick={submit} disabled={!saveable || save.isPending} className="mt-1">
               {save.isPending ? "Saving" : "Save scene"}
             </Button>
           </section>
@@ -152,16 +166,4 @@ export function SceneSheet({
       </DrawerContent>
     </Drawer>
   );
-}
-
-function Heading({ children }: { children: string }) {
-  return (
-    <span className="text-caption font-semibold uppercase tracking-caps text-subtle">
-      {children}
-    </span>
-  );
-}
-
-function countOn(scene: SceneDto): number {
-  return scene.targets.filter((target) => target.trait === "power" && target.value === true).length;
 }

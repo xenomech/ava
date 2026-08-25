@@ -4,6 +4,7 @@ import { PlusIcon } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { matches, scenePreview, type ScenePreview } from "../capture";
+import { SceneLights } from "./scene-lights";
 import { SceneSheet } from "./scene-sheet";
 
 /** Card width in px. The rail's end padding is derived from it. */
@@ -14,9 +15,9 @@ const CARD = 104;
  *
  * The card in the middle is the one the switch will play. That is the whole
  * model: no separate arming control and nothing to press to choose — you scroll
- * the room to the mood you want and throw the switch. The caret above the rail
- * points back up at the paddle so the two read as one object rather than a
- * switch with a shelf underneath it.
+ * the room to the mood you want and throw the switch. Nothing points at the
+ * chosen card, because it is already the only one at full size and full
+ * strength; an arrow would only label what the eye has found already.
  *
  * Scrolling arms without applying, which would normally be a dead gesture, so
  * the room previews instead: the glow behind the plate and the paddle both take
@@ -24,10 +25,9 @@ const CARD = 104;
  * just does it to the switch rather than to the lights. Tapping the centred
  * card is the shortcut for anyone who would rather not flick at all.
  *
- * A card draws its scene rather than naming it — one dot per fixture, sized by
- * brightness, coloured by what that fixture will actually be, a bare ring for
- * whatever the scene leaves off. You recognise the room you are asking for
- * before you read the word under it.
+ * A card draws its scene rather than naming it, and the card whose scene is
+ * actually running has its pane lit — the same thing the room is doing behind
+ * the plate two inches above, so it needs no legend.
  */
 export function SceneRow({
   roomId,
@@ -130,12 +130,7 @@ export function SceneRow({
 
   return (
     <>
-      <div className="grid w-full grid-cols-[minmax(0,1fr)] justify-items-center gap-1.5">
-        <span
-          aria-hidden
-          className="size-0 border-x-[6px] border-b-[6px] border-x-transparent border-b-border-strong"
-        />
-
+      <div className="grid w-full grid-cols-[minmax(0,1fr)] justify-items-center">
         {/* The bleed lives on a wrapper rather than on the rail itself. The
             rail's end padding is a percentage, and a percentage padding resolves
             against the containing block — so while the rail was the element
@@ -238,61 +233,33 @@ function SceneCard({
       onClick={onPick}
       style={{ width: CARD }}
       className={cn(
-        "grid shrink-0 snap-center gap-2 rounded-lg border p-2 text-left",
-        "transition-[transform,opacity,border-color,background-color] duration-200 ease-out",
+        "grid shrink-0 snap-center gap-2 rounded-xl border p-2",
+        "transition-[transform,opacity,border-color,background-color,box-shadow]",
+        "duration-200 ease-out",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fg",
+        /* Chosen by weight, not by outline. The old white border was the one
+           bright edge on a screen whose every other border is a dark hairline,
+           and it shouted across the room to say something the size and the
+           brightness of the card were already saying. */
         centred
-          ? "scale-100 border-fg bg-raised opacity-100"
-          : "scale-[0.88] border-border bg-surface opacity-45",
+          ? cn(
+              "scale-100 border-border-strong bg-raised opacity-100",
+              "shadow-[0_10px_24px_-14px_rgb(0_0_0/0.9)]",
+            )
+          : "scale-[0.88] border-border bg-surface opacity-40 shadow-none",
       )}
     >
-      <span className="grid h-9 place-items-center rounded-md bg-bg">
-        <span className="flex items-center justify-center gap-1.5">
-          {preview.map((entry) => (
-            <Lamp key={entry.id} entry={entry} />
-          ))}
-        </span>
-      </span>
+      <SceneLights preview={preview} live={live} />
 
-      <span className="flex min-w-0 items-center gap-1.5">
-        <span
-          aria-hidden
-          className={cn(
-            "size-1.5 shrink-0 rounded-full transition-colors duration-300 ease-out",
-            live ? "bg-success" : "bg-transparent",
-          )}
-        />
-        <span className="min-w-0 truncate text-caption font-semibold">{label}</span>
-        {live ? <span className="sr-only">(showing now)</span> : null}
+      <span className="min-w-0 truncate text-center text-caption font-medium">
+        {label}
+        {live ? <span className="sr-only"> (showing now)</span> : null}
       </span>
     </button>
   );
 }
 
-/** One fixture under a scene: a lit dot sized by brightness, or a bare ring. */
-function Lamp({ entry }: { entry: ScenePreview }) {
-  if (entry.color === null) {
-    return <span aria-hidden className="size-2.5 rounded-full border border-off" />;
-  }
-
-  /* Floored well above nothing, so a dim lamp still reads as lit rather than as
-     dust on the screen. */
-  const size = 6 + Math.round((Math.min(Math.max(entry.level, 0), 100) / 100) * 5);
-
-  return (
-    <span
-      aria-hidden
-      className="rounded-full"
-      style={{
-        width: size,
-        height: size,
-        background: entry.color,
-        boxShadow: `0 0 8px 1px ${entry.color}`,
-      }}
-    />
-  );
-}
-
+/** The end of the rail: the same card, waiting to be filled in. */
 function SaveCard({
   centred,
   roomName,
@@ -310,18 +277,21 @@ function SaveCard({
       aria-label={`Scenes in ${roomName}`}
       style={{ width: CARD }}
       className={cn(
-        "grid shrink-0 snap-center gap-2 rounded-lg border border-dashed p-2 text-left",
-        "transition-[transform,opacity,border-color,color] duration-200 ease-out",
+        "grid shrink-0 snap-center gap-2 rounded-xl border p-2",
+        "transition-[transform,opacity,border-color,background-color] duration-200 ease-out",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fg",
         centred
-          ? "scale-100 border-fg text-fg opacity-100"
-          : "scale-[0.88] border-border-strong text-muted opacity-45",
+          ? "scale-100 border-border-strong bg-raised text-fg opacity-100"
+          : "scale-[0.88] border-border bg-surface text-muted opacity-40",
       )}
     >
-      <span className="grid h-9 place-items-center rounded-md">
+      {/* A dashed pane where the lights would be, so the silhouette matches its
+          neighbours and only the material says it is empty. */}
+      <span className="grid h-10 place-items-center rounded-md border border-dashed border-border-strong">
         <PlusIcon className="size-4" aria-hidden />
       </span>
-      <span className="truncate text-caption font-semibold">Scenes</span>
+
+      <span className="truncate text-center text-caption font-medium">New scene</span>
     </button>
   );
 }
