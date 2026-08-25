@@ -80,7 +80,10 @@ export function MenuHandle({ children }: { children: ReactNode }) {
 
           {/* The handle repeats at the bottom of the sheet, where the panel now
               ends and the thumb already is. */}
-          <span aria-hidden className="mx-auto mb-3 h-1 w-10 shrink-0 rounded-full bg-border-strong" />
+          <span
+            aria-hidden
+            className="mx-auto mb-3 h-1 w-10 shrink-0 rounded-full bg-border-strong"
+          />
         </DrawerContent>
       </Drawer>
     </>

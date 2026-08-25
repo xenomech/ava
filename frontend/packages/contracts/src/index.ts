@@ -1,6 +1,7 @@
 export * from "./auth";
 export * from "./device";
 export * from "./room";
+export * from "./scene";
 export * from "./event";
 export * from "./flow";
 export * from "./http";

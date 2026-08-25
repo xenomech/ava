@@ -1,12 +1,4 @@
-import {
-  Button,
-  Menu,
-  MenuContent,
-  MenuItem,
-  MenuSeparator,
-  MenuTrigger,
-  cn,
-} from "@ava/ui";
+import { Button, Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger, cn } from "@ava/ui";
 import { isOn, type RoomDto } from "@ava/contracts";
 import { Link } from "@tanstack/react-router";
 import { ChevronDownIcon, ChevronUpIcon, MoreHorizontalIcon, Trash2Icon } from "lucide-react";
@@ -65,7 +57,10 @@ export function NavContent({ onNavigate }: { onNavigate?: () => void }) {
         </div>
 
         <div className="pt-3">
-          <NewRoom onCreate={(name) => actions.create.mutate(name)} busy={actions.create.isPending} />
+          <NewRoom
+            onCreate={(name) => actions.create.mutate(name)}
+            busy={actions.create.isPending}
+          />
         </div>
       </nav>
 

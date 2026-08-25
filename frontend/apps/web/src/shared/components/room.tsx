@@ -76,7 +76,8 @@ function Bloom({ level }: { level: number }) {
           background: "radial-gradient(closest-side, var(--lit), transparent 74%)",
           animation:
             "bloom-in 1400ms var(--ease-out-expo) both, breathe 7s ease-in-out 1400ms infinite",
-          transition: "width 1200ms var(--ease-in-out-quart), height 1200ms var(--ease-in-out-quart)",
+          transition:
+            "width 1200ms var(--ease-in-out-quart), height 1200ms var(--ease-in-out-quart)",
         }}
       />
     </div>

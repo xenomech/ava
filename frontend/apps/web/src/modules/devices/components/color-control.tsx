@@ -90,12 +90,7 @@ export function ColorControl({
     /* Manual activation: with Radix's default, focusing a tab selects it, so a
        click fired the command twice and arrowing between them would drive the
        bulb on the way past. */
-    <Tabs
-      value={mode}
-      onValueChange={choose}
-      activationMode="manual"
-      className="grid gap-2.5"
-    >
+    <Tabs value={mode} onValueChange={choose} activationMode="manual" className="grid gap-2.5">
       {showColor ? (
         <TabsList className="w-full">
           <TabsTrigger value="white">White</TabsTrigger>

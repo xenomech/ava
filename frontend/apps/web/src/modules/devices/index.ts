@@ -1,2 +1,2 @@
 export { deviceQueries } from "./queries";
-export { useDeviceControl, useDevices } from "./use-devices";
+export { useApplyTargets, useDeviceControl, useDevices, useRoomPower } from "./use-devices";

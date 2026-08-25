@@ -37,6 +37,8 @@ func Migrate(database *gorm.DB) error {
 		&model.Device{},
 		&model.Flow{},
 		&model.FlowStep{},
+		&model.Scene{},
+		&model.SceneTarget{},
 	); err != nil {
 		logger.Error("DB_MIGRATION_ERROR", logger.Err(err))
 

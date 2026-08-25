@@ -92,7 +92,12 @@ export function RoomSwitch({
     if (disabled) return;
 
     event.currentTarget.setPointerCapture(event.pointerId);
-    drag.current = { startY: event.clientY, lastY: event.clientY, lastAt: event.timeStamp, speed: 0 };
+    drag.current = {
+      startY: event.clientY,
+      lastY: event.clientY,
+      lastAt: event.timeStamp,
+      speed: 0,
+    };
   };
 
   const move = (event: PointerEvent<HTMLButtonElement>) => {
@@ -168,10 +173,17 @@ export function RoomSwitch({
     <div
       className={cn(
         "relative grid place-items-center",
-        /* A phone in portrait has to fit a header, this, a readout and a
-           carousel. On anything short the plate gives up height first. */
-        "[--plate-h:288px] [@media(max-height:760px)]:[--plate-h:240px]",
-        "[@media(max-height:640px)]:[--plate-h:200px]",
+        /* A phone in portrait has to fit a header, the scene row, a readout and
+           a carousel around this. Everything else in that column is a fixed
+           height — about 355px of it — so the plate takes what is left and the
+           room never has to overlap itself.
+         *
+         * One clamp rather than a stack of max-height breakpoints. The stack
+         * relied on source order to resolve two rules that both matched a short
+         * screen, and it was resolving the wrong way: a 620px-tall phone was
+         * getting the 240px plate meant for 760px and colliding with the
+         * footer. A clamp has one answer at every height. */
+        "[--plate-h:clamp(150px,calc(100dvh-436px),288px)]",
       )}
       style={{ "--lit": color } as React.CSSProperties}
     >

@@ -79,7 +79,9 @@ export function LooseDevicePage() {
             <h1 className="text-display font-semibold">{device.name}</h1>
             <p className="mt-1.5 flex items-center gap-2 text-small text-muted">
               Not in a room
-              {offline ? <Chip tone="warning">{hubOffline ? "Hub offline" : "Offline"}</Chip> : null}
+              {offline ? (
+                <Chip tone="warning">{hubOffline ? "Hub offline" : "Offline"}</Chip>
+              ) : null}
             </p>
           </div>
         </main>

@@ -1,12 +1,6 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": [
-    "typescript",
-    "unicorn",
-    "oxc",
-    "react",
-    "jsx-a11y"
-  ],
+  "plugins": ["typescript", "unicorn", "oxc", "react", "jsx-a11y"],
   "categories": {
     "correctness": "error"
   },
@@ -14,40 +8,27 @@
   "env": {
     "builtin": true
   },
-  "ignorePatterns": [
-    "**/dist/**",
-    "**/routeTree.gen.ts"
-  ],
+  "ignorePatterns": ["**/dist/**", "**/routeTree.gen.ts"],
   "overrides": [
     {
-      "files": [
-        "packages/ui/src/components/**"
-      ],
+      "files": ["packages/ui/src/components/**"],
       "rules": {
         "jsx-a11y/label-has-associated-control": "off"
       }
     },
     {
-      "files": [
-        "apps/*/src/modules/**"
-      ],
+      "files": ["apps/*/src/modules/**"],
       "rules": {
         "no-restricted-imports": [
           "error",
           {
             "patterns": [
               {
-                "group": [
-                  "@/modules/*/*",
-                  "@/modules/*/*/**"
-                ],
+                "group": ["@/modules/*/*", "@/modules/*/*/**"],
                 "message": "Import another module through its barrel (@/modules/<name>), not its internals."
               },
               {
-                "group": [
-                  "@/app/*",
-                  "@/app"
-                ],
+                "group": ["@/app/*", "@/app"],
                 "message": "Modules must not import from app/. Dependencies flow modules -> shared -> config."
               }
             ]
@@ -56,22 +37,14 @@
       }
     },
     {
-      "files": [
-        "apps/*/src/shared/**",
-        "apps/*/src/config/**"
-      ],
+      "files": ["apps/*/src/shared/**", "apps/*/src/config/**"],
       "rules": {
         "no-restricted-imports": [
           "error",
           {
             "patterns": [
               {
-                "group": [
-                  "@/modules/*",
-                  "@/modules/*/*",
-                  "@/app",
-                  "@/app/*"
-                ],
+                "group": ["@/modules/*", "@/modules/*/*", "@/app", "@/app/*"],
                 "message": "shared/ and config/ must not depend on features. Dependencies flow modules -> shared -> config."
               }
             ]
@@ -80,28 +53,18 @@
       }
     },
     {
-      "files": [
-        "apps/*/src/config/**"
-      ],
+      "files": ["apps/*/src/config/**"],
       "rules": {
         "no-restricted-imports": [
           "error",
           {
             "patterns": [
               {
-                "group": [
-                  "@/modules/*",
-                  "@/modules/*/*",
-                  "@/app",
-                  "@/app/*"
-                ],
+                "group": ["@/modules/*", "@/modules/*/*", "@/app", "@/app/*"],
                 "message": "shared/ and config/ must not depend on features. Dependencies flow modules -> shared -> config."
               },
               {
-                "group": [
-                  "@/shared",
-                  "@/shared/*"
-                ],
+                "group": ["@/shared", "@/shared/*"],
                 "message": "config/ is the base layer and must not import from shared/."
               }
             ]
@@ -110,22 +73,14 @@
       }
     },
     {
-      "files": [
-        "packages/contracts/**"
-      ],
+      "files": ["packages/contracts/**"],
       "rules": {
         "no-restricted-imports": [
           "error",
           {
             "patterns": [
               {
-                "group": [
-                  "react",
-                  "react/*",
-                  "axios",
-                  "@tanstack/*",
-                  "@ava/*"
-                ],
+                "group": ["react", "react/*", "axios", "@tanstack/*", "@ava/*"],
                 "message": "contracts describes the wire and is shared by web, mobile and desktop: depend on zod only."
               }
             ]

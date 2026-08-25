@@ -4,6 +4,7 @@ import {
   TRAIT_COLOR_TEMP,
   TRAIT_POWER,
   supports,
+  type ApplyTargetRequest,
   type DeviceDto,
   type TraitValue,
 } from "@ava/contracts";
@@ -74,25 +75,36 @@ export function useDeviceControl() {
   );
 }
 
-export function useRoomPower() {
+/**
+ * Push a batch of trait writes, showing them locally before the hub answers.
+ *
+ * Shared by the room switch and by scenes, because a scene is nothing more than
+ * a batch of writes someone saved earlier — there is no second code path for
+ * replaying one, and so no second place for the optimistic copy to drift.
+ */
+export function useApplyTargets() {
   const queryClient = useQueryClient();
 
   return useCallback(
-    async (devices: DeviceDto[], on: boolean) => {
-      const targets = devices
-        .filter((device) => device.status !== "offline" && supports(device, TRAIT_POWER))
-        .map((device) => ({ device_id: device.id, trait: TRAIT_POWER, value: on }));
-
+    async (targets: ApplyTargetRequest[]) => {
       if (targets.length === 0) {
         toast.error("Nothing here can be switched");
 
         return;
       }
 
-      const ids = new Set(targets.map((target) => target.device_id));
+      const byDevice = new Map<string, ApplyTargetRequest[]>();
+      for (const target of targets) {
+        byDevice.set(target.device_id, [...(byDevice.get(target.device_id) ?? []), target]);
+      }
 
       queryClient.setQueryData<DeviceDto[]>(deviceQueries.list().queryKey, (current) =>
-        current?.map((entry) => (ids.has(entry.id) ? applyLocally(entry, TRAIT_POWER, on) : entry)),
+        current?.map((entry) =>
+          (byDevice.get(entry.id) ?? []).reduce(
+            (device, target) => applyLocally(device, target.trait, target.value),
+            entry,
+          ),
+        ),
       );
 
       try {
@@ -107,5 +119,19 @@ export function useRoomPower() {
       }
     },
     [queryClient],
+  );
+}
+
+export function useRoomPower() {
+  const apply = useApplyTargets();
+
+  return useCallback(
+    (devices: DeviceDto[], on: boolean) =>
+      apply(
+        devices
+          .filter((device) => device.status !== "offline" && supports(device, TRAIT_POWER))
+          .map((device) => ({ device_id: device.id, trait: TRAIT_POWER, value: on })),
+      ),
+    [apply],
   );
 }

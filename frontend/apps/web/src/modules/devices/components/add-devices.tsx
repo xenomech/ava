@@ -78,7 +78,9 @@ export function AddDevices({
 
       <Drawer open={open} onOpenChange={setOpen}>
         <DrawerContent className="max-h-[80dvh]">
-          <DrawerTitle className="px-5 pt-2 text-title font-semibold">Add to {roomName}</DrawerTitle>
+          <DrawerTitle className="px-5 pt-2 text-title font-semibold">
+            Add to {roomName}
+          </DrawerTitle>
           <DrawerDescription className="px-5 pb-1 text-small text-muted">
             {candidates.length === 0
               ? "Every device you have is already in here."

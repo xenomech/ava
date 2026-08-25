@@ -7,6 +7,7 @@ import {
   numberOf,
   supports,
   type DeviceDto,
+  type SceneDto,
 } from "@ava/contracts";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -14,6 +15,7 @@ import { useEffect, useState } from "react";
 
 import { hubQueries } from "@/modules/hub";
 import { RoomHeading, rememberRoom, useRoomActions, useRooms } from "@/modules/rooms";
+import { SceneRow, useApplyScene, useArmedScene, useScenes } from "@/modules/scenes";
 import { Loader } from "@/shared/components/loader";
 import { useMediaQuery } from "@/shared/hooks/use-media-query";
 import { parseColor, warmth } from "@/shared/lib/color";
@@ -54,6 +56,10 @@ export function RoomPage() {
   const setRoomPower = useRoomPower();
   const beside = useMediaQuery(BESIDE);
 
+  const { scenes } = useScenes(roomId);
+  const { armed, arm } = useArmedScene(roomId, scenes);
+  const applyScene = useApplyScene();
+
   /* The sweep is fire-and-forget: `play` remounts it so a second flick
      restarts the animation instead of being swallowed mid-flight. */
   const [sweep, setSweep] = useState({ play: 0, direction: "on" as "on" | "off" });
@@ -93,9 +99,27 @@ export function RoomPage() {
   const lit = kelvinToCss(kelvin);
   const palette = roomPalette(inRoom, lit);
 
+  /* Up means whichever scene the row is pointed at, and "everything on" when
+     that is none. Down is always down: a scene describes a room that is on, so
+     there is nothing for it to say about turning the room off. */
   const flick = (next: boolean) => {
     setSweep((current) => ({ play: current.play + 1, direction: next ? "on" : "off" }));
+
+    if (next && armed) {
+      void applyScene(armed);
+
+      return;
+    }
+
     void setRoomPower(inRoom, next);
+  };
+
+  const pick = (scene: SceneDto | null) => {
+    arm(scene?.id ?? null);
+    setSweep((current) => ({ play: current.play + 1, direction: "on" }));
+
+    if (scene) void applyScene(scene);
+    else void setRoomPower(inRoom, true);
   };
 
   const close = () => void navigate({ to: "/rooms/$roomId", params: { roomId }, replace: true });
@@ -151,13 +175,24 @@ export function RoomPage() {
               {selected ? (
                 <DeviceOnStage key={selected.id} device={selected} level={dragging} />
               ) : (
-                <RoomSwitch
-                  on={on > 0}
-                  disabled={switchable.length === 0}
-                  color={lit}
-                  label={`${room.name} lights`}
-                  onFlick={flick}
-                />
+                <div className="grid min-h-0 w-full justify-items-center gap-4">
+                  <RoomSwitch
+                    on={on > 0}
+                    disabled={switchable.length === 0}
+                    color={lit}
+                    label={`${room.name} lights`}
+                    onFlick={flick}
+                  />
+
+                  <SceneRow
+                    roomId={room.id}
+                    roomName={room.name}
+                    devices={inRoom}
+                    scenes={scenes}
+                    armedId={armed?.id ?? null}
+                    onPick={pick}
+                  />
+                </div>
               )}
             </div>
 

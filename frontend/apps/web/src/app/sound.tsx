@@ -37,7 +37,9 @@ export function SoundEffects() {
     document.addEventListener("pointerdown", click, { capture: true });
 
     return () => {
-      document.removeEventListener("pointerdown", unlock, { capture: true } as EventListenerOptions);
+      document.removeEventListener("pointerdown", unlock, {
+        capture: true,
+      } as EventListenerOptions);
       document.removeEventListener("pointerdown", click, { capture: true } as EventListenerOptions);
     };
   }, []);

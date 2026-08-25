@@ -43,8 +43,7 @@ export function useFlow(
   // state meant a rejected step wrote to the mirror and left the cache holding
   // a different answer.
   const flow = flowQuery.data ?? null;
-  const setFlow = (next: FlowStateDto) =>
-    queryClient.setQueryData(flowQueries.key(flowType), next);
+  const setFlow = (next: FlowStateDto) => queryClient.setQueryData(flowQueries.key(flowType), next);
 
   const [values, setValues] = useState<Record<string, string>>({});
 

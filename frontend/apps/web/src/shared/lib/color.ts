@@ -1,8 +1,7 @@
 export type Rgb = [number, number, number];
 export type Hsl = { h: number; s: number; l: number };
 
-const clamp = (value: number, low: number, high: number) =>
-  Math.min(Math.max(value, low), high);
+const clamp = (value: number, low: number, high: number) => Math.min(Math.max(value, low), high);
 
 export function rgbToCss([r, g, b]: Rgb): string {
   return `rgb(${r} ${g} ${b})`;
@@ -47,7 +46,10 @@ export function parseColor(value: string): Rgb | null {
     return hslToRgb({ h: Number(hsl[1]), s: Number(hsl[2]) / 100, l: Number(hsl[3]) / 100 });
   }
 
-  const parts = /^rgba?\(([^)]+)\)$/i.exec(text)?.[1]?.split(/[\s,/]+/).filter(Boolean);
+  const parts = /^rgba?\(([^)]+)\)$/i
+    .exec(text)?.[1]
+    ?.split(/[\s,/]+/)
+    .filter(Boolean);
 
   if (!parts || parts.length < 3) return null;
 

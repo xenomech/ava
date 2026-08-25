@@ -7,7 +7,11 @@ import { useRef, type ClipboardEvent, type KeyboardEvent } from "react";
 const GROUP = 4;
 const LENGTH = GROUP * 2;
 
-const clean = (value: string) => value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, LENGTH);
+const clean = (value: string) =>
+  value
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "")
+    .slice(0, LENGTH);
 
 /** "BXS8568F" -> "BXS8-568F", the shape the server issued. */
 const format = (raw: string) =>
