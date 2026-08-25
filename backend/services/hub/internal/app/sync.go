@@ -2,10 +2,12 @@ package app
 
 import (
 	"context"
+	"encoding/json"
 	"sync"
 	"time"
 
 	"ava/pkg/logger"
+	"ava/pkg/wire"
 
 	"ava/hub/internal/device"
 	"ava/hub/internal/device/adapters"
@@ -77,10 +79,47 @@ func (a *App) syncOnce(ctx context.Context) {
 		return
 	}
 
+	a.publishSweep(ctx, entries)
+
 	logger.Info("DEVICES_SYNCED",
 		logger.Int("reported", len(entries)),
 		logger.Int("known", len(synced)),
 	)
+}
+
+// publishSweep reports what the sweep found, over the channel that merges.
+//
+// State used to travel with the sync itself, which replaced a device's stored
+// reading outright — and a sweep spends several seconds discovering before it
+// reports, so a snapshot taken six seconds ago landed on top of a change made
+// one second ago. The light was right and the app said otherwise, which is the
+// worst way round for it to be wrong.
+//
+// Sending it here instead gives state exactly one writer, and that writer
+// merges: a reading can correct a trait or retire it, but it cannot undo
+// something newer than itself.
+func (a *App) publishSweep(ctx context.Context, entries []inventory.Entry) {
+	if a.mqtt == nil || a.topics.State == "" {
+		return
+	}
+
+	for at := range entries {
+		entry := &entries[at]
+
+		payload, err := json.Marshal(wire.StateEvent{
+			DeviceID: entry.Spec.ID,
+			State:    entry.State,
+		})
+		if err != nil {
+			continue
+		}
+
+		if err := a.mqtt.Publish(ctx, a.topics.State, payload, false); err != nil {
+			logger.Warn("SWEEP_PUBLISH_FAILED", logger.String("error", err.Error()))
+
+			return
+		}
+	}
 }
 
 func (r *registry) get(externalID string) (device.Device, bool) {

@@ -152,13 +152,15 @@ func pilotState(result *pilotResult) wire.State {
 		state[wire.TraitBrightness] = wire.Number(float64(result.Dimming))
 	}
 
-	if temp := optionalNumber(result.Temp); temp.IsSet() {
-		state[wire.TraitColorTemp] = temp
-	}
-
-	if color := optionalColor(result.R, result.G, result.B); color.IsSet() {
-		state[wire.TraitColor] = color
-	}
+	/* Both are always named, one of them with no value. A bulb holds a colour or
+	   a temperature and never both, so saying nothing about the one it is not
+	   using is not the same as saying it has stopped: this state is merged into
+	   what is already stored, and an omission would leave the retired trait
+	   sitting there for ever. An empty value is how a trait says it no longer
+	   applies. Callers that need a snapshot rather than a patch drop the empties
+	   with State.Settled. */
+	state[wire.TraitColorTemp] = optionalNumber(result.Temp)
+	state[wire.TraitColor] = optionalColor(result.R, result.G, result.B)
 
 	return state
 }

@@ -109,9 +109,20 @@ func ToSyncItems(entries []Entry) []wire.DeviceReport {
 			Model:        entry.Spec.Name,
 			IP:           entry.Spec.IP,
 			Capabilities: entry.Spec.Capabilities,
-			State:        entry.State,
+			/* Only the traits that have a value. This is the record a device is
+			   created from, and a brand new row has nothing to retract — the
+			   empties exist for the merge that goes over the broker, and stored
+			   verbatim they become a `"color": null` sitting in the device's
+			   state, which is not something a trait can be. */
+			State: settled(entry.State),
 		})
 	}
 
 	return items
+}
+
+func settled(state wire.State) wire.State {
+	set, _ := state.Settled()
+
+	return set
 }

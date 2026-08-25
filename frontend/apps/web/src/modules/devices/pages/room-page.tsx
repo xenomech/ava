@@ -63,7 +63,7 @@ export function RoomPage() {
   const setRoomPower = useRoomPower();
   const beside = useMediaQuery(BESIDE);
 
-  const { scenes } = useScenes(roomId);
+  const { scenes, isPending: scenesPending } = useScenes(roomId);
   const { armed, arm } = useArmedScene(roomId, scenes);
   const applyScene = useApplyScene();
 
@@ -206,6 +206,7 @@ export function RoomPage() {
                     roomName={room.name}
                     devices={inRoom}
                     scenes={scenes}
+                    scenesReady={!scenesPending}
                     armedId={armed?.id ?? null}
                     onArm={(scene) => arm(scene?.id ?? null)}
                     onApply={play}

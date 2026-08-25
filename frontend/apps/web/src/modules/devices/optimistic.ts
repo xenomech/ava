@@ -56,6 +56,15 @@ export function applyLocally(device: DeviceDto, trait: string, value: TraitValue
  * the real state finally arrived. Two corrections, neither of them wanted.
  */
 export function claim(deviceID: string, trait: string, value: TraitValue): void {
+  /* Writing one of these retires the other, so holding on to the one you have
+     just replaced is holding on to something that is no longer true. Both were
+     kept independently, and reconcile then applied them in turn — so setting a
+     colour and then a temperature left the panel showing whichever claim
+     happened to be applied last, while the bulb showed the one actually sent.
+     The light was right and the app argued with it for six seconds. */
+  if (trait === TRAIT_COLOR) release(deviceID, TRAIT_COLOR_TEMP);
+  if (trait === TRAIT_COLOR_TEMP) release(deviceID, TRAIT_COLOR);
+
   pending.set(keyFor(deviceID, trait), { value, at: Date.now() });
 }
 

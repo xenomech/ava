@@ -34,6 +34,7 @@ export function SceneRow({
   roomName,
   devices,
   scenes,
+  scenesReady,
   armedId,
   onArm,
   onApply,
@@ -43,6 +44,8 @@ export function SceneRow({
   /** The devices in this room, for previews and for what a new scene captures. */
   devices: DeviceDto[];
   scenes: SceneDto[];
+  /** Whether the scene list has arrived, so the rail knows when to take aim. */
+  scenesReady: boolean;
   /** `null` is the default: everything on. */
   armedId: string | null;
   /** The centred card changed. Aims the switch; changes nothing in the room. */
@@ -75,30 +78,49 @@ export function SceneRow({
   const switchable = devices.filter((device) => supports(device, TRAIT_POWER));
   const everythingOn = switchable.length > 0 && switchable.every(isOn);
 
-  /* Put the armed card under the caret before the first paint, so the rail does
-     not visibly slide into place every time the room is opened. */
+  /* Put the armed card in the middle, and put it there again if the answer
+     changes underneath.
+   *
+   * Scenes arrive from a query, so on a cold load the rail mounts before anyone
+   * knows what is armed and centres on "All on" by default. Running this only
+   * on mount meant it stayed there: a room you had aimed at Evening came back
+   * pointing at everything, and stayed wrong until you touched the rail.
+   *
+   * Keyed on the list arriving rather than on what is armed. Arming is what
+   * scrolling does, so re-centring in response to it would have this effect
+   * wrestling the very scroll that caused it. */
   useLayoutEffect(() => {
     const node = rail.current;
     const card = node?.querySelector<HTMLElement>(`[data-stop="${armedStop}"]`);
-    if (!node || !card) return;
 
     /* scrollIntoView rather than arithmetic on offsetLeft, which is measured
        from the nearest positioned ancestor — the room, not the rail — and left
        the armed card sitting a little to one side of the caret. */
-    settling.current = true;
-    card.scrollIntoView({ behavior: "instant", inline: "center", block: "nearest" });
-    setCentred(armedStop);
+    if (node && card && centred !== armedStop) {
+      settling.current = true;
+      card.scrollIntoView({ behavior: "instant", inline: "center", block: "nearest" });
+      setCentred(armedStop);
+    }
 
-    /* Two frames: one for the scroll to be applied, one for its event to have
+    /* Cleared on every run, including the ones with nothing to do. Returning
+       early and leaving it raised is how the rail went completely deaf: the
+       suppression is only meant to cover a scroll this effect started, and on a
+       load that was already pointing the right way it started none — so nothing
+       ever lowered it again and no amount of scrolling armed anything.
+     *
+       Two frames: one for the scroll to be applied, one for its event to have
        been delivered. */
     requestAnimationFrame(() =>
       requestAnimationFrame(() => {
         settling.current = false;
       }),
     );
-    // Only when the room changes. Scrolling drives it from then on.
+    /* `centred` is read to decide whether there is anything to do, not to drive
+       this — listing it would re-enter on the state this effect itself sets. */
+    /* Deliberately not `armedStop`: see above. It is read here to decide where
+       to go, not to decide when. */
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roomId]);
+  }, [roomId, scenesReady]);
 
   /* Measured with rects, not offsetLeft. offsetLeft is relative to the nearest
      positioned ancestor and scrollLeft to the rail's own content box, and
