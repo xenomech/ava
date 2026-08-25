@@ -87,7 +87,7 @@ func Bootstrap(ctx context.Context) (*App, error) {
 		DB:      database,
 		Service: service,
 		Broker:  messages,
-		Fiber:   buildFiber(cfg, service),
+		Fiber:   buildFiber(ctx, cfg, service),
 	}, nil
 }
 
@@ -140,7 +140,7 @@ func disconnect(database *gorm.DB) {
 	}
 }
 
-func buildFiber(cfg *config.Config, service *services.Service) *fiber.App {
+func buildFiber(life context.Context, cfg *config.Config, service *services.Service) *fiber.App {
 	server := fiber.New(fiber.Config{
 		ReadTimeout: readTimeout,
 		IdleTimeout: idleTimeout,
@@ -161,7 +161,7 @@ func buildFiber(cfg *config.Config, service *services.Service) *fiber.App {
 	server.Use(middleware.SecurityHeaders(cfg.ServerEnv))
 	server.Use(middleware.VerifyOrigin(cfg.CORSAllowedOrigins))
 
-	routes.AddRoutes(server, controller.NewController(service), mw)
+	routes.AddRoutes(server, controller.NewController(life, service), mw)
 
 	return server
 }

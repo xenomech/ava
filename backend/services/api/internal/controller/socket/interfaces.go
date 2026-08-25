@@ -19,10 +19,11 @@ type Commander interface {
 }
 
 type Controller struct {
+	life    context.Context
 	events  eventsvc.Service
 	devices Commander
 }
 
-func NewController(events eventsvc.Service, devices devicesvc.Service) *Controller {
-	return &Controller{events: events, devices: devices}
+func NewController(life context.Context, events eventsvc.Service, devices devicesvc.Service) *Controller {
+	return &Controller{life: life, events: events, devices: devices}
 }
