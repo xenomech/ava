@@ -1,7 +1,4 @@
 import {
-  TRAIT_BRIGHTNESS,
-  TRAIT_COLOR,
-  TRAIT_COLOR_TEMP,
   TRAIT_POWER,
   supports,
   type ApplyTargetRequest,
@@ -15,6 +12,7 @@ import { toast } from "sonner";
 import { useAvaSocket } from "@/shared/realtime";
 import { isApiError } from "@/config/http/request";
 import { applyTargets, sendCommand } from "./api";
+import { applyLocally, claim, release } from "./optimistic";
 import { deviceQueries } from "./queries";
 
 export function useDevices() {
@@ -28,29 +26,14 @@ export function useDevices() {
   };
 }
 
-function applyLocally(device: DeviceDto, trait: string, value: TraitValue): DeviceDto {
-  const state = { ...device.state, [trait]: value };
-
-  if (trait === TRAIT_BRIGHTNESS && typeof value === "number") {
-    state[TRAIT_POWER] = value > 0;
-  }
-
-  /* A light shows a colour or a temperature, never both, and the hub clears
-     whichever one you did not set. The optimistic copy has to say the same
-     thing: while it claimed a light had both, the colour panel read the stale
-     temperature, stayed on the White tab, and so refused to switch back to it. */
-  if (trait === TRAIT_COLOR) delete state[TRAIT_COLOR_TEMP];
-  if (trait === TRAIT_COLOR_TEMP) delete state[TRAIT_COLOR];
-
-  return { ...device, state };
-}
-
 export function useDeviceControl() {
   const queryClient = useQueryClient();
   const socket = useAvaSocket();
 
   return useCallback(
     (device: DeviceDto, trait: string, value: TraitValue) => {
+      claim(device.id, trait, value);
+
       queryClient.setQueryData<DeviceDto[]>(deviceQueries.list().queryKey, (current) =>
         current?.map((entry) =>
           entry.id === device.id ? applyLocally(entry, trait, value) : entry,
@@ -67,6 +50,7 @@ export function useDeviceControl() {
       if (sent) return;
 
       void sendCommand(device.id, { trait, value }).catch((error: unknown) => {
+        release(device.id, trait);
         toast.error(isApiError(error) ? error.message : "The hub did not accept that");
         void queryClient.invalidateQueries({ queryKey: deviceQueries.all() });
       });
@@ -95,6 +79,7 @@ export function useApplyTargets() {
 
       const byDevice = new Map<string, ApplyTargetRequest[]>();
       for (const target of targets) {
+        claim(target.device_id, target.trait, target.value);
         byDevice.set(target.device_id, [...(byDevice.get(target.device_id) ?? []), target]);
       }
 
@@ -114,6 +99,8 @@ export function useApplyTargets() {
           toast.warning(`${result.applied.length} changed, ${result.skipped.length} skipped`);
         }
       } catch (error: unknown) {
+        for (const target of targets) release(target.device_id, target.trait);
+
         toast.error(isApiError(error) ? error.message : "The hub did not accept that");
         void queryClient.invalidateQueries({ queryKey: deviceQueries.all() });
       }
