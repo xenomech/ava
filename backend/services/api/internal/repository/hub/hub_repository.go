@@ -202,10 +202,15 @@ func (r *hubRepository) SetPresence(
 
 		was := current.IsOnline()
 
-		fields := map[string]any{"online": online, "updated_at": at}
-		if online {
-			fields["last_seen_at"] = at
-		}
+		/* Recorded whether or not the hub is reachable, because "when we last
+		   heard from it" and "can it be reached" are different questions and the
+		   answer to the second is the interesting one. A hub whose broker
+		   connection has failed still heartbeats over HTTP every thirty seconds,
+		   and only by keeping both facts can the room say "alive but I cannot
+		   reach it" instead of flattening that into plain offline. IsOnline
+		   needs both to be true, so nothing here makes a hub look reachable when
+		   it is not. */
+		fields := map[string]any{"online": online, "last_seen_at": at, "updated_at": at}
 
 		if err := dbTx.Model(&current).Clauses(clause.Returning{}).Updates(fields).Error; err != nil {
 			return err

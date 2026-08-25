@@ -13,7 +13,7 @@ import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
-import { hubQueries } from "@/modules/hub";
+import { HubPill, hubQueries } from "@/modules/hub";
 import { RoomHeading, rememberRoom, useRoomActions, useRooms } from "@/modules/rooms";
 import {
   SceneRow,
@@ -102,6 +102,13 @@ export function RoomPage() {
   const hub = (hubs.data ?? []).find((entry) => entry.id === selected?.hub_id);
   const hubOffline = hub !== undefined && !hub.online;
 
+  /* The hubs actually answering for this room, rather than every hub on the
+     account. A room is a promise about a handful of bulbs, and only the hubs
+     holding those bulbs have any bearing on whether it can be kept. */
+  const serving = (hubs.data ?? []).filter((entry) =>
+    inRoom.some((device) => device.hub_id === entry.id),
+  );
+
   const kelvin = roomKelvin(inRoom);
   /* The armed scene's colour, not the room's current one. Scrolling the
      carousel arms without applying, so this is what makes that gesture visible:
@@ -171,6 +178,10 @@ export function RoomPage() {
               room={room}
               onRename={(name) => actions.rename.mutate({ id: room.id, name })}
             />
+
+            {serving.map((entry) => (
+              <HubPill key={entry.id} hub={entry} />
+            ))}
           </div>
         </header>
 
