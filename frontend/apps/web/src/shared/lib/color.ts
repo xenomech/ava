@@ -117,18 +117,39 @@ export function hslToRgb({ h, s, l }: Hsl): Rgb {
  */
 export const warmth = ([r, , b]: Rgb) => r - b;
 
-/**
- * Hue alone, for the colour wheel: the picker works in hue and lets the bulb
- * supply its own saturation and brightness.
- */
-export function cssToHue(css: string): number {
-  const rgb = parseColor(css);
+/** A colour a bulb can be asked for: a hue, and how much of it. */
+export type Tint = { hue: number; saturation: number };
 
-  return rgb ? rgbToHsl(rgb).h : 0;
+/**
+ * The hue and saturation of a colour, for the picker to sit on.
+ *
+ * Lightness is deliberately dropped. A bulb already has a brightness control,
+ * and a picker that also offered lightness would give two ways to dim one lamp
+ * that disagree with each other.
+ */
+export function cssToTint(css: string): Tint {
+  const rgb = parseColor(css);
+  if (!rgb) return { hue: 0, saturation: 100 };
+
+  const { h, s } = rgbToHsl(rgb);
+
+  return { hue: h, saturation: Math.round(s * 100) };
 }
 
-export function hueToHex(hue: number): string {
-  return `#${hslToRgb({ h: hue, s: 1, l: 0.5 })
+/**
+ * A hue at a given saturation, as the hex a bulb wants.
+ *
+ * Saturation used to be pinned at 1, which quietly meant the slider could only
+ * reach the outer rim of the wheel: every pastel, every muted or dusty shade,
+ * and white itself were unreachable no matter where you dragged. Worse, several
+ * of the offered swatches lived inside that unreachable region, so picking one
+ * and then touching the slider threw the light to a colour you had not asked
+ * for.
+ */
+export function tintToHex({ hue, saturation }: Tint): string {
+  return `#${hslToRgb({ h: hue, s: clamp01(saturation / 100), l: 0.5 })
     .map((channel) => channel.toString(16).padStart(2, "0"))
     .join("")}`;
 }
+
+const clamp01 = (value: number) => Math.min(Math.max(value, 0), 1);

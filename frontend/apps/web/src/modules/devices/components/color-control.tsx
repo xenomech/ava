@@ -1,7 +1,7 @@
 import { Slider, Tabs, TabsContent, TabsList, TabsTrigger } from "@ava/ui";
 import { useState } from "react";
 
-import { cssToHue, hueToHex } from "@/shared/lib/color";
+import { cssToTint, parseColor, tintToHex, type Tint } from "@/shared/lib/color";
 import { useLiveSlider } from "../use-live-slider";
 
 const KELVIN_STEP = 50;
@@ -9,17 +9,32 @@ const KELVIN_STEP = 50;
 /** Where the white slider starts on a bulb that has only ever shown colour. */
 const DEFAULT_WHITE = 2700;
 
+/**
+ * Ten colours a room actually gets set to, warm to cool.
+ *
+ * Written as the two numbers the sliders work in rather than as hex, so every
+ * swatch is somewhere the sliders can actually land. They were hex before, and
+ * hex carries a lightness the picker does not model — so tapping Lagoon and
+ * then so much as changing tabs handed the bulb `#00c5ff` instead of the
+ * `#4bd6ff` you had chosen. A palette whose own colours it cannot reproduce is
+ * a palette that argues with you.
+ *
+ * "Cool white" used to close the row and was a different trap: it asks for RGB
+ * white, which is not the tunable white on the other tab, and left the panel
+ * showing Colour while the lamp looked like it was showing White. Saturation
+ * reaches it now for anyone who wants it.
+ */
 const SWATCHES = [
-  { css: "#ff5a3c", name: "Ember" },
-  { css: "#ffb347", name: "Amber" },
-  { css: "#ffe28a", name: "Candle" },
-  { css: "#b8ff6b", name: "Lime" },
-  { css: "#4bffb5", name: "Mint" },
-  { css: "#4bd6ff", name: "Lagoon" },
-  { css: "#6b8cff", name: "Dusk" },
-  { css: "#b46bff", name: "Violet" },
-  { css: "#ff6bd6", name: "Blossom" },
-  { css: "#ffffff", name: "Cool white" },
+  { hue: 12, saturation: 90, name: "Ember" },
+  { hue: 32, saturation: 95, name: "Amber" },
+  { hue: 44, saturation: 72, name: "Candle" },
+  { hue: 28, saturation: 34, name: "Sand" },
+  { hue: 92, saturation: 78, name: "Lime" },
+  { hue: 156, saturation: 70, name: "Mint" },
+  { hue: 194, saturation: 85, name: "Lagoon" },
+  { hue: 224, saturation: 72, name: "Dusk" },
+  { hue: 274, saturation: 68, name: "Violet" },
+  { hue: 320, saturation: 72, name: "Blossom" },
 ] as const;
 
 const KELVIN_RAMP =
@@ -71,19 +86,46 @@ export function ColorControl({
   if (kelvin !== null && kelvin !== lastWhite) setLastWhite(kelvin);
 
   const white = useLiveSlider(lastWhite, onWhitePreview, onWhite);
-  const hue = useLiveSlider(
-    Math.round((cssToHue(color) / 360) * 100),
-    (percent) => onColor(hueToHex((percent / 100) * 360)),
-    (percent) => onColor(hueToHex((percent / 100) * 360)),
-  );
 
   const mode = showColor && kelvin === null ? "color" : "white";
+
+  /* The colour the lamp is holding, kept while it shows white — otherwise the
+     sliders read the kelvin ramp's own orange, and coming back to Colour landed
+     on a shade nobody had chosen. */
+  const [lastTint, setLastTint] = useState(() => cssToTint(color));
+  const shown = mode === "color" ? cssToTint(color) : lastTint;
+
+  if (
+    mode === "color" &&
+    (shown.hue !== lastTint.hue || shown.saturation !== lastTint.saturation)
+  ) {
+    setLastTint(shown);
+  }
+
+  const send = (next: Partial<Tint>) => {
+    const tint = { ...shown, ...next };
+
+    setLastTint(tint);
+    onColor(tintToHex(tint));
+  };
+
+  const hue = useLiveSlider(
+    Math.round(shown.hue),
+    (value) => send({ hue: value }),
+    (value) => send({ hue: value }),
+  );
+
+  const saturation = useLiveSlider(
+    shown.saturation,
+    (value) => send({ saturation: value }),
+    (value) => send({ saturation: value }),
+  );
 
   const choose = (next: string) => {
     if (next === mode) return;
 
     if (next === "white") onWhite(lastWhite);
-    else onColor(hueToHex((hue.value / 100) * 360));
+    else onColor(tintToHex(lastTint));
   };
 
   return (
@@ -118,11 +160,12 @@ export function ColorControl({
       <TabsContent value="color" className={showColor ? "grid gap-2.5" : "hidden"}>
         <Slider
           value={[hue.value]}
-          max={100}
+          max={360}
           step={1}
           variant="marker"
           disabled={disabled}
           aria-label="Hue"
+          aria-valuetext={`${hue.value} degrees`}
           /* Without onValueChange a controlled Radix thumb does not move at
              all: the slider looked broken because it was frozen at whatever
              the device last reported. */
@@ -131,16 +174,35 @@ export function ColorControl({
           style={{ background: HUE_RAMP }}
         />
 
+        {/* The other half of the wheel. Hue says which colour, this says how
+            much of it, and between them every shade the swatches offer becomes
+            reachable by hand. The track is drawn in the hue you are on, so it
+            previews its own outcome. */}
+        <Slider
+          value={[saturation.value]}
+          max={100}
+          step={1}
+          variant="marker"
+          disabled={disabled}
+          aria-label="Saturation"
+          aria-valuetext={`${saturation.value} percent`}
+          onValueChange={([v]) => saturation.change(v ?? 0)}
+          onValueCommit={([v]) => saturation.release(v ?? 0)}
+          style={{
+            background: `linear-gradient(to right, ${tintToHex({ hue: hue.value, saturation: 0 })}, ${tintToHex({ hue: hue.value, saturation: 100 })})`,
+          }}
+        />
+
         <div className="grid grid-cols-5 gap-1.5">
           {SWATCHES.map((s) => (
             <button
-              key={s.css}
+              key={s.name}
               type="button"
               disabled={disabled}
               aria-label={s.name}
-              aria-pressed={color === s.css}
-              onClick={() => onColor(s.css)}
-              style={{ background: s.css }}
+              aria-pressed={sameColor(color, tintToHex(s))}
+              onClick={() => send(s)}
+              style={{ background: tintToHex(s) }}
               className="aspect-square rounded-sm border border-border transition-transform duration-150 ease-out active:scale-95 disabled:opacity-40 aria-pressed:ring-2 aria-pressed:ring-fg aria-pressed:ring-offset-2 aria-pressed:ring-offset-surface"
             />
           ))}
@@ -148,4 +210,20 @@ export function ColorControl({
       </TabsContent>
     </Tabs>
   );
+}
+
+/**
+ * Whether two colours are the same lamp setting.
+ *
+ * Compared as numbers, not as strings: the same colour arrives as `#FFB347`
+ * from one place and `rgb(255 179 71)` from another, so a string comparison
+ * meant a swatch you had just tapped never looked tapped.
+ */
+function sameColor(left: string, right: string): boolean {
+  const a = parseColor(left);
+  const b = parseColor(right);
+
+  if (!a || !b) return false;
+
+  return a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
 }
