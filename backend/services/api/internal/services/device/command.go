@@ -93,12 +93,23 @@ func (s *deviceService) ApplyReportedState(
 	externalID string,
 	state wire.State,
 ) error {
-	patch, err := json.Marshal(state)
+	/* A trait reported as null is a retraction, not a value. Storing it verbatim
+	   left `"color": null` sitting in the device's state, which is not something
+	   a trait can be — the web client validates every device in one request, so
+	   that single null made the whole house come back empty. */
+	set, cleared := state.Settled()
+
+	patch, err := json.Marshal(set)
 	if err != nil {
 		return fmt.Errorf("encode reported state: %w", err)
 	}
 
-	updated, err := s.deviceRepo.ApplyState(ctx, hubID, externalID, patch)
+	retire := make([]string, 0, len(cleared))
+	for _, trait := range cleared {
+		retire = append(retire, string(trait))
+	}
+
+	updated, err := s.deviceRepo.ApplyState(ctx, hubID, externalID, patch, retire)
 	if err != nil {
 		if serrors.Is(err, devicerepo.ErrDeviceNotFound) {
 			return ErrDeviceNotFound

@@ -176,14 +176,28 @@ func (r *deviceRepository) ApplyState(
 	hubID uuid.UUID,
 	externalID string,
 	state json.RawMessage,
+	cleared []string,
 ) (*model.Device, error) {
 	var updated model.Device
+
+	/* Merge what was reported, then remove the traits reported as null. Built
+	   one `- ?` at a time rather than as an array parameter so it does not
+	   depend on the driver encoding a text[]; a device reports a handful of
+	   traits, never enough for the difference to matter. */
+	merge := "coalesce(state, '{}'::jsonb) || ?::jsonb"
+	args := []any{string(state)}
+
+	for _, trait := range cleared {
+		merge += " - ?::text"
+
+		args = append(args, trait)
+	}
 
 	result := r.db.WithContext(ctx).Model(&updated).
 		Clauses(clause.Returning{}).
 		Where("hub_id = ? AND external_id = ?", hubID, externalID).
 		Updates(map[string]any{
-			"state":        gorm.Expr("coalesce(state, '{}'::jsonb) || ?::jsonb", string(state)),
+			"state":        gorm.Expr(merge, args...),
 			"status":       model.DeviceStatusOnline,
 			"last_seen_at": time.Now(),
 			"updated_at":   time.Now(),
