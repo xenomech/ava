@@ -56,13 +56,20 @@ export function RoomSwitch({
   );
 
   /* Written straight to the node. A pointermove fires far too often to be worth
-     a render, and nothing else on the page reads the offset. */
+     a render, and nothing else on the page reads the offset.
+   *
+   * `translate`, not `transform`. The resting positions come from Tailwind's
+   * translate-y utilities, which set the separate `translate` property, so a
+   * `transform` written here does not replace them — it composes with them.
+   * From the off position that meant the class held the paddle down by its own
+   * height and the drag added the same distance again, shoving the thumb a full
+   * paddle further down the moment it was touched. */
   const place = (offset: number) => {
     const node = paddle.current;
     if (!node) return;
 
     node.style.transitionDuration = "0ms";
-    node.style.transform = `translate3d(0, ${offset}px, 0)`;
+    node.style.translate = `0 ${offset}px`;
   };
 
   const release = () => {
@@ -70,7 +77,7 @@ export function RoomSwitch({
     if (!node) return;
 
     node.style.transitionDuration = "";
-    node.style.transform = "";
+    node.style.translate = "";
   };
 
   const down = (event: PointerEvent<HTMLButtonElement>) => {
