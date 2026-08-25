@@ -31,10 +31,23 @@ type Options struct {
 	ClientID  string
 	Username  string
 	Password  string
-	WillTopic string
-	Will      []byte
-	Durable   bool
-	OnConnect func(client *Client)
+	// Credentials, when set, is asked for a username and password on every
+	// connection attempt, reconnects included, and takes precedence over the
+	// static pair above.
+	//
+	// A broker that rotates a client's password mid-session is otherwise
+	// unsurvivable: the credentials handed to the client at construction are
+	// the only ones it will ever present, so it retries the stale password
+	// until someone restarts the process. Asking each time turns a rotation
+	// into a reconnect.
+	//
+	// It is called from the library's connection goroutine, so an
+	// implementation that reads changing state has to do its own locking.
+	Credentials func() (username, password string)
+	WillTopic   string
+	Will        []byte
+	Durable     bool
+	OnConnect   func(client *Client)
 }
 
 type Client struct {
@@ -57,7 +70,12 @@ func Connect(ctx context.Context, opts *Options) (*Client, error) {
 		SetAutoReconnect(true).
 		SetConnectRetry(true).
 		SetConnectRetryInterval(5 * time.Second).
-		SetMaxReconnectInterval(time.Minute).
+		/* Short, because the common reason to be dropped here is a password
+		   rotation and the reconnect that follows is the whole command channel
+		   coming back. A minute of backoff spent presenting credentials that
+		   are about to be replaced anyway is a minute of a switch that does
+		   nothing. */
+		SetMaxReconnectInterval(15 * time.Second).
 		SetKeepAlive(30 * time.Second).
 		SetConnectionLostHandler(func(_ paho.Client, err error) {
 			logger.Warn("MQTT_DISCONNECTED", logger.Err(err))
@@ -72,7 +90,10 @@ func Connect(ctx context.Context, opts *Options) (*Client, error) {
 			}
 		})
 
-	if opts.Username != "" {
+	switch {
+	case opts.Credentials != nil:
+		config = config.SetCredentialsProvider(paho.CredentialsProvider(opts.Credentials))
+	case opts.Username != "":
 		config = config.SetUsername(opts.Username).SetPassword(opts.Password)
 	}
 
@@ -152,6 +173,16 @@ func (c *Client) Publish(ctx context.Context, topic string, payload []byte, reta
 	}
 
 	return nil
+}
+
+// Connected reports whether the client currently holds a session with the
+// broker.
+//
+// Worth asking, because losing one is quiet: the library reports a connection
+// dropping but says nothing at all about a reconnect attempt that is refused,
+// so a client with bad credentials retries forever and logs nothing either way.
+func (c *Client) Connected() bool {
+	return c != nil && c.inner != nil && c.inner.IsConnected()
 }
 
 func (c *Client) Close() {

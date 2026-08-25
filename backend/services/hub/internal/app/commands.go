@@ -27,13 +27,12 @@ func (a *App) startCommands(ctx context.Context, tokens *api.HubTokens) (*mqtt.C
 	}
 
 	client, err := mqtt.Connect(ctx, &mqtt.Options{
-		BrokerURL: a.cfg.MQTTBrokerURL,
-		ClientID:  "ava-hub-" + tokens.Hub.ID,
-		Username:  a.state.BrokerUsername,
-		Password:  a.state.BrokerPassword,
-		WillTopic: topics.Status,
-		Durable:   true,
-		Will:      offline,
+		BrokerURL:   a.cfg.MQTTBrokerURL,
+		ClientID:    "ava-hub-" + tokens.Hub.ID,
+		Credentials: a.brokerCredentials,
+		WillTopic:   topics.Status,
+		Durable:     true,
+		Will:        offline,
 		OnConnect: func(client *mqtt.Client) {
 			a.announce(ctx, client, topics, online)
 		},
