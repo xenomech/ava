@@ -12,6 +12,8 @@ import {
   type SceneTargetDto,
 } from "@ava/contracts";
 
+import { kelvinToCss } from "@/shared/lib/kelvin";
+
 /**
  * The room, frozen: what to save when someone says "remember this".
  *
@@ -86,6 +88,68 @@ export function matches(scene: SceneDto, devices: DeviceDto[]): boolean {
 
     return current === target.value;
   });
+}
+
+/** One device under a scene. `color: null` means the scene leaves it off. */
+export type ScenePreview = { id: string; color: string | null; level: number };
+
+/**
+ * The room as this scene would leave it, device by device.
+ *
+ * What a scene card draws instead of writing its name. A room has three or four
+ * fixtures, and a scene is mostly a statement about which of them are lit and
+ * how warmly — that is a picture, and a picture is read faster than "Evening".
+ *
+ * `null` is the default scene, everything on, which is stored nowhere: it is
+ * every device at whatever colour it is already holding.
+ */
+export function scenePreview(scene: SceneDto | null, devices: DeviceDto[]): ScenePreview[] {
+  return devices
+    .filter((device) => supports(device, TRAIT_POWER))
+    .map((device) => {
+      if (!scene) {
+        return { id: device.id, color: currentColor(device), level: currentLevel(device) };
+      }
+
+      const mine = scene.targets.filter((target) => target.device_id === device.id);
+      const power = mine.find((target) => target.trait === TRAIT_POWER);
+
+      if (power?.value !== true) return { id: device.id, color: null, level: 0 };
+
+      const color = mine.find((target) => target.trait === TRAIT_COLOR)?.value;
+      const kelvin = mine.find((target) => target.trait === TRAIT_COLOR_TEMP)?.value;
+      const level = mine.find((target) => target.trait === TRAIT_BRIGHTNESS)?.value;
+
+      return {
+        id: device.id,
+        color:
+          typeof color === "string" && color !== ""
+            ? color
+            : kelvinToCss(typeof kelvin === "number" ? kelvin : 2700),
+        level: typeof level === "number" ? level : 100,
+      };
+    });
+}
+
+/** The scene's own light, brightest wins, for the room to borrow while armed. */
+export function sceneColor(preview: ScenePreview[], fallback: string): string {
+  const lit = preview.filter((entry) => entry.color !== null);
+  if (lit.length === 0) return fallback;
+
+  return lit.reduce((a, b) => (b.level > a.level ? b : a)).color ?? fallback;
+}
+
+function currentColor(device: DeviceDto): string {
+  const picked = traitValue(device, TRAIT_COLOR);
+  if (typeof picked === "string" && picked !== "") return picked;
+
+  return kelvinToCss(numberOf(device, TRAIT_COLOR_TEMP) ?? 2700);
+}
+
+function currentLevel(device: DeviceDto): number {
+  if (!supports(device, TRAIT_BRIGHTNESS)) return 100;
+
+  return numberOf(device, TRAIT_BRIGHTNESS) ?? 100;
 }
 
 /** "Table lamp · 60% · 2700K", for the list of what is about to be saved. */

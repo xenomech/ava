@@ -15,7 +15,14 @@ import { useEffect, useState } from "react";
 
 import { hubQueries } from "@/modules/hub";
 import { RoomHeading, rememberRoom, useRoomActions, useRooms } from "@/modules/rooms";
-import { SceneRow, useApplyScene, useArmedScene, useScenes } from "@/modules/scenes";
+import {
+  SceneRow,
+  sceneColor,
+  scenePreview,
+  useApplyScene,
+  useArmedScene,
+  useScenes,
+} from "@/modules/scenes";
 import { Loader } from "@/shared/components/loader";
 import { useMediaQuery } from "@/shared/hooks/use-media-query";
 import { parseColor, warmth } from "@/shared/lib/color";
@@ -96,7 +103,12 @@ export function RoomPage() {
   const hubOffline = hub !== undefined && !hub.online;
 
   const kelvin = roomKelvin(inRoom);
-  const lit = kelvinToCss(kelvin);
+  /* The armed scene's colour, not the room's current one. Scrolling the
+     carousel arms without applying, so this is what makes that gesture visible:
+     the glow behind the plate and the paddle both move to the colour the switch
+     is now pointed at, before anything has been sent to a bulb. */
+  const ambient = kelvinToCss(kelvin);
+  const lit = armed ? sceneColor(scenePreview(armed, inRoom), ambient) : ambient;
   const palette = roomPalette(inRoom, lit);
 
   /* Up means whichever scene the row is pointed at, and "everything on" when
@@ -114,7 +126,7 @@ export function RoomPage() {
     void setRoomPower(inRoom, next);
   };
 
-  const pick = (scene: SceneDto | null) => {
+  const play = (scene: SceneDto | null) => {
     arm(scene?.id ?? null);
     setSweep((current) => ({ play: current.play + 1, direction: "on" }));
 
@@ -175,7 +187,7 @@ export function RoomPage() {
               {selected ? (
                 <DeviceOnStage key={selected.id} device={selected} level={dragging} />
               ) : (
-                <div className="grid min-h-0 w-full justify-items-center gap-4">
+                <div className="grid min-h-0 w-full grid-cols-[minmax(0,1fr)] justify-items-center gap-4">
                   <RoomSwitch
                     on={on > 0}
                     disabled={switchable.length === 0}
@@ -190,7 +202,8 @@ export function RoomPage() {
                     devices={inRoom}
                     scenes={scenes}
                     armedId={armed?.id ?? null}
-                    onPick={pick}
+                    onArm={(scene) => arm(scene?.id ?? null)}
+                    onApply={play}
                   />
                 </div>
               )}
@@ -201,7 +214,13 @@ export function RoomPage() {
                 travel into it rather than sitting on top of the device. */}
             {selected && !beside ? null : (
               <footer className="z-raised grid gap-4 p-5 pt-0 sm:p-6 sm:pt-0">
-                <p className="flex items-baseline gap-2">
+                {/* The first thing to go when the screen is short. Once the
+                    carousel is there it is the least load-bearing line on the
+                    page: the centred card's lit dot already says whether the
+                    room matches what the switch is aimed at, and the strip
+                    below spells out every device by name. A tall phone has room
+                    to state the count anyway. */}
+                <p className="hidden items-baseline gap-2 [@media(min-height:700px)]:flex">
                   {on === 0 ? (
                     <b className="text-hero font-semibold text-subtle">Off</b>
                   ) : (
