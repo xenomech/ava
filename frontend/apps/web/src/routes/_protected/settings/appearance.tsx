@@ -2,7 +2,7 @@ import { cn } from "@ava/ui";
 import { createFileRoute } from "@tanstack/react-router";
 import { MonitorIcon, MoonIcon, SunIcon } from "lucide-react";
 
-import { Section } from "@/shared/components/page";
+import { Page, Section } from "@/shared/components/page";
 import { useTheme } from "@/shared/components/theme-provider";
 
 const CHOICES = [
@@ -18,27 +18,34 @@ function Appearance() {
   const { theme, setTheme } = useTheme();
 
   return (
-    <Section title="Theme" description="How Ava looks on this device.">
-      <div className="grid gap-2 p-5 sm:grid-cols-3">
-        {CHOICES.map(({ value, label, icon: Icon }) => (
-          <button
-            key={value}
-            type="button"
-            aria-pressed={theme === value}
-            onClick={() => setTheme(value)}
-            className={cn(
-              "grid min-h-11 place-items-center gap-2 rounded-lg border border-border py-4",
-              "text-small font-medium text-muted",
-              "transition-colors duration-150 ease-out hover:border-border-strong hover:text-fg",
-              "aria-pressed:border-fg aria-pressed:bg-surface aria-pressed:text-fg",
-            )}
-          >
-            <Icon className="size-5" aria-hidden />
-            {label}
-          </button>
-        ))}
-      </div>
-    </Section>
+    /* This was the one settings page rendering a bare Section, so it ran edge
+       to edge while every sibling sat inside the page gutter. */
+    <Page>
+      <Section title="Theme" description="How Ava looks on this device.">
+        <div className="grid grid-cols-3 gap-2 p-4 sm:p-5">
+          {CHOICES.map(({ value, label, icon: Icon }) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={theme === value}
+              onClick={() => setTheme(value)}
+              /* Three across rather than stacked. A three-way choice read as a
+                 tall column of near-identical cards, which took most of a phone
+                 screen to say very little. */
+              className={cn(
+                "grid min-h-[76px] place-items-center gap-2 rounded-lg border border-border px-2 py-3",
+                "text-caption font-medium text-muted sm:text-small",
+                "transition-colors duration-150 ease-out hover:border-border-strong hover:text-fg",
+                "aria-pressed:border-fg aria-pressed:bg-raised aria-pressed:text-fg",
+              )}
+            >
+              <Icon className="size-5" aria-hidden />
+              {label}
+            </button>
+          ))}
+        </div>
+      </Section>
+    </Page>
   );
 }
 

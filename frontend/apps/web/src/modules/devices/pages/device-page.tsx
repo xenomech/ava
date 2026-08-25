@@ -58,7 +58,7 @@ export function LooseDevicePage() {
       {hubOffline ? <HubOfflineNotice name={hub.name} /> : null}
 
       <div className="min-h-0 overflow-y-auto lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:overflow-hidden">
-        <main className="grid min-h-0 grid-rows-[34vh_auto] p-5 pt-16 sm:p-6 md:pt-6 lg:grid-rows-[minmax(0,1fr)_auto]">
+        <main className="grid min-h-0 grid-rows-[34vh_auto] p-5 pt-11 sm:p-6 md:pt-6 lg:grid-rows-[minmax(0,1fr)_auto]">
           <div
             className="relative grid min-h-0 place-items-center"
             style={{ "--level": level, "--lit": color } as React.CSSProperties}

@@ -123,7 +123,7 @@ export function RoomPage() {
       >
         <LightSweep colors={palette} direction={sweep.direction} play={sweep.play} />
 
-        <header className="z-raised p-5 pt-16 sm:p-6 md:pt-6">
+        <header className="z-raised p-5 pt-11 sm:p-6 md:pt-6">
           <span className="font-mono text-caption uppercase tracking-caps text-subtle">Room</span>
           <div className="mt-1 flex min-w-0 items-center gap-2">
             <RoomHeading
@@ -165,7 +165,7 @@ export function RoomPage() {
                 half of the screen, so the count, the hint and the strip all
                 travel into it rather than sitting on top of the device. */}
             {selected && !beside ? null : (
-              <footer className="z-raised grid gap-5 p-5 pt-0 sm:p-6 sm:pt-0">
+              <footer className="z-raised grid gap-4 p-5 pt-0 sm:p-6 sm:pt-0">
                 <p className="flex items-baseline gap-2">
                   {on === 0 ? (
                     <b className="text-hero font-semibold text-subtle">Off</b>

@@ -49,9 +49,18 @@ export function Toaster({ className, toastOptions, ...props }: ComponentProps<ty
       toastOptions={{
         ...toastOptions,
         unstyled: true,
+        /* Inline, for the same reason the container is. Below 600px Sonner's own
+           sheet sizes a toast at `100% - 32px`, leaving it narrower than the
+           strip it sits in — off-centre, with stacked toasts at differing widths
+           showing out from behind each other. A class cannot outrank that. */
+        style: { width: "100%", ...toastOptions?.style },
         classNames: {
           toast: cn(
-            "pointer-events-auto flex w-[var(--width)] items-center gap-3 rounded-lg p-3.5",
+            /* w-full, not the --width expression: the toaster is already that
+               wide and centred, and sizing the toast independently left it
+               narrower than its own container — off to one side, with stacked
+               toasts at differing widths poking out from behind each other. */
+            "pointer-events-auto flex w-full items-center gap-3 rounded-lg p-3.5",
             "border border-border bg-raised text-fg",
             "shadow-[0_20px_44px_-18px_rgb(0_0_0/0.75)]",
           ),

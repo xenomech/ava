@@ -16,10 +16,19 @@ export function Page({
   className?: string;
 }) {
   return (
-    <div className={cn("mx-auto grid max-w-[720px] gap-6 px-5 py-8 sm:px-8", className)}>
+    /* grid-cols-[minmax(0,1fr)]: a grid item defaults to min-width:auto, so a
+       long identifier or a wide row was widening the track and pushing the
+       whole page past the edge of the surface it sits on. */
+    <div
+      className={cn(
+        "mx-auto grid w-full max-w-[720px] grid-cols-[minmax(0,1fr)] gap-6",
+        "px-5 pb-10 pt-6 sm:px-8 sm:pt-8",
+        className,
+      )}
+    >
       {title || description || actions ? (
         <header className="flex items-start justify-between gap-4">
-          <div className="grid gap-1">
+          <div className="grid min-w-0 gap-1">
             {title ? <h1 className="text-title font-semibold">{title}</h1> : null}
             {description ? <p className="text-small text-muted">{description}</p> : null}
           </div>

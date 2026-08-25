@@ -25,7 +25,8 @@ const button = cva(
       },
       size: {
         md: "h-[50px] px-5 text-body",
-        sm: "h-9 px-3 text-small",
+        /* 44 for a thumb, 36 where there is a pointer. */
+        sm: "h-11 px-3 text-small [@media(hover:hover)]:h-9",
         icon: "size-11",
         "icon-sm": "size-9",
       },
