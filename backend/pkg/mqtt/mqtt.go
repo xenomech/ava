@@ -89,20 +89,23 @@ func Connect(ctx context.Context, opts *Options) (*Client, error) {
 	return client, nil
 }
 
+// Subscribe records the topic as wanted and subscribes if the connection is up.
+//
+// The record is kept even when the subscribe fails, so `resume` reinstates it on
+// the next connect. Storing it only on success meant a broker that was slow to
+// accept the first connection left the caller subscribed to nothing for the
+// lifetime of the process: the error was logged once at boot, the client
+// reconnected seconds later, and `resume` then had an empty set to replay.
 func (c *Client) Subscribe(ctx context.Context, topic string, handler Handler) error {
-	if !c.ready() {
-		return ErrNotConnected
-	}
-
-	if err := c.subscribe(ctx, topic, handler); err != nil {
-		return err
-	}
-
 	c.mu.Lock()
 	c.subs[topic] = handler
 	c.mu.Unlock()
 
-	return nil
+	if !c.ready() {
+		return ErrNotConnected
+	}
+
+	return c.subscribe(ctx, topic, handler)
 }
 
 func (c *Client) subscribe(ctx context.Context, topic string, handler Handler) error {
