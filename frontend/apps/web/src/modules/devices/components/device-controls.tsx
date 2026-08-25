@@ -1,4 +1,4 @@
-import { Slider, Switch, cn } from "@ava/ui";
+import { Slider, Switch, cn, playSound } from "@ava/ui";
 import {
   TRAIT_BRIGHTNESS,
   TRAIT_COLOR,
@@ -103,7 +103,11 @@ export function DeviceControls({
         <Switch
           checked={on}
           disabled={offline}
-          onCheckedChange={(next) => send(TRAIT_POWER, next)}
+          data-sound="none"
+          onCheckedChange={(next) => {
+            playSound(next ? "on" : "off");
+            send(TRAIT_POWER, next);
+          }}
           aria-label={`${device.name} power`}
         />
       </div>

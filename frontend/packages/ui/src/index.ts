@@ -1,4 +1,12 @@
 export { cn } from "./lib/utils";
+export {
+  onSoundChange,
+  playSound,
+  setSoundEnabled,
+  soundEnabled,
+  unlockSound,
+} from "./lib/sound";
+export type { SoundName } from "./lib/sounds.data";
 
 export { Button, buttonVariants, type ButtonProps } from "./components/button";
 export { Chip, ChipToggle, type ChipProps } from "./components/chip";

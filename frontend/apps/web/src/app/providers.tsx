@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 
 import { queryClient } from "./query-client";
 import { ThemeProvider } from "@/shared/components/theme-provider";
+import { SoundEffects } from "./sound";
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
@@ -15,6 +16,7 @@ export function Providers({ children }: { children: ReactNode }) {
         storageKey="ava.theme"
       >
         {children}
+        <SoundEffects />
         <Toaster closeButton />
       </ThemeProvider>
     </QueryClientProvider>

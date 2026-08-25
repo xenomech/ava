@@ -1,4 +1,4 @@
-import { cn } from "@ava/ui";
+import { cn, playSound } from "@ava/ui";
 import { useRef, type KeyboardEvent, type PointerEvent } from "react";
 
 /**
@@ -51,6 +51,14 @@ export function RoomSwitch({
   onFlick: (on: boolean) => void;
 }) {
   const paddle = useRef<HTMLSpanElement>(null);
+
+  /* The room's own sound, rising or falling with the direction, instead of the
+     generic press click every other control gets. */
+  const flick = (next: boolean) => {
+    playSound(next ? "on" : "off");
+    onFlick(next);
+  };
+
   const drag = useRef<{ startY: number; lastY: number; lastAt: number; speed: number } | null>(
     null,
   );
@@ -120,7 +128,7 @@ export function RoomSwitch({
     const dy = event.clientY - state.startY;
 
     if (Math.abs(dy) < TAP_SLOP) {
-      onFlick(!on);
+      flick(!on);
 
       return;
     }
@@ -129,7 +137,7 @@ export function RoomSwitch({
        paddle past the midpoint. Deciding on distance alone made a quick,
        confident flick feel like it had been ignored. */
     if (Math.abs(state.speed) >= FLING) {
-      onFlick(state.speed < 0);
+      flick(state.speed < 0);
 
       return;
     }
@@ -137,7 +145,7 @@ export function RoomSwitch({
     const travel = node?.offsetHeight ?? 0;
     const landed = (on ? 0 : travel) + dy;
 
-    onFlick(landed < travel / 2);
+    flick(landed < travel / 2);
   };
 
   const cancel = () => {
@@ -148,9 +156,9 @@ export function RoomSwitch({
   const key = (event: KeyboardEvent<HTMLButtonElement>) => {
     if (disabled) return;
 
-    if (event.key === "ArrowUp") onFlick(true);
-    else if (event.key === "ArrowDown") onFlick(false);
-    else if (event.key === " " || event.key === "Enter") onFlick(!on);
+    if (event.key === "ArrowUp") flick(true);
+    else if (event.key === "ArrowDown") flick(false);
+    else if (event.key === " " || event.key === "Enter") flick(!on);
     else return;
 
     event.preventDefault();
@@ -185,6 +193,7 @@ export function RoomSwitch({
         aria-checked={on}
         aria-label={label}
         disabled={disabled}
+        data-sound="none"
         onPointerDown={down}
         onPointerMove={move}
         onPointerUp={up}
