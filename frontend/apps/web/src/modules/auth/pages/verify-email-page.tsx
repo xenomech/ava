@@ -1,7 +1,7 @@
 import { buttonVariants } from "@ava/ui";
 import { useMutation } from "@tanstack/react-query";
 import { Link, useSearch } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 import { AuthCard } from "../components/auth-card";
 import { verifyEmail } from "../api";
@@ -13,10 +13,16 @@ export function VerifyEmailPage() {
   const attempt = useMutation({ mutationFn: (value: string) => verifyEmail(value) });
   const { mutate } = attempt;
 
+  /* The token is single-use, so it must be sent exactly once — an effect alone
+     fires twice under StrictMode, and the second attempt turns a verified email
+     into an "already used" error screen. */
+  const consumed = useRef<string | null>(null);
+
   useEffect(() => {
-    if (token) {
-      mutate(token);
-    }
+    if (!token || consumed.current === token) return;
+
+    consumed.current = token;
+    mutate(token);
   }, [token, mutate]);
 
   if (!token) {
