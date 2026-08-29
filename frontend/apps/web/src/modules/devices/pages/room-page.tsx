@@ -28,7 +28,7 @@ import { useMediaQuery } from "@/shared/hooks/use-media-query";
 import { parseColor, warmth } from "@/shared/lib/color";
 import { kelvinToCss } from "@/shared/lib/kelvin";
 import { deviceColor, deviceKind, deviceLevel } from "../components/device-stage";
-import { DeviceSheet, ROOM_HEIGHT } from "../components/device-sheet";
+import { DeviceDrawer, DevicePanel, ROOM_HEIGHT } from "../components/device-sheet";
 import { DeviceStrip } from "../components/device-strip";
 import { Missing } from "../components/empty-state";
 import { LightSweep } from "../components/light-sweep";
@@ -101,6 +101,11 @@ export function RoomPage() {
   const selected = inRoom.find((device) => device.id === selectedId);
   const hub = (hubs.data ?? []).find((entry) => entry.id === selected?.hub_id);
   const hubOffline = hub !== undefined && !hub.online;
+  const connectivity = hubOffline
+    ? ("hub-offline" as const)
+    : selected?.status === "offline"
+      ? ("device-offline" as const)
+      : ("online" as const);
 
   /* The hubs actually answering for this room, rather than every hub on the
      account. A room is a promise about a handful of bulbs, and only the hubs
@@ -263,15 +268,23 @@ export function RoomPage() {
       </div>
 
       {selected ? (
-        <DeviceSheet
-          device={selected}
-          offline={selected.status === "offline" || hubOffline}
-          hubOffline={hubOffline}
-          strip={strip}
-          beside={beside}
-          onClose={close}
-          onLevelChange={setDragging}
-        />
+        beside ? (
+          <DevicePanel
+            device={selected}
+            connectivity={connectivity}
+            onClose={close}
+            onLevelChange={setDragging}
+          />
+        ) : (
+          <DeviceDrawer
+            device={selected}
+            connectivity={connectivity}
+            onClose={close}
+            onLevelChange={setDragging}
+          >
+            {strip}
+          </DeviceDrawer>
+        )
       ) : null}
     </div>
   );

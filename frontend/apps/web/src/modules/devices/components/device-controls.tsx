@@ -1,4 +1,5 @@
 import { Slider, Switch, cn, playSound } from "@ava/ui";
+import { useEffect, useRef } from "react";
 import {
   TRAIT_BRIGHTNESS,
   TRAIT_COLOR,
@@ -18,7 +19,7 @@ import {
 } from "@ava/contracts";
 
 import { AppliancePicker } from "./appliance-picker";
-import { ColorControl } from "./color-control";
+import { ColorControl, WhiteControl } from "./color-control";
 import { RoomPicker } from "./room-picker";
 import { TraitControl, TraitReading } from "./trait-control";
 import { deviceColor } from "./device-stage";
@@ -67,6 +68,12 @@ export function DeviceControls({
   onLevelChange?: (level: number | null) => void;
 }) {
   const control = useDeviceControl();
+
+  /* If we unmount mid-drag (sheet dismissed, another device picked) the caller
+     would otherwise keep painting the stage at our last in-flight level. */
+  const onLevelChangeRef = useRef(onLevelChange);
+  onLevelChangeRef.current = onLevelChange;
+  useEffect(() => () => onLevelChangeRef.current?.(null), []);
 
   const dimming = brightnessRange(device) ?? { min: 0, max: 100, step: 1, unit: "%" };
   const warmth = kelvinRange(device);
@@ -137,17 +144,25 @@ export function DeviceControls({
       {warmth ? (
         <div className="grid gap-3">
           <Heading>Colour</Heading>
-          <ColorControl
-            color={deviceColor(device)}
-            kelvin={numberOf(device, TRAIT_COLOR_TEMP) ?? null}
-            kelvinMin={warmth.min}
-            kelvinMax={warmth.max}
-            showColor={hasColor(device)}
-            disabled={offline}
-            onWhitePreview={(kelvin) => send(TRAIT_COLOR_TEMP, kelvin)}
-            onWhite={(kelvin) => send(TRAIT_COLOR_TEMP, kelvin)}
-            onColor={(hex) => send(TRAIT_COLOR, hex)}
-          />
+          {hasColor(device) ? (
+            <ColorControl
+              color={deviceColor(device)}
+              kelvin={numberOf(device, TRAIT_COLOR_TEMP) ?? null}
+              kelvinMin={warmth.min}
+              kelvinMax={warmth.max}
+              disabled={offline}
+              onWhite={(kelvin) => send(TRAIT_COLOR_TEMP, kelvin)}
+              onColor={(hex) => send(TRAIT_COLOR, hex)}
+            />
+          ) : (
+            <WhiteControl
+              kelvin={numberOf(device, TRAIT_COLOR_TEMP) ?? null}
+              kelvinMin={warmth.min}
+              kelvinMax={warmth.max}
+              disabled={offline}
+              onWhite={(kelvin) => send(TRAIT_COLOR_TEMP, kelvin)}
+            />
+          )}
         </div>
       ) : null}
 
