@@ -10,7 +10,7 @@ import {
 } from "@ava/ui";
 import type { DeviceDto, SceneDto } from "@ava/contracts";
 import { Trash2Icon } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { capture, describe, matches, scenePreview } from "../capture";
 import { SceneLights } from "./scene-lights";
@@ -56,9 +56,13 @@ export function SceneSheet({
   const targets = useMemo(() => capture(devices), [devices]);
   const preview = useMemo(() => scenePreview(null, devices), [devices]);
 
-  useEffect(() => {
-    if (open) setName("");
-  }, [open]);
+  /* The name field starts blank each time the sheet opens. Cleared on close —
+     every close funnels through here, while opening is the parent's doing —
+     so no effect and no frame showing the old name. */
+  const openChange = (next: boolean) => {
+    if (!next) setName("");
+    onOpenChange(next);
+  };
 
   const named = name.trim();
   const taken = scenes.some((scene) => scene.name.toLowerCase() === named.toLowerCase());
@@ -67,11 +71,11 @@ export function SceneSheet({
   const submit = () => {
     if (!saveable) return;
 
-    save.mutate({ name: named, targets }, { onSuccess: () => onOpenChange(false) });
+    save.mutate({ name: named, targets }, { onSuccess: () => openChange(false) });
   };
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
+    <Drawer open={open} onOpenChange={openChange}>
       <DrawerContent className="max-h-[85dvh]">
         <DrawerTitle className="px-5 pt-2 text-title font-semibold">Scenes</DrawerTitle>
         <DrawerDescription className="px-5 pb-1 text-small text-muted">

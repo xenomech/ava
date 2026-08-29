@@ -9,16 +9,21 @@ type Listener = (raw: string) => void;
 type AvaSocket = {
   send: (frame: unknown) => boolean;
   subscribe: (listener: Listener) => () => void;
-  connected: boolean;
 };
 
+/* Two contexts on purpose. send/subscribe only touch refs and never change
+   identity, while connected flips on every reconnect — folding them into one
+   value made every consumer re-render (and ava-events re-subscribe its
+   handlers) each time the socket flapped, for a field none of them read. */
 const SocketContext = createContext<AvaSocket>({
   send: () => false,
   subscribe: () => () => undefined,
-  connected: false,
 });
 
+const SocketConnectedContext = createContext(false);
+
 export const useAvaSocket = () => use(SocketContext);
+export const useSocketConnected = () => use(SocketConnectedContext);
 
 function socketURL() {
   /* The API base is absolute in development and a same-origin path in a
@@ -77,7 +82,6 @@ export function AvaSocketProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<AvaSocket>(
     () => ({
-      connected,
       send: (frame) => {
         const live = socket.current;
         if (!live || live.readyState !== WebSocket.OPEN) return false;
@@ -92,8 +96,12 @@ export function AvaSocketProvider({ children }: { children: ReactNode }) {
         return () => listeners.current.delete(listener);
       },
     }),
-    [connected],
+    [],
   );
 
-  return <SocketContext value={value}>{children}</SocketContext>;
+  return (
+    <SocketContext value={value}>
+      <SocketConnectedContext value={connected}>{children}</SocketConnectedContext>
+    </SocketContext>
+  );
 }

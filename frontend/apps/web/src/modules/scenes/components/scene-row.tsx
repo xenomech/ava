@@ -1,7 +1,7 @@
 import { cn, playSound } from "@ava/ui";
 import { TRAIT_POWER, isOn, supports, type DeviceDto, type SceneDto } from "@ava/contracts";
 import { PlusIcon } from "lucide-react";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { matches, scenePreview, type ScenePreview } from "../capture";
 import { SceneLights } from "./scene-lights";
@@ -74,9 +74,25 @@ export function SceneRow({
 
   const armedStop = armedId ?? "all";
   const [centred, setCentred] = useState(armedStop);
+  /* What the scroll listener last settled on, so a scroll event that lands on
+     the same card again is a no-op instead of another render and another arm. */
+  const settledOn = useRef(armedStop);
 
-  const switchable = devices.filter((device) => supports(device, TRAIT_POWER));
-  const everythingOn = switchable.length > 0 && switchable.every(isOn);
+  /* Walking every device for every card is O(scenes × devices); it only
+     changes when the scenes or the devices do, not on every scroll frame. */
+  const cardFacts = useMemo(() => {
+    const switchable = devices.filter((device) => supports(device, TRAIT_POWER));
+    const everythingOn = switchable.length > 0 && switchable.every(isOn);
+
+    const map = new Map<string, { preview: ScenePreview[]; live: boolean }>();
+    map.set("all", { preview: scenePreview(null, devices), live: everythingOn });
+
+    for (const scene of scenes) {
+      map.set(scene.id, { preview: scenePreview(scene, devices), live: matches(scene, devices) });
+    }
+
+    return map;
+  }, [scenes, devices]);
 
   /* Put the armed card in the middle, and put it there again if the answer
      changes underneath.
@@ -99,6 +115,7 @@ export function SceneRow({
     if (node && card && centred !== armedStop) {
       settling.current = true;
       card.scrollIntoView({ behavior: "instant", inline: "center", block: "nearest" });
+      settledOn.current = armedStop;
       setCentred(armedStop);
     }
 
@@ -109,12 +126,19 @@ export function SceneRow({
        ever lowered it again and no amount of scrolling armed anything.
      *
        Two frames: one for the scroll to be applied, one for its event to have
-       been delivered. */
-    requestAnimationFrame(() =>
-      requestAnimationFrame(() => {
+       been delivered. Cancelled on re-run so a stale frame from the previous
+       room cannot lower the flag in the middle of this run's scroll. */
+    let second = 0;
+    const first = requestAnimationFrame(() => {
+      second = requestAnimationFrame(() => {
         settling.current = false;
-      }),
-    );
+      });
+    });
+
+    return () => {
+      cancelAnimationFrame(first);
+      cancelAnimationFrame(second);
+    };
     /* `centred` is read to decide whether there is anything to do, not to drive
        this — listing it would re-enter on the state this effect itself sets. */
     /* Deliberately not `armedStop`: see above. It is read here to decide where
@@ -151,6 +175,11 @@ export function SceneRow({
       if (nearestId === null) return;
 
       const settled: string = nearestId;
+
+      /* Most scroll events land on the card that is already centred. */
+      if (settled === settledOn.current) return;
+
+      settledOn.current = settled;
       setCentred(settled);
 
       /* The save card is a stop on the rail but not a scene, so passing over it
@@ -213,14 +242,16 @@ export function SceneRow({
                 );
               }
 
+              const facts = cardFacts.get(id);
+
               return (
                 <SceneCard
                   key={id}
                   id={id}
                   label={stop === null ? "All on" : stop.name}
-                  preview={scenePreview(stop, devices)}
+                  preview={facts?.preview ?? []}
                   centred={isCentred}
-                  live={stop === null ? everythingOn : matches(stop, devices)}
+                  live={facts?.live ?? false}
                   onPick={() => {
                     if (!isCentred) {
                       centre(id);

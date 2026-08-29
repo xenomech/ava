@@ -7,11 +7,10 @@ import { useRef, type ClipboardEvent, type KeyboardEvent } from "react";
 const GROUP = 4;
 const LENGTH = GROUP * 2;
 
-const clean = (value: string) =>
-  value
-    .toUpperCase()
-    .replace(/[^A-Z0-9]/g, "")
-    .slice(0, LENGTH);
+/* Hoisted: clean runs on every keystroke and render. */
+const NOT_CODE = /[^A-Z0-9]/g;
+
+const clean = (value: string) => value.toUpperCase().replace(NOT_CODE, "").slice(0, LENGTH);
 
 /** "BXS8568F" -> "BXS8-568F", the shape the server issued. */
 const format = (raw: string) =>

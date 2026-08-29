@@ -11,7 +11,7 @@ import {
 } from "@ava/contracts";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { HubPill, hubQueries } from "@/modules/hub";
 import { RoomHeading, rememberRoom, useRoomActions, useRooms } from "@/modules/rooms";
@@ -82,6 +82,52 @@ export function RoomPage() {
      click means a bookmark or a shared link counts too. */
   useEffect(() => rememberRoom(roomId), [roomId]);
 
+  /* All of this is derived from the queries alone. Memoised because the page
+     re-renders at pointer rate while a brightness drag or a sweep is live, and
+     none of it changes then — recomputing palettes per pointer event was most
+     of the render cost. */
+  const inRoom = useMemo(
+    () => devices.filter((device) => device.room_id === roomId),
+    [devices, roomId],
+  );
+  const elsewhere = useMemo(
+    () => devices.filter((device) => device.room_id !== roomId),
+    [devices, roomId],
+  );
+
+  const { on, switchable } = useMemo(
+    () => ({
+      on: inRoom.filter(isOn).length,
+      switchable: inRoom.filter(
+        (device) => device.status !== "offline" && supports(device, TRAIT_POWER),
+      ),
+    }),
+    [inRoom],
+  );
+
+  /* The hubs actually answering for this room, rather than every hub on the
+     account. A room is a promise about a handful of bulbs, and only the hubs
+     holding those bulbs have any bearing on whether it can be kept. */
+  const serving = useMemo(() => {
+    const hubIds = new Set(inRoom.map((device) => device.hub_id));
+
+    return (hubs.data ?? []).filter((entry) => hubIds.has(entry.id));
+  }, [hubs.data, inRoom]);
+
+  /* The armed scene's colour, not the room's current one. Scrolling the
+     carousel arms without applying, so this is what makes that gesture visible:
+     the glow behind the plate and the paddle both move to the colour the switch
+     is now pointed at, before anything has been sent to a bulb. */
+  const ambient = kelvinToCss(roomKelvin(inRoom));
+  const lit = useMemo(
+    () => (armed ? sceneColor(scenePreview(armed, inRoom), ambient) : ambient),
+    [armed, inRoom, ambient],
+  );
+  const palette = useMemo(() => roomPalette(inRoom, lit), [inRoom, lit]);
+
+  /* Stable, so SceneRow's scroll listener is not re-attached per render. */
+  const onArm = useCallback((scene: SceneDto | null) => arm(scene?.id ?? null), [arm]);
+
   if (isPending || roomsPending) return <Loader label="Loading room" />;
 
   const room = rooms.find((entry) => entry.id === roomId);
@@ -92,12 +138,6 @@ export function RoomPage() {
     );
   }
 
-  const inRoom = devices.filter((device) => device.room_id === room.id);
-  const on = inRoom.filter(isOn).length;
-  const switchable = inRoom.filter(
-    (device) => device.status !== "offline" && supports(device, TRAIT_POWER),
-  );
-
   const selected = inRoom.find((device) => device.id === selectedId);
   const hub = (hubs.data ?? []).find((entry) => entry.id === selected?.hub_id);
   const hubOffline = hub !== undefined && !hub.online;
@@ -106,22 +146,6 @@ export function RoomPage() {
     : selected?.status === "offline"
       ? ("device-offline" as const)
       : ("online" as const);
-
-  /* The hubs actually answering for this room, rather than every hub on the
-     account. A room is a promise about a handful of bulbs, and only the hubs
-     holding those bulbs have any bearing on whether it can be kept. */
-  const serving = (hubs.data ?? []).filter((entry) =>
-    inRoom.some((device) => device.hub_id === entry.id),
-  );
-
-  const kelvin = roomKelvin(inRoom);
-  /* The armed scene's colour, not the room's current one. Scrolling the
-     carousel arms without applying, so this is what makes that gesture visible:
-     the glow behind the plate and the paddle both move to the colour the switch
-     is now pointed at, before anything has been sent to a bulb. */
-  const ambient = kelvinToCss(kelvin);
-  const lit = armed ? sceneColor(scenePreview(armed, inRoom), ambient) : ambient;
-  const palette = roomPalette(inRoom, lit);
 
   /* Up means whichever scene the row is pointed at, and "everything on" when
      that is none. Down is always down: a scene describes a room that is on, so
@@ -151,7 +175,7 @@ export function RoomPage() {
   const strip = (
     <DeviceStrip
       devices={inRoom}
-      elsewhere={devices.filter((device) => device.room_id !== room.id)}
+      elsewhere={elsewhere}
       roomId={room.id}
       roomName={room.name}
       selectedId={selected?.id}
@@ -224,7 +248,7 @@ export function RoomPage() {
                     scenes={scenes}
                     scenesReady={!scenesPending}
                     armedId={armed?.id ?? null}
-                    onArm={(scene) => arm(scene?.id ?? null)}
+                    onArm={onArm}
                     onApply={play}
                   />
                 </div>

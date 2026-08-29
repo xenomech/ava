@@ -8,10 +8,10 @@ import {
   MenuTrigger,
   cn,
 } from "@ava/ui";
-import { isOn, type RoomDto } from "@ava/contracts";
+import { isOn, type DeviceDto, type RoomDto } from "@ava/contracts";
 import { Link } from "@tanstack/react-router";
 import { ChevronDownIcon, ChevronUpIcon, MoreHorizontalIcon, Trash2Icon } from "lucide-react";
-import { useState, type CSSProperties } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 
 import { useSession } from "@/modules/auth";
 import { deviceColor } from "@/modules/devices/components/device-stage";
@@ -40,7 +40,28 @@ export function NavContent({ onNavigate }: { onNavigate?: () => void }) {
   /* One dialog for the whole list rather than one per row: only ever one room
      is being deleted, and mounting a portal per room to say so is waste. */
   const [doomed, setDoomed] = useState<RoomDto | null>(null);
-  const inDoomed = doomed ? devices.filter((device) => device.room_id === doomed.id).length : 0;
+
+  /* One pass over the devices for the whole rail, not two filters per room. */
+  const byRoom = useMemo(() => {
+    const map = new Map<string, { count: number; lit: DeviceDto[] }>();
+
+    for (const device of devices) {
+      if (!device.room_id) continue;
+
+      let entry = map.get(device.room_id);
+      if (!entry) {
+        entry = { count: 0, lit: [] };
+        map.set(device.room_id, entry);
+      }
+
+      entry.count += 1;
+      if (isOn(device)) entry.lit.push(device);
+    }
+
+    return map;
+  }, [devices]);
+
+  const inDoomed = doomed ? (byRoom.get(doomed.id)?.count ?? 0) : 0;
 
   return (
     <div className="grid h-full grid-rows-[auto_minmax(0,1fr)_auto]">
@@ -71,10 +92,10 @@ export function NavContent({ onNavigate }: { onNavigate?: () => void }) {
             <RoomRow
               key={room.id}
               room={room}
-              deviceCount={devices.filter((device) => device.room_id === room.id).length}
-              lit={devices.filter((device) => device.room_id === room.id && isOn(device))}
-              isFirst={at === 0}
-              isLast={at === rooms.length - 1}
+              deviceCount={byRoom.get(room.id)?.count ?? 0}
+              lit={byRoom.get(room.id)?.lit ?? NO_DEVICES}
+              at={at}
+              count={rooms.length}
               onNavigate={onNavigate}
               onMove={(direction) => actions.reorder.mutate(moved(rooms, at, direction))}
               onDelete={() => setDoomed(room)}
@@ -99,26 +120,29 @@ export function NavContent({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
+const NO_DEVICES: DeviceDto[] = [];
+
 function RoomRow({
   room,
   deviceCount,
   lit,
-  isFirst,
-  isLast,
+  at,
+  count,
   onNavigate,
   onMove,
   onDelete,
 }: {
   room: RoomDto;
   deviceCount: number;
-  lit: { id: string }[];
-  isFirst: boolean;
-  isLast: boolean;
+  lit: DeviceDto[];
+  /** The row's place in the rail, so the menu knows which moves exist. */
+  at: number;
+  count: number;
   onNavigate?: () => void;
   onMove: (direction: -1 | 1) => void;
   onDelete: () => void;
 }) {
-  const first = lit[0] as Parameters<typeof deviceColor>[0] | undefined;
+  const first = lit[0];
 
   return (
     /* The trigger sits over the link rather than inside it: an anchor may not
@@ -168,11 +192,11 @@ function RoomRow({
         </MenuTrigger>
 
         <MenuContent align="end">
-          <MenuItem disabled={isFirst} onSelect={() => onMove(-1)}>
+          <MenuItem disabled={at === 0} onSelect={() => onMove(-1)}>
             <ChevronUpIcon aria-hidden />
             Move up
           </MenuItem>
-          <MenuItem disabled={isLast} onSelect={() => onMove(1)}>
+          <MenuItem disabled={at === count - 1} onSelect={() => onMove(1)}>
             <ChevronDownIcon aria-hidden />
             Move down
           </MenuItem>

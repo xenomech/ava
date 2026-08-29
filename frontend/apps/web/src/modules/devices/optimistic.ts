@@ -17,10 +17,9 @@ import {
  */
 const HOLD_MS = 6_000;
 
-/** `deviceId:trait` → what we asked for, and when. */
-const pending = new Map<string, { value: TraitValue; at: number }>();
-
-const keyFor = (deviceID: string, trait: string) => `${deviceID}:${trait}`;
+/** deviceId → trait → what we asked for, and when. Keyed by device first so
+    reconciling one device never has to walk every other device's claims. */
+const pending = new Map<string, Map<string, { value: TraitValue; at: number }>>();
 
 /**
  * Show a change now, before anything has confirmed it.
@@ -65,20 +64,29 @@ export function claim(deviceID: string, trait: string, value: TraitValue): void 
   if (trait === TRAIT_COLOR) release(deviceID, TRAIT_COLOR_TEMP);
   if (trait === TRAIT_COLOR_TEMP) release(deviceID, TRAIT_COLOR);
 
-  pending.set(keyFor(deviceID, trait), { value, at: Date.now() });
+  let traits = pending.get(deviceID);
+
+  if (!traits) {
+    traits = new Map();
+    pending.set(deviceID, traits);
+  }
+
+  traits.set(trait, { value, at: Date.now() });
 }
 
 /** Give a device's writes back, on a rejection or a hard refresh. */
 export function release(deviceID: string, trait?: string): void {
-  if (trait !== undefined) {
-    pending.delete(keyFor(deviceID, trait));
+  if (trait === undefined) {
+    pending.delete(deviceID);
 
     return;
   }
 
-  for (const key of pending.keys()) {
-    if (key.startsWith(`${deviceID}:`)) pending.delete(key);
-  }
+  const traits = pending.get(deviceID);
+  if (!traits) return;
+
+  traits.delete(trait);
+  if (traits.size === 0) pending.delete(deviceID);
 }
 
 /**
@@ -90,21 +98,15 @@ export function release(deviceID: string, trait?: string): void {
  * longer than it has to be.
  */
 export function reconcile(incoming: DeviceDto): DeviceDto {
+  const traits = pending.get(incoming.id);
+  if (!traits) return incoming;
+
   const now = Date.now();
   let device = incoming;
 
-  for (const [key, held] of pending) {
-    const [deviceID, trait] = split(key);
-    if (deviceID !== incoming.id) continue;
-
-    if (now - held.at > HOLD_MS) {
-      pending.delete(key);
-
-      continue;
-    }
-
-    if (incoming.state[trait] === held.value) {
-      pending.delete(key);
+  for (const [trait, held] of traits) {
+    if (now - held.at > HOLD_MS || incoming.state[trait] === held.value) {
+      traits.delete(trait);
 
       continue;
     }
@@ -112,16 +114,25 @@ export function reconcile(incoming: DeviceDto): DeviceDto {
     device = applyLocally(device, trait, held.value);
   }
 
+  if (traits.size === 0) pending.delete(incoming.id);
+
   return device;
 }
 
 /** Every device in a list, reconciled. */
 export function reconcileAll(incoming: DeviceDto[]): DeviceDto[] {
+  /* Expire here as well as per device: a device that has stopped reporting
+     never reaches `reconcile`, so its claims would otherwise sit in the map —
+     and keep the fast path below disabled — for the rest of the session. */
+  const now = Date.now();
+
+  for (const [deviceID, traits] of pending) {
+    for (const [trait, held] of traits) {
+      if (now - held.at > HOLD_MS) traits.delete(trait);
+    }
+
+    if (traits.size === 0) pending.delete(deviceID);
+  }
+
   return pending.size === 0 ? incoming : incoming.map(reconcile);
-}
-
-function split(key: string): [string, string] {
-  const at = key.indexOf(":");
-
-  return [key.slice(0, at), key.slice(at + 1)];
 }

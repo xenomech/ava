@@ -1,5 +1,22 @@
 import { useCallback, useSyncExternalStore } from "react";
 
+/* One MediaQueryList per query string for the page's lifetime: getSnapshot runs
+   on every render and store check, and window.matchMedia re-parses the query
+   each call. Sharing the list also means subscribe and getSnapshot read the
+   same object. */
+const lists = new Map<string, MediaQueryList>();
+
+function listFor(query: string): MediaQueryList {
+  let list = lists.get(query);
+
+  if (!list) {
+    list = window.matchMedia(query);
+    lists.set(query, list);
+  }
+
+  return list;
+}
+
 /**
  * Subscribes to a media query.
  *
@@ -10,7 +27,7 @@ import { useCallback, useSyncExternalStore } from "react";
 export function useMediaQuery(query: string): boolean {
   const subscribe = useCallback(
     (notify: () => void) => {
-      const list = window.matchMedia(query);
+      const list = listFor(query);
       list.addEventListener("change", notify);
 
       return () => list.removeEventListener("change", notify);
@@ -20,7 +37,7 @@ export function useMediaQuery(query: string): boolean {
 
   return useSyncExternalStore(
     subscribe,
-    () => window.matchMedia(query).matches,
+    () => listFor(query).matches,
     () => false,
   );
 }

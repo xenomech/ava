@@ -14,6 +14,13 @@ export function mix(from: Rgb, towards: Rgb, amount: number): Rgb {
   ) as Rgb;
 }
 
+/* parseColor sits on the drag path, so its patterns live here rather than
+   being re-created per call. */
+const HEX_PATTERN = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
+const HSL_PATTERN = /^hsla?\(\s*([\d.]+)(?:deg)?[\s,]+([\d.]+)%[\s,]+([\d.]+)%/i;
+const RGB_PATTERN = /^rgba?\(([^)]+)\)$/i;
+const RGB_SEPARATOR = /[\s,/]+/;
+
 /**
  * Reads the two forms a device colour arrives in: a hex from a bulb that was
  * given an explicit colour, and the `rgb(r g b)` this app writes for anything
@@ -22,7 +29,7 @@ export function mix(from: Rgb, towards: Rgb, amount: number): Rgb {
 export function parseColor(value: string): Rgb | null {
   const text = value.trim();
 
-  const hex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(text);
+  const hex = HEX_PATTERN.exec(text);
 
   if (hex?.[1]) {
     const digits =
@@ -40,16 +47,13 @@ export function parseColor(value: string): Rgb | null {
     ];
   }
 
-  const hsl = /^hsla?\(\s*([\d.]+)(?:deg)?[\s,]+([\d.]+)%[\s,]+([\d.]+)%/i.exec(text);
+  const hsl = HSL_PATTERN.exec(text);
 
   if (hsl) {
     return hslToRgb({ h: Number(hsl[1]), s: Number(hsl[2]) / 100, l: Number(hsl[3]) / 100 });
   }
 
-  const parts = /^rgba?\(([^)]+)\)$/i
-    .exec(text)?.[1]
-    ?.split(/[\s,/]+/)
-    .filter(Boolean);
+  const parts = RGB_PATTERN.exec(text)?.[1]?.split(RGB_SEPARATOR).filter(Boolean);
 
   if (!parts || parts.length < 3) return null;
 
@@ -116,40 +120,3 @@ export function hslToRgb({ h, s, l }: Hsl): Rgb {
  * behaves for the near-white colours most bulbs actually sit at.
  */
 export const warmth = ([r, , b]: Rgb) => r - b;
-
-/** A colour a bulb can be asked for: a hue, and how much of it. */
-export type Tint = { hue: number; saturation: number };
-
-/**
- * The hue and saturation of a colour, for the picker to sit on.
- *
- * Lightness is deliberately dropped. A bulb already has a brightness control,
- * and a picker that also offered lightness would give two ways to dim one lamp
- * that disagree with each other.
- */
-export function cssToTint(css: string): Tint {
-  const rgb = parseColor(css);
-  if (!rgb) return { hue: 0, saturation: 100 };
-
-  const { h, s } = rgbToHsl(rgb);
-
-  return { hue: h, saturation: Math.round(s * 100) };
-}
-
-/**
- * A hue at a given saturation, as the hex a bulb wants.
- *
- * Saturation used to be pinned at 1, which quietly meant the slider could only
- * reach the outer rim of the wheel: every pastel, every muted or dusty shade,
- * and white itself were unreachable no matter where you dragged. Worse, several
- * of the offered swatches lived inside that unreachable region, so picking one
- * and then touching the slider threw the light to a colour you had not asked
- * for.
- */
-export function tintToHex({ hue, saturation }: Tint): string {
-  return `#${hslToRgb({ h: hue, s: clamp01(saturation / 100), l: 0.5 })
-    .map((channel) => channel.toString(16).padStart(2, "0"))
-    .join("")}`;
-}
-
-const clamp01 = (value: number) => Math.min(Math.max(value, 0), 1);
