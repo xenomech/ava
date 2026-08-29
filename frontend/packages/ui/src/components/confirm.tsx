@@ -25,7 +25,7 @@ export function Confirm({
   description,
   confirmLabel,
   onConfirm,
-  destructive = false,
+  tone = "default",
   children,
 }: {
   open?: boolean;
@@ -35,7 +35,8 @@ export function Confirm({
   description: ReactNode;
   confirmLabel: string;
   onConfirm: () => void;
-  destructive?: boolean;
+  /** Matches the tone vocabulary of Chip and MenuItem. */
+  tone?: "default" | "danger";
   /** The control that opens this, if it should own its own trigger. */
   children?: ReactNode;
 }) {
@@ -69,7 +70,7 @@ export function Confirm({
 
             <AlertDialog.Action
               onClick={onConfirm}
-              className={cn(buttonVariants({ variant: destructive ? "danger" : "primary" }))}
+              className={cn(buttonVariants({ variant: tone === "danger" ? "danger" : "primary" }))}
             >
               {confirmLabel}
             </AlertDialog.Action>

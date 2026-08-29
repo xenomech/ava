@@ -48,17 +48,14 @@ export function LoginPage() {
         }}
       >
         <Field label="Email" error={fieldErrors?.email}>
-          {(props) => (
-            <Input
-              {...props}
-              type="email"
-              autoComplete="email"
-              placeholder="you@home.com"
-              required
-              value={form.email}
-              onChange={(event) => setForm({ ...form, email: event.target.value })}
-            />
-          )}
+          <Input
+            type="email"
+            autoComplete="email"
+            placeholder="you@home.com"
+            required
+            value={form.email}
+            onChange={(event) => setForm((f) => ({ ...f, email: event.target.value }))}
+          />
         </Field>
 
         <Field
@@ -70,17 +67,14 @@ export function LoginPage() {
             </Link>
           }
         >
-          {(props) => (
-            <Input
-              {...props}
-              type="password"
-              autoComplete="current-password"
-              placeholder="••••••••"
-              required
-              value={form.password}
-              onChange={(event) => setForm({ ...form, password: event.target.value })}
-            />
-          )}
+          <Input
+            type="password"
+            autoComplete="current-password"
+            placeholder="••••••••"
+            required
+            value={form.password}
+            onChange={(event) => setForm((f) => ({ ...f, password: event.target.value }))}
+          />
         </Field>
 
         {fieldErrors ? null : <FormError error={attempt.error} fallback="Could not sign in" />}

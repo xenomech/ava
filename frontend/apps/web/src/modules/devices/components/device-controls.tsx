@@ -123,7 +123,7 @@ export function DeviceControls({
             min={dimming.min}
             max={dimming.max}
             step={dimming.step}
-            lit
+            tone="lit"
             disabled={offline}
             className={cn(!on && "opacity-40")}
             aria-label="Brightness"

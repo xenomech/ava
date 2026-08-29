@@ -53,45 +53,36 @@ export function RegisterPage() {
         }}
       >
         <Field label="Your name" error={fieldErrors?.name}>
-          {(props) => (
-            <Input
-              {...props}
-              autoComplete="name"
-              placeholder="Alex Mercer"
-              required
-              value={form.name}
-              onChange={(event) => setForm({ ...form, name: event.target.value })}
-            />
-          )}
+          <Input
+            autoComplete="name"
+            placeholder="Alex Mercer"
+            required
+            value={form.name}
+            onChange={(event) => setForm((f) => ({ ...f, name: event.target.value }))}
+          />
         </Field>
 
         <Field label="Email" error={fieldErrors?.email}>
-          {(props) => (
-            <Input
-              {...props}
-              type="email"
-              autoComplete="email"
-              placeholder="you@home.com"
-              required
-              value={form.email}
-              onChange={(event) => setForm({ ...form, email: event.target.value })}
-            />
-          )}
+          <Input
+            type="email"
+            autoComplete="email"
+            placeholder="you@home.com"
+            required
+            value={form.email}
+            onChange={(event) => setForm((f) => ({ ...f, email: event.target.value }))}
+          />
         </Field>
 
         <Field label="Password" error={fieldErrors?.password} hint="At least 8 characters">
-          {(props) => (
-            <Input
-              {...props}
-              type="password"
-              autoComplete="new-password"
-              placeholder="••••••••"
-              required
-              minLength={8}
-              value={form.password}
-              onChange={(event) => setForm({ ...form, password: event.target.value })}
-            />
-          )}
+          <Input
+            type="password"
+            autoComplete="new-password"
+            placeholder="••••••••"
+            required
+            minLength={8}
+            value={form.password}
+            onChange={(event) => setForm((f) => ({ ...f, password: event.target.value }))}
+          />
         </Field>
 
         {fieldErrors ? null : (

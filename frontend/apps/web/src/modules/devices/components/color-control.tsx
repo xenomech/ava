@@ -1,4 +1,4 @@
-import { Slider, cn } from "@ava/ui";
+import { MarkerSlider, cn } from "@ava/ui";
 
 import { parseColor } from "@/shared/lib/color";
 import { kelvinToCss } from "@/shared/lib/kelvin";
@@ -98,12 +98,11 @@ export function ColorControl({
   if (!showColor) {
     return (
       <div className="grid gap-2">
-        <Slider
+        <MarkerSlider
           value={[white.value]}
           min={kelvinMin}
           max={kelvinMax}
           step={KELVIN_STEP}
-          variant="marker"
           disabled={disabled}
           aria-label="White temperature"
           aria-valuetext={`${white.value} kelvin`}

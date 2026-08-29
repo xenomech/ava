@@ -54,7 +54,7 @@ export function NavContent({ onNavigate }: { onNavigate?: () => void }) {
             : `Its ${inDoomed === 1 ? "device stays" : `${inDoomed} devices stay`} set up, but ${inDoomed === 1 ? "it moves" : "they move"} out of any room, and any scenes saved here are lost.`
         }
         confirmLabel="Delete room"
-        destructive
+        tone="danger"
         onConfirm={() => {
           if (doomed) actions.remove.mutate(doomed.id);
           setDoomed(null);
