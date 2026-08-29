@@ -49,10 +49,29 @@ const litSource = { opacity: "calc(0.14 + var(--level) / 100 * 0.86)" } satisfie
 
 const TRANSITION = { transition: "opacity 420ms var(--motion-out-soft)" } satisfies CSSProperties;
 
+/* Pre-merged: the design page renders 27 devices at once, and spreading these
+   per node per render allocated hundreds of identical objects. */
+const LIT_CORE = { ...litCore, ...TRANSITION } satisfies CSSProperties;
+const LIT_SOFT = { ...litSoft, ...TRANSITION } satisfies CSSProperties;
+const LIT_SOURCE = { ...litSource, ...TRANSITION } satisfies CSSProperties;
+const LIT_FULL = { opacity: "calc(var(--level) / 100)", ...TRANSITION } satisfies CSSProperties;
+const LIT_HALF = {
+  opacity: "calc(var(--level) / 100 * .55)",
+  ...TRANSITION,
+} satisfies CSSProperties;
+
+/* Fixed geometry, computed once rather than per render. */
+const BULB_COIL = coilPath(84, 136, 126, 9, 7);
+const FAN_SPOKES = Array.from({ length: 20 }, (_, i) => (i * 360) / 20);
+const HEATER_BOLTS = [0, 1, 2, 3].map((i) => ({
+  cx: 130 + 52 * Math.cos(((45 + i * 90) * Math.PI) / 180),
+  cy: 212 + 52 * Math.sin(((45 + i * 90) * Math.PI) / 180),
+}));
+
 function Bulb({ m, className, style }: ShapeProps) {
   const glass =
     "M110 16c50 0 84 38 84 88 0 27-13 46-25 62-9 12-14 20-14 30v10H65v-10c0-10-5-18-14-30-12-16-25-35-25-62 0-50 34-88 84-88Z";
-  const coil = coilPath(84, 136, 126, 9, 7);
+  const coil = BULB_COIL;
 
   return (
     <svg viewBox="0 0 220 366" aria-hidden className={className} style={style}>
@@ -67,13 +86,13 @@ function Bulb({ m, className, style }: ShapeProps) {
         ry="70"
         fill="var(--lit)"
         filter={`url(#${m.soft})`}
-        style={{ ...litSoft, ...TRANSITION }}
+        style={LIT_SOFT}
       />
 
       <path d="M104 206v-44h12v44Z" fill="var(--palette-glass)" opacity="0.07" />
       <ellipse cx="110" cy="160" rx="13" ry="8" fill="var(--palette-glass)" opacity="0.06" />
 
-      <g style={{ ...litSource, ...TRANSITION }}>
+      <g style={LIT_SOURCE}>
         <g stroke="var(--palette-wire)" strokeWidth="1.5" fill="none" opacity="0.85">
           <path d="M100 162V132M120 162v-30" />
           <path d="M92 150l8-6M128 150l-8-6" />
@@ -110,7 +129,7 @@ function Bulb({ m, className, style }: ShapeProps) {
         opacity="0.12"
         transform="rotate(16 152 104)"
       />
-      <ellipse cx="110" cy="196" rx="34" ry="7" fill="#fff" style={{ ...litSoft, ...TRANSITION }} />
+      <ellipse cx="110" cy="196" rx="34" ry="7" fill="#fff" style={LIT_SOFT} />
 
       <path d={glass} fill="none" stroke={`url(#${m.rim})`} strokeWidth="var(--rim-width, 1.6)" />
 
@@ -158,17 +177,9 @@ function Strip({ m, className, style }: ShapeProps) {
         <rect x="30" y="160" width="260" height="14" rx="7" fill="#fff" opacity="0.13" />
         <rect x="30" y="188" width="260" height="10" rx="5" fill="#000" opacity="0.3" />
 
-        <rect
-          x="42"
-          y="170"
-          width="236"
-          height="18"
-          rx="9"
-          fill="var(--lit)"
-          style={{ ...litSoft, ...TRANSITION }}
-        />
+        <rect x="42" y="170" width="236" height="18" rx="9" fill="var(--lit)" style={LIT_SOFT} />
 
-        <g style={{ ...litSource, ...TRANSITION }}>
+        <g style={LIT_SOURCE}>
           {[0, 1, 2, 3, 4, 5].map((i) => {
             const x = 68 + i * 37;
             return (
@@ -210,7 +221,7 @@ function Lamp({ m, className, style }: ShapeProps) {
         d="M80 152h100l46 146H34Z"
         fill="var(--lit)"
         filter={`url(#${m.soft})`}
-        style={{ ...litCore, ...TRANSITION }}
+        style={LIT_CORE}
       />
 
       <path d="M78 78h104l22 72H56Z" fill={`url(#${m.dark})`} />
@@ -221,8 +232,8 @@ function Lamp({ m, className, style }: ShapeProps) {
       </g>
       <path d="M78 78h104l3 10H75Z" fill="#fff" opacity="0.15" />
 
-      <path d="M60 142h140l-4 8H64Z" fill="var(--lit)" style={{ ...litSoft, ...TRANSITION }} />
-      <g style={{ ...litSource, ...TRANSITION }}>
+      <path d="M60 142h140l-4 8H64Z" fill="var(--lit)" style={LIT_SOFT} />
+      <g style={LIT_SOURCE}>
         <ellipse cx="130" cy="150" rx="72" ry="10" fill="var(--lit)" filter={`url(#${m.glow})`} />
         <ellipse cx="130" cy="150" rx="52" ry="6" fill="#fff" opacity="0.4" />
       </g>
@@ -256,7 +267,7 @@ function Plug({ m, className, style }: ShapeProps) {
         strokeWidth="var(--rim-width, 1.4)"
       />
 
-      <g style={{ ...litSource, ...TRANSITION }}>
+      <g style={LIT_SOURCE}>
         <circle cx="130" cy="168" r="17" fill="var(--lit)" filter={`url(#${m.glow})`} />
         <circle cx="130" cy="168" r="9" fill="#fff" opacity="0.55" />
       </g>
@@ -296,7 +307,7 @@ function Sensor({ m, className, style }: ShapeProps) {
         r="12"
         fill="var(--lit)"
         filter={`url(#${m.glow})`}
-        style={{ ...litSource, ...TRANSITION }}
+        style={LIT_SOURCE}
       />
 
       <rect x="118" y="264" width="24" height="16" rx="4" fill={`url(#${m.metal})`} />
@@ -337,7 +348,7 @@ function Tube({ m, className, style }: ShapeProps) {
         height="22"
         rx="11"
         fill={`url(#${emit})`}
-        style={{ ...litSoft, ...TRANSITION }}
+        style={LIT_SOFT}
       />
 
       <rect
@@ -348,7 +359,7 @@ function Tube({ m, className, style }: ShapeProps) {
         rx="11"
         fill="var(--lit)"
         filter={`url(#${m.glow})`}
-        style={{ ...litSource, ...TRANSITION }}
+        style={LIT_SOURCE}
       />
 
       <rect
@@ -362,20 +373,13 @@ function Tube({ m, className, style }: ShapeProps) {
         strokeWidth="var(--rim-width, 1.6)"
       />
 
-      <ellipse
-        cx="190"
-        cy="212"
-        rx="176"
-        ry="58"
-        fill={`url(#${spill})`}
-        style={{ ...litSoft, ...TRANSITION }}
-      />
+      <ellipse cx="190" cy="212" rx="176" ry="58" fill={`url(#${spill})`} style={LIT_SOFT} />
     </svg>
   );
 }
 
 function Fan({ m, className, style }: ShapeProps) {
-  const spokes = Array.from({ length: 20 }, (_, i) => (i * 360) / 20);
+  const spokes = FAN_SPOKES;
   const blade = "M130 148 C168 128 176 92 158 58 C140 74 116 92 130 148 Z";
 
   return (
@@ -391,7 +395,7 @@ function Fan({ m, className, style }: ShapeProps) {
 
       <circle cx="130" cy="148" r="86" fill="#0a0b0d" />
 
-      <g style={{ opacity: "calc(var(--level) / 100 * .55)", ...TRANSITION }}>
+      <g style={LIT_HALF}>
         <circle
           cx="130"
           cy="148"
@@ -450,13 +454,7 @@ function Fan({ m, className, style }: ShapeProps) {
         strokeWidth="1.4"
       />
 
-      <circle
-        cx="130"
-        cy="322"
-        r="4"
-        fill="#4ade80"
-        style={{ opacity: "calc(var(--level) / 100)", ...TRANSITION }}
-      />
+      <circle cx="130" cy="322" r="4" fill="#4ade80" style={LIT_FULL} />
     </svg>
   );
 }
@@ -469,7 +467,7 @@ function Heater({ m, className, style }: ShapeProps) {
       <rect x="42" y="58" width="176" height="238" rx="18" fill={`url(#${m.env})`} />
       <rect x="42" y="58" width="176" height="16" rx="8" fill="#fff" opacity=".1" />
 
-      <g style={{ ...litSource, ...TRANSITION }}>
+      <g style={LIT_SOURCE}>
         {[0, 1, 2, 3, 4].map((i) => {
           const y = 96 + i * 40;
           return (
@@ -565,14 +563,8 @@ function Speaker({ m, className, style }: ShapeProps) {
         transform="rotate(-24 123 204)"
       />
 
-      {[0, 1, 2, 3].map((i) => (
-        <circle
-          key={i}
-          cx={130 + 52 * Math.cos(((45 + i * 90) * Math.PI) / 180)}
-          cy={212 + 52 * Math.sin(((45 + i * 90) * Math.PI) / 180)}
-          r="3.4"
-          fill={`url(#${m.metal})`}
-        />
+      {HEATER_BOLTS.map((bolt) => (
+        <circle key={bolt.cx} cx={bolt.cx} cy={bolt.cy} r="3.4" fill={`url(#${m.metal})`} />
       ))}
 
       <circle cx="130" cy="104" r="26" fill="#0d0f12" />
@@ -610,13 +602,7 @@ function Speaker({ m, className, style }: ShapeProps) {
         strokeWidth="1.6"
       />
 
-      <circle
-        cx="64"
-        cy="304"
-        r="3.6"
-        fill="#4ade80"
-        style={{ opacity: "calc(var(--level) / 100)", ...TRANSITION }}
-      />
+      <circle cx="64" cy="304" r="3.6" fill="#4ade80" style={LIT_FULL} />
     </svg>
   );
 }
@@ -641,11 +627,13 @@ export function DeviceHalo({ className }: { className?: string }) {
         "pointer-events-none absolute aspect-square rounded-full blur-[52px]",
         className,
       )}
-      style={{
-        background: "radial-gradient(circle, var(--lit) 0%, transparent 68%)",
-        opacity: "calc(var(--level) / 100 * var(--level) / 100 * 0.2)",
-        transition: "opacity 500ms var(--motion-out-soft)",
-      }}
+      style={HALO_STYLE}
     />
   );
 }
+
+const HALO_STYLE = {
+  background: "radial-gradient(circle, var(--lit) 0%, transparent 68%)",
+  opacity: "calc(var(--level) / 100 * var(--level) / 100 * 0.2)",
+  transition: "opacity 500ms var(--motion-out-soft)",
+} satisfies CSSProperties;
