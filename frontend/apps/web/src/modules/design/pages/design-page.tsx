@@ -20,7 +20,9 @@ import {
   DrawerTitle,
   DrawerTrigger,
   Field,
+  FieldControl,
   Input,
+  MarkerSlider,
   Select,
   SelectContent,
   SelectItem,
@@ -196,34 +198,33 @@ export function DesignPage() {
             </div>
 
             <Field label="Email" hint="We never share this.">
-              {(props) => <Input {...props} type="email" placeholder="you@home.com" />}
+              <Input type="email" placeholder="you@home.com" />
             </Field>
 
             <Field label="Password" error="That password is too short.">
-              {(props) => <Input {...props} type="password" defaultValue="abc" />}
+              <Input type="password" defaultValue="abc" />
             </Field>
 
             <Field label="Role">
-              {({ id, ...props }) => (
-                <Select defaultValue="member">
-                  <SelectTrigger id={id} {...props}>
+              <Select defaultValue="member">
+                <FieldControl>
+                  <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="member">Member</SelectItem>
-                    <SelectItem value="guest">Guest</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
+                </FieldControl>
+                <SelectContent>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="member">Member</SelectItem>
+                  <SelectItem value="guest">Guest</SelectItem>
+                </SelectContent>
+              </Select>
             </Field>
 
             <div className="grid gap-2">
               <span className="text-small text-muted">Slider · marker</span>
-              <Slider
+              <MarkerSlider
                 defaultValue={[30]}
                 max={100}
-                variant="marker"
                 aria-label="Demo temperature"
                 style={{
                   background:
@@ -389,7 +390,7 @@ function TypeRow({ name, klass, text }: { name: string; klass: string; text: str
     if (!sample.current) return;
     const style = getComputedStyle(sample.current);
     setMetrics(`${style.fontSize} / ${style.lineHeight} / ${style.letterSpacing}`);
-  }, []);
+  }, [klass]);
 
   return (
     <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">

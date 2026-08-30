@@ -1,11 +1,15 @@
 import { cn } from "@ava/ui";
 import { Outlet } from "@tanstack/react-router";
 
+import { useMediaQuery } from "@/shared/hooks/use-media-query";
 import { AvaSocketProvider } from "@/shared/realtime";
 import { AvaEvents } from "./ava-events";
 import { CommandPalette } from "./command-palette";
 import { MenuHandle } from "./menu-handle";
 import { NavContent } from "./nav-content";
+
+/** Where the rail replaces the pull-down. Matches the `md:` classes below. */
+const RAIL = "(min-width: 768px)";
 
 /**
  * No top bar. The window is the app: rooms down the side, the light filling
@@ -16,6 +20,10 @@ import { NavContent } from "./nav-content";
  * only permanent chrome is a handle the width of two fingers.
  */
 export function AppShell() {
+  /* Mounted per form factor rather than hidden with CSS: a display:none rail
+     still runs every query and re-renders on every device change. */
+  const rail = useMediaQuery(RAIL);
+
   return (
     <AvaSocketProvider>
       <AvaEvents />
@@ -29,9 +37,11 @@ export function AppShell() {
           "md:grid-cols-[208px_minmax(0,1fr)] xl:grid-cols-[262px_minmax(0,1fr)]",
         )}
       >
-        <aside className="hidden min-h-0 bg-surface px-4 pb-8 pt-8 md:block xl:px-6 xl:pb-10 xl:pt-10">
-          <NavContent />
-        </aside>
+        {rail ? (
+          <aside className="hidden min-h-0 bg-surface px-4 pb-8 pt-8 md:block xl:px-6 xl:pb-10 xl:pt-10">
+            <NavContent />
+          </aside>
+        ) : null}
 
         <main
           className={cn(
@@ -41,9 +51,11 @@ export function AppShell() {
         >
           {/* One nav list, two presentations: the pull-down renders the same
               component so the phone can never drift from the desktop. */}
-          <MenuHandle>
-            <NavContent />
-          </MenuHandle>
+          {rail ? null : (
+            <MenuHandle>
+              <NavContent />
+            </MenuHandle>
+          )}
 
           <Outlet />
         </main>

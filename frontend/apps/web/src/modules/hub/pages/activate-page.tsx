@@ -1,7 +1,7 @@
 import { Button, Chip, Field, Input } from "@ava/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { isApiError } from "@/config/http/request";
@@ -16,11 +16,7 @@ export function ActivatePage() {
   const search = useSearch({ strict: false }) as { code?: string };
 
   const hubs = useQuery(hubQueries.list());
-  const [code, setCode] = useState("");
-
-  useEffect(() => {
-    if (search.code) setCode(search.code);
-  }, [search.code]);
+  const [code, setCode] = useState(() => search.code ?? "");
 
   const activate = useMutation({
     mutationFn: () => activateHub({ user_code: code.trim().toUpperCase() }),
@@ -56,18 +52,15 @@ export function ActivatePage() {
             hint="Nine characters, like ABCD-1234."
             error={isApiError(activate.error) ? activate.error.details?.user_code : undefined}
           >
-            {(props) => (
-              <Input
-                {...props}
-                required
-                autoComplete="off"
-                spellCheck={false}
-                placeholder="ABCD-1234"
-                className="font-mono tracking-caps uppercase"
-                value={code}
-                onChange={(event) => setCode(event.target.value)}
-              />
-            )}
+            <Input
+              required
+              autoComplete="off"
+              spellCheck={false}
+              placeholder="ABCD-1234"
+              className="font-mono tracking-caps uppercase"
+              value={code}
+              onChange={(event) => setCode(event.target.value)}
+            />
           </Field>
 
           <Button type="submit" loading={activate.isPending} disabled={!code.trim()}>

@@ -15,11 +15,15 @@ import { applyTargets, sendCommand } from "./api";
 import { applyLocally, claim, release } from "./optimistic";
 import { deviceQueries } from "./queries";
 
+/* One shared empty list, so a pending query does not hand every consumer a
+   fresh [] whose downstream filters change identity each render. */
+const NO_DEVICES: DeviceDto[] = [];
+
 export function useDevices() {
   const query = useQuery(deviceQueries.list());
 
   return {
-    devices: query.data ?? [],
+    devices: query.data ?? NO_DEVICES,
     isPending: query.isPending,
     isError: query.isError,
     error: query.error,

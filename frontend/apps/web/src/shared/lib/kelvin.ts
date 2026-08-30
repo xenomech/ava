@@ -20,9 +20,3 @@ export function kelvinToCss(kelvin: number): string {
 
   return `rgb(${r} ${g} ${b})`;
 }
-
-export const percentToKelvin = (percent: number) =>
-  Math.round(KELVIN_MIN + (percent / 100) * (KELVIN_MAX - KELVIN_MIN));
-
-export const kelvinToPercent = (kelvin: number) =>
-  ((kelvin - KELVIN_MIN) / (KELVIN_MAX - KELVIN_MIN)) * 100;

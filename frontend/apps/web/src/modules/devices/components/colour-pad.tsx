@@ -84,6 +84,7 @@ export function ColourPad({
   disabled = false,
   onPreview,
   onCommit,
+  onCancel,
 }: {
   tint: Tint;
   kelvinMin: number;
@@ -91,6 +92,7 @@ export function ColourPad({
   disabled?: boolean;
   onPreview: (tint: Tint) => void;
   onCommit: (tint: Tint) => void;
+  onCancel?: () => void;
 }) {
   const pad = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
@@ -128,6 +130,15 @@ export function ColourPad({
 
     dragging.current = false;
     onCommit(at(event));
+  };
+
+  /* A cancelled gesture — capture lost, a system gesture took over — must not
+     write to the bulb; only a deliberate release commits. */
+  const abort = () => {
+    if (!dragging.current) return;
+
+    dragging.current = false;
+    onCancel?.();
   };
 
   /* Arrows move by a usable step rather than a pixel: across changes the hue or
@@ -193,7 +204,7 @@ export function ColourPad({
       onPointerDown={down}
       onPointerMove={move}
       onPointerUp={up}
-      onPointerCancel={up}
+      onPointerCancel={abort}
       onKeyDown={key}
       className={cn(
         "relative h-[168px] w-full touch-none select-none overflow-hidden rounded-lg",
@@ -206,10 +217,7 @@ export function ColourPad({
         /* The wash is the same maths `tintCss` applies, expressed as a gradient
            — white at `WASH` alpha by `WHITE_EDGE` — so the thumb always sits on
            the colour it is about to send. */
-        backgroundImage: [
-          `linear-gradient(to bottom, rgb(255 255 255 / 0) 0%, rgb(255 255 255 / ${WASH}) ${WHITE_EDGE * 100}%)`,
-          hueRamp(),
-        ].join(","),
+        backgroundImage: PAD_BACKGROUND,
       }}
     >
       <span
@@ -261,12 +269,31 @@ function hueRamp(steps = 48): string {
   return `linear-gradient(to right, ${stops.join(",")})`;
 }
 
+/* The pad re-renders on every pointer move while a drag is live, and neither
+   gradient depends on anything that changes mid-drag — so both are built once.
+   The wash is the same maths `tintCss` applies, expressed as a gradient —
+   white at `WASH` alpha by `WHITE_EDGE` — so the thumb always sits on the
+   colour it is about to send. */
+const PAD_BACKGROUND = [
+  `linear-gradient(to bottom, rgb(255 255 255 / 0) 0%, rgb(255 255 255 / ${WASH}) ${WHITE_EDGE * 100}%)`,
+  hueRamp(),
+].join(",");
+
+const whiteRamps = new Map<string, string>();
+
 function whiteRamp(min: number, max: number, steps = 24): string {
+  const key = `${min}:${max}`;
+  const cached = whiteRamps.get(key);
+  if (cached) return cached;
+
   const stops = Array.from({ length: steps + 1 }, (_, index) => {
     const kelvin = min + (index / steps) * (max - min);
 
     return `${rgbToCss(kelvinToRgb(kelvin))} ${((index / steps) * 100).toFixed(1)}%`;
   });
 
-  return `linear-gradient(to right, ${stops.join(",")})`;
+  const ramp = `linear-gradient(to right, ${stops.join(",")})`;
+  whiteRamps.set(key, ramp);
+
+  return ramp;
 }

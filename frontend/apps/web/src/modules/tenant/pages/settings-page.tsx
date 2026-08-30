@@ -1,6 +1,6 @@
 import { Button, Chip, Field, Input } from "@ava/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { isApiError } from "@/config/http/request";
@@ -15,16 +15,16 @@ export function SettingsPage() {
   const isAdmin = session.isAdmin;
   const tenant = useQuery(tenantQueries.current());
 
-  const [name, setName] = useState("");
-
-  useEffect(() => {
-    if (tenant.data) setName(tenant.data.name);
-  }, [tenant.data]);
+  /* The server name shows through until the user starts typing; a background
+     refetch can then no longer clobber a half-finished edit. */
+  const [draft, setDraft] = useState<string | null>(null);
+  const name = draft ?? tenant.data?.name ?? "";
 
   const save = useMutation({
     mutationFn: () => updateCurrentTenant(name),
     onSuccess: async () => {
       toast.success("Home updated");
+      setDraft(null);
       await queryClient.invalidateQueries({ queryKey: tenantQueries.all() });
     },
     onError: (error) => toast.error(isApiError(error) ? error.message : "Could not save"),
@@ -50,15 +50,12 @@ export function SettingsPage() {
           }}
         >
           <Field label="Name" error={isApiError(save.error) ? save.error.details?.name : undefined}>
-            {(props) => (
-              <Input
-                {...props}
-                required
-                disabled={!isAdmin || tenant.isPending}
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-              />
-            )}
+            <Input
+              required
+              disabled={!isAdmin || tenant.isPending}
+              value={name}
+              onChange={(event) => setDraft(event.target.value)}
+            />
           </Field>
 
           {isAdmin ? (
