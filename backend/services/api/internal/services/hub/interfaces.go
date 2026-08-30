@@ -24,6 +24,11 @@ type Service interface {
 	ValidateDevice(ctx context.Context, hubID uuid.UUID) (*model.Hub, error)
 }
 
+type BrokerProvisioner interface {
+	ProvisionHub(ctx context.Context, tenantSlug, hubID string) (username, password string, err error)
+	RevokeHub(ctx context.Context, hubID string) error
+}
+
 type DeviceRegistry interface {
 	MarkHubOffline(ctx context.Context, tenantID, hubID uuid.UUID) error
 }
@@ -33,6 +38,7 @@ type hubService struct {
 	tenantRepo   tenantrepo.Repository
 	events       eventsvc.Service
 	devices      DeviceRegistry
+	broker       BrokerProvisioner
 	tokenManager jwt.TokenManager
 }
 
@@ -41,12 +47,14 @@ func NewService(
 	tenantRepo tenantrepo.Repository,
 	events eventsvc.Service,
 	devices DeviceRegistry,
+	provisioner BrokerProvisioner,
 ) Service {
 	return &hubService{
 		hubRepo:      hubRepo,
 		tenantRepo:   tenantRepo,
 		events:       events,
 		devices:      devices,
+		broker:       provisioner,
 		tokenManager: jwt.NewTokenManager(),
 	}
 }

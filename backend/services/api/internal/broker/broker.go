@@ -2,15 +2,20 @@ package broker
 
 import (
 	"context"
+	"errors"
 
 	"ava/pkg/mqtt"
 
 	"github.com/google/uuid"
 )
 
+var ErrNotConnected = errors.New("broker: not connected")
+
 type Config struct {
 	URL      string
 	ClientID string
+	Username string
+	Password string
 }
 
 type Broker struct {
@@ -26,6 +31,8 @@ func Connect(ctx context.Context, cfg Config) (*Broker, error) {
 	client, err := mqtt.Connect(ctx, &mqtt.Options{
 		BrokerURL: cfg.URL,
 		ClientID:  clientID,
+		Username:  cfg.Username,
+		Password:  cfg.Password,
 	})
 	if err != nil {
 		return nil, err

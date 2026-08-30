@@ -10,10 +10,12 @@ import (
 )
 
 type State struct {
-	HubID        string `json:"hub_id"`
-	HubName      string `json:"hub_name"`
-	TenantSlug   string `json:"tenant_slug"`
-	RefreshToken string `json:"refresh_token"`
+	HubID          string `json:"hub_id"`
+	HubName        string `json:"hub_name"`
+	TenantSlug     string `json:"tenant_slug"`
+	RefreshToken   string `json:"refresh_token"`
+	BrokerUsername string `json:"broker_username,omitempty"`
+	BrokerPassword string `json:"broker_password,omitempty"`
 }
 
 func Load(path string) (*State, error) {

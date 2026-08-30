@@ -120,11 +120,9 @@ You also need a Postgres service and an MQTT broker. Railway has a Postgres temp
 there is no first-party MQTT one, so run Mosquitto as a service or point
 `MQTT_BROKER_URL` at a hosted broker.
 
-**Do not deploy `docker/mosquitto/mosquitto.conf` as-is.** It sets
-`allow_anonymous true`, which is fine on a laptop and unacceptable on a public
-network — anyone who finds the broker can drive every hub. A deployed broker needs a
-password file and per-tenant topic ACLs restricting each hub to `ava/{tenant}/{hub}/#`.
-That work is not done yet.
+The broker refuses anonymous connections. Set `MQTT_USERNAME` and `MQTT_PASSWORD`
+on both the broker and the API — the broker bootstraps that account on first start
+and the API authenticates with it.
 
 ### `ava-api` environment
 
@@ -206,3 +204,44 @@ railway config migrate --apply   # write it and clear the Railway Config File se
 ```
 
 Run it once per service.
+
+## Broker authentication
+
+The broker runs Mosquitto's dynamic-security plugin with `allow_anonymous false`.
+Two kinds of account exist.
+
+**The API** holds one long-lived account, named by `MQTT_USERNAME`. Its password is
+`MQTT_PASSWORD`, and `docker/mosquitto/entrypoint.sh` creates the account the first
+time the broker starts against an empty config volume. The account carries the dynsec
+admin role plus an `ava-control-plane` role the API creates for itself at boot, which
+grants publish on `ava/+/+/cmd` and `ava/+/+/apply`. Without that second role the API
+can administer the broker but cannot send a single command — the admin role the
+bootstrap creates deliberately excludes publishing to ordinary topics.
+
+**Each hub** gets its own account, created by the API when the hub pairs and returned
+in the token response as `broker.username` and `broker.password`. The hub stores them
+in `avahub-state.json` at mode `0600` and uses them to connect. Re-pairing or a token
+refresh rotates them. Revoking a hub deletes its account.
+
+A hub's role permits exactly four things:
+
+| | |
+| --- | --- |
+| publish | `ava/{tenant}/{hub}/state` |
+| publish | `ava/{tenant}/{hub}/status` |
+| subscribe | `ava/{tenant}/{hub}/cmd` |
+| subscribe | `ava/{tenant}/{hub}/apply` |
+
+Everything else is refused, including publishing to its own `cmd` topic, reading any
+other hub's topics, subscribing to a wildcard, and writing to the dynsec control topic.
+One customer's hub cannot see or drive another customer's devices even if its
+credentials leak.
+
+The credentials live only in the hub's state file and the broker's
+`dynamic-security.json`, which sits on the `mosquitto_config` volume at mode `0600`.
+The API never stores a hub's broker password — it generates one, hands it over once,
+and forgets it. Losing the state file means re-pairing.
+
+To rotate the API account, change `MQTT_PASSWORD` and run
+`mosquitto_ctrl dynsec setClientPassword` against the broker; the bootstrap only runs
+when `dynamic-security.json` does not already exist.

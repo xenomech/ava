@@ -57,17 +57,30 @@ func Bootstrap(ctx context.Context) (*App, error) {
 		return nil, err
 	}
 
-	messages, err := broker.Connect(ctx, broker.Config{URL: cfg.MQTTBrokerURL})
+	messages, err := broker.Connect(ctx, broker.Config{
+		URL:      cfg.MQTTBrokerURL,
+		Username: cfg.MQTTUsername,
+		Password: cfg.MQTTPassword,
+	})
 	if err != nil {
 		logger.Warn("MQTT_UNAVAILABLE", logger.Err(err))
 	}
 
-	var commander services.Commander
+	var (
+		commander   services.Commander
+		provisioner services.Provisioner
+	)
+
 	if messages != nil {
+		if err := messages.EnsureControlPlane(ctx, cfg.MQTTUsername); err != nil {
+			logger.Warn("MQTT_CONTROL_PLANE_FAILED", logger.Err(err))
+		}
+
 		commander = messages
+		provisioner = messages
 	}
 
-	service := services.NewService(repository.NewRepository(database), commander)
+	service := services.NewService(repository.NewRepository(database), commander, provisioner)
 
 	return &App{
 		Config:  cfg,

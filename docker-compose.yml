@@ -26,13 +26,19 @@ services:
   mosquitto:
     image: eclipse-mosquitto:2
     restart: unless-stopped
+    environment:
+      MQTT_ADMIN_USERNAME: ${MQTT_USERNAME:-ava-api}
+      MQTT_ADMIN_PASSWORD: ${MQTT_PASSWORD:?MQTT_PASSWORD is required}
+    entrypoint: ["/entrypoint.sh"]
     volumes:
       - ./docker/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./docker/mosquitto/entrypoint.sh:/entrypoint.sh:ro
+      - mosquitto_config:/mosquitto/config
       - mosquitto_data:/mosquitto/data
     ports:
       - "${MQTT_PORT:-1883}:1883"
     healthcheck:
-      test: ["CMD-SHELL", "mosquitto_sub -t '$$SYS/#' -C 1 -W 3 -q 1 >/dev/null 2>&1 || exit 1"]
+      test: ["CMD-SHELL", "mosquitto_sub -t '$$SYS/#' -C 1 -W 3 -q 1 -u $$MQTT_ADMIN_USERNAME -P $$MQTT_ADMIN_PASSWORD >/dev/null 2>&1 || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -64,6 +70,8 @@ volumes:
   postgres_data:
     driver: local
   mosquitto_data:
+    driver: local
+  mosquitto_config:
     driver: local
 
 networks:
