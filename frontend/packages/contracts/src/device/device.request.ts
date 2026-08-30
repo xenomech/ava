@@ -1,19 +1,39 @@
 import { z } from "zod";
+import { traitValueSchema } from "./device.dto";
 
 export const updateDeviceRequest = z.object({
   name: z.string().min(1).max(100).optional(),
-  room: z.string().max(80).optional(),
+  room_id: z.uuid().optional(),
+  clear_room: z.boolean().optional(),
+  appliance: z.string().max(40).optional(),
 });
 
 export type UpdateDeviceRequest = z.infer<typeof updateDeviceRequest>;
 
-export const DEVICE_ACTIONS = ["power", "brightness", "color_temp"] as const;
-export const deviceActionSchema = z.enum(DEVICE_ACTIONS);
-export type DeviceAction = z.infer<typeof deviceActionSchema>;
-
 export const sendCommandRequest = z.object({
-  action: deviceActionSchema,
-  value: z.union([z.boolean(), z.number()]),
+  trait: z.string().min(1).max(64),
+  value: traitValueSchema,
 });
 
 export type SendCommandRequest = z.infer<typeof sendCommandRequest>;
+
+export const applyTargetRequest = z.object({
+  device_id: z.uuid(),
+  trait: z.string().min(1).max(64),
+  value: traitValueSchema,
+});
+
+export type ApplyTargetRequest = z.infer<typeof applyTargetRequest>;
+
+export const applyRequest = z.object({
+  targets: z.array(applyTargetRequest).min(1).max(100),
+});
+
+export type ApplyRequest = z.infer<typeof applyRequest>;
+
+export const applyResponse = z.object({
+  applied: z.array(z.uuid()).default([]),
+  skipped: z.array(z.object({ device_id: z.uuid(), reason: z.string() })).default([]),
+});
+
+export type ApplyResponse = z.infer<typeof applyResponse>;

@@ -41,9 +41,18 @@ func (s *deviceService) SendCommand(
 		return nil, ErrHubOffline
 	}
 
+	capabilities, err := decodeCapabilities(target.Capabilities)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := capabilities.ValidateWrite(req.Trait, req.Value); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrTraitRejected, err)
+	}
+
 	payload, err := json.Marshal(wire.Command{
 		DeviceID: target.ExternalID,
-		Action:   req.Action,
+		Trait:    req.Trait,
 		Value:    req.Value,
 	})
 	if err != nil {
@@ -61,13 +70,13 @@ func (s *deviceService) SendCommand(
 	logger.Info("COMMAND_PUBLISHED",
 		logger.String("topic", topic),
 		logger.String("device.ExternalID", target.ExternalID),
-		logger.String("action", req.Action),
+		logger.String("trait", string(req.Trait)),
 	)
 
 	return &dto.CommandAcceptedResponse{
 		DeviceID:   target.ID,
 		ExternalID: target.ExternalID,
-		Action:     req.Action,
+		Trait:      req.Trait,
 		Topic:      topic,
 	}, nil
 }
@@ -75,15 +84,21 @@ func (s *deviceService) SendCommand(
 var (
 	ErrCommandChannelUnavailable = serrors.NewCoded("command_channel_unavailable", "the hub command channel is unavailable")
 	ErrHubOffline                = serrors.NewCoded("hub_offline", "the hub for this device is offline")
+	ErrTraitRejected             = serrors.NewCoded("trait_rejected", "the device cannot accept this value")
 )
 
 func (s *deviceService) ApplyReportedState(
 	ctx context.Context,
 	hubID uuid.UUID,
 	externalID string,
-	state json.RawMessage,
+	state wire.State,
 ) error {
-	updated, err := s.deviceRepo.ApplyState(ctx, hubID, externalID, state)
+	patch, err := json.Marshal(state)
+	if err != nil {
+		return fmt.Errorf("encode reported state: %w", err)
+	}
+
+	updated, err := s.deviceRepo.ApplyState(ctx, hubID, externalID, patch)
 	if err != nil {
 		if serrors.Is(err, devicerepo.ErrDeviceNotFound) {
 			return ErrDeviceNotFound

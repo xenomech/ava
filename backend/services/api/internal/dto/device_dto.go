@@ -1,18 +1,15 @@
 package dto
 
 import (
-	"encoding/json"
 	"time"
+
+	"ava/pkg/wire"
 
 	"github.com/google/uuid"
 )
 
 type SyncDeviceItem struct {
-	ExternalID string          `json:"external_id" validate:"required,max=128"`
-	Name       string          `json:"name" validate:"required,max=100"`
-	Kind       string          `json:"kind" validate:"required,max=40"`
-	Status     string          `json:"status" validate:"required,oneof=online offline"`
-	State      json.RawMessage `json:"state,omitempty"`
+	wire.DeviceReport
 }
 
 type SyncDevicesRequest struct {
@@ -20,31 +17,59 @@ type SyncDevicesRequest struct {
 }
 
 type UpdateDeviceRequest struct {
-	Name *string `json:"name,omitempty" validate:"omitempty,max=100"`
-	Room *string `json:"room,omitempty" validate:"omitempty,max=80"`
+	Name      *string    `json:"name,omitempty" validate:"omitempty,max=100"`
+	RoomID    *uuid.UUID `json:"room_id,omitempty"`
+	ClearRoom bool       `json:"clear_room,omitempty"`
+	Appliance *string    `json:"appliance,omitempty" validate:"omitempty,max=40"`
 }
 
 type DeviceResponse struct {
-	ID         uuid.UUID       `json:"id"`
-	HubID      uuid.UUID       `json:"hub_id"`
-	ExternalID string          `json:"external_id"`
-	Name       string          `json:"name"`
-	Room       string          `json:"room"`
-	Kind       string          `json:"kind"`
-	Status     string          `json:"status"`
-	LastSeenAt *time.Time      `json:"last_seen_at,omitempty"`
-	State      json.RawMessage `json:"state"`
-	CreatedAt  time.Time       `json:"created_at"`
+	ID           uuid.UUID         `json:"id"`
+	HubID        uuid.UUID         `json:"hub_id"`
+	ExternalID   string            `json:"external_id"`
+	Name         string            `json:"name"`
+	RoomID       *uuid.UUID        `json:"room_id,omitempty"`
+	Room         string            `json:"room"`
+	Appliance    string            `json:"appliance"`
+	Kind         string            `json:"kind"`
+	Vendor       string            `json:"vendor,omitempty"`
+	Model        string            `json:"model,omitempty"`
+	Parent       string            `json:"parent,omitempty"`
+	Status       string            `json:"status"`
+	LastSeenAt   *time.Time        `json:"last_seen_at,omitempty"`
+	Capabilities wire.Capabilities `json:"capabilities"`
+	State        wire.State        `json:"state"`
+	CreatedAt    time.Time         `json:"created_at"`
 }
 
 type SendCommandRequest struct {
-	Action string          `json:"action" validate:"required,oneof=power brightness color_temp"`
-	Value  json.RawMessage `json:"value" validate:"required"`
+	Trait wire.Trait `json:"trait" validate:"required,max=64"`
+	Value wire.Value `json:"value"`
 }
 
 type CommandAcceptedResponse struct {
-	DeviceID   uuid.UUID `json:"device_id"`
-	ExternalID string    `json:"external_id"`
-	Action     string    `json:"action"`
-	Topic      string    `json:"topic"`
+	DeviceID   uuid.UUID  `json:"device_id"`
+	ExternalID string     `json:"external_id"`
+	Trait      wire.Trait `json:"trait"`
+	Topic      string     `json:"topic"`
+}
+
+type ApplyTargetRequest struct {
+	DeviceID uuid.UUID  `json:"device_id" validate:"required"`
+	Trait    wire.Trait `json:"trait" validate:"required,max=64"`
+	Value    wire.Value `json:"value"`
+}
+
+type ApplyRequest struct {
+	Targets []ApplyTargetRequest `json:"targets" validate:"required,min=1,max=100,dive"`
+}
+
+type SkippedTarget struct {
+	DeviceID uuid.UUID `json:"device_id"`
+	Reason   string    `json:"reason"`
+}
+
+type ApplyResponse struct {
+	Applied []uuid.UUID     `json:"applied"`
+	Skipped []SkippedTarget `json:"skipped"`
 }

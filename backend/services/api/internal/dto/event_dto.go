@@ -1,7 +1,7 @@
 package dto
 
 import (
-	"encoding/json"
+	"ava/pkg/wire"
 
 	"github.com/google/uuid"
 )
@@ -16,10 +16,10 @@ const (
 )
 
 type DeviceCommandFrame struct {
-	Type     string          `json:"type"`
-	DeviceID uuid.UUID       `json:"device_id"`
-	Action   string          `json:"action"`
-	Value    json.RawMessage `json:"value"`
+	Type     string     `json:"type"`
+	DeviceID uuid.UUID  `json:"device_id"`
+	Trait    wire.Trait `json:"trait"`
+	Value    wire.Value `json:"value"`
 }
 
 type CommandRejectedEvent struct {

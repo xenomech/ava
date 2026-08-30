@@ -6,6 +6,7 @@ import (
 
 	"ava/hub/internal/device"
 	"ava/hub/internal/device/adapters"
+	"ava/pkg/wire"
 )
 
 func TestOpenReturnsTheRightAdapterPerVendor(t *testing.T) {
@@ -18,11 +19,6 @@ func TestOpenReturnsTheRightAdapterPerVendor(t *testing.T) {
 			name:   "wiz",
 			spec:   device.Spec{Vendor: device.VendorWiz, IP: "192.168.1.50"},
 			vendor: "wiz",
-		},
-		{
-			name:   "tuya",
-			spec:   device.Spec{Vendor: device.VendorTuya, ID: "bf01", IP: "192.168.1.60", LocalKey: "0123456789abcdef"},
-			vendor: "tuya",
 		},
 	}
 
@@ -58,26 +54,34 @@ func TestOpenRejectsANilSpec(t *testing.T) {
 	}
 }
 
-func TestOpenPropagatesAdapterValidation(t *testing.T) {
-	_, err := adapters.Open(&device.Spec{Vendor: device.VendorTuya, ID: "bf01", LocalKey: "short"})
-
-	if err == nil {
-		t.Fatal("a bad local key must not produce a device")
-	}
-}
-
 func TestCapabilitiesFlowThroughTheSpec(t *testing.T) {
-	dev, err := adapters.Open(&device.Spec{
-		Vendor:       device.VendorTuya,
-		ID:           "bf01",
-		LocalKey:     "0123456789abcdef",
-		Capabilities: device.CapabilityBrightness,
-	})
+	spec := device.Spec{
+		Vendor: device.VendorWiz,
+		IP:     "192.168.1.50",
+		Capabilities: wire.Capabilities{
+			device.Switch(wire.TraitPower),
+			{Trait: wire.TraitColor, Kind: wire.KindColor, Access: wire.AccessReadWrite},
+		},
+	}
+
+	dev, err := adapters.Open(&spec)
 	if err != nil {
 		t.Fatalf("Open: %v", err)
 	}
 
-	if !dev.Capabilities().Has(device.CapabilityBrightness) {
-		t.Error("capabilities did not reach the adapter")
+	if !dev.Capabilities().Has(wire.TraitColor) {
+		t.Error("colour did not reach the adapter")
+	}
+
+	if dev.Capabilities().Has(wire.TraitBrightness) {
+		t.Error("the adapter invented a capability the spec did not declare")
+	}
+}
+
+func TestEveryListedVendorCanBeOpened(t *testing.T) {
+	for _, vendor := range adapters.Vendors() {
+		if _, err := adapters.Open(&device.Spec{Vendor: vendor, IP: "192.168.1.50"}); err != nil {
+			t.Errorf("%s is listed but cannot be opened: %v", vendor, err)
+		}
 	}
 }

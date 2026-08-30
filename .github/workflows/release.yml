@@ -1,0 +1,99 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/services/api/go.mod
+      - name: Test every module
+        run: make test
+      - name: Module boundaries hold
+        run: make check-boundary
+
+  hub:
+    name: Hub ${{ matrix.goos }}/${{ matrix.goarch }}
+    needs: verify
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: arm64
+          - goos: linux
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/services/hub/go.mod
+
+      - name: Build
+        working-directory: backend/services/hub
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "0"
+        run: |
+          version="${GITHUB_REF_NAME}"
+          date="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          flags="-s -w"
+          flags="$flags -X ava/hub/internal/cli.Version=${version}"
+          flags="$flags -X ava/hub/internal/cli.Commit=${GITHUB_SHA::7}"
+          flags="$flags -X ava/hub/internal/cli.Date=${date}"
+
+          mkdir -p dist
+          for cmd in avahub avactl; do
+            go build -trimpath -ldflags "$flags" \
+              -o "dist/${cmd}-${GOOS}-${GOARCH}" "./cmd/${cmd}"
+          done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hub-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: backend/services/hub/dist/*
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    name: Publish
+    needs: hub
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: staging
+          merge-multiple: true
+
+      - name: Checksums
+        working-directory: staging
+        run: sha256sum * > checksums.txt
+
+      - name: Release notes
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: .github/scripts/release-notes.sh "${GITHUB_REF_NAME}" > notes.md
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          body_path: notes.md
+          files: staging/*
+          fail_on_unmatched_files: true
+          generate_release_notes: false

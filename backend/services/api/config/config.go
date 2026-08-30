@@ -29,11 +29,12 @@ type Config struct {
 	HubPollInterval  time.Duration
 	HubTokenExpiry   time.Duration
 
-	DBHost     string
-	DBPort     string
-	DBUser     string
-	DBPassword string
-	DBDatabase string
+	DBHost            string
+	DBPort            string
+	DBUser            string
+	DBPassword        string
+	DBDatabase        string
+	DBSSLModeOverride string
 
 	CookieDomain string
 	LogLevel     string
@@ -57,6 +58,18 @@ func GetConfig() *Config {
 	})
 
 	return instance
+}
+
+func (c *Config) DBSSLMode() string {
+	if c.DBSSLModeOverride != "" {
+		return c.DBSSLModeOverride
+	}
+
+	if c.ServerEnv == "local" {
+		return "disable"
+	}
+
+	return "require"
 }
 
 func load() *Config {
@@ -85,11 +98,12 @@ func load() *Config {
 		HubPollInterval:  v.GetDuration("HUB_POLL_INTERVAL"),
 		HubTokenExpiry:   v.GetDuration("HUB_TOKEN_EXPIRY"),
 
-		DBHost:     v.GetString("DB_HOST"),
-		DBPort:     v.GetString("DB_PORT"),
-		DBUser:     v.GetString("DB_USER"),
-		DBPassword: v.GetString("DB_PASSWORD"),
-		DBDatabase: v.GetString("DB_DATABASE"),
+		DBHost:            v.GetString("DB_HOST"),
+		DBPort:            v.GetString("DB_PORT"),
+		DBUser:            v.GetString("DB_USER"),
+		DBPassword:        v.GetString("DB_PASSWORD"),
+		DBDatabase:        v.GetString("DB_DATABASE"),
+		DBSSLModeOverride: v.GetString("DB_SSL_MODE"),
 
 		CookieDomain: v.GetString("COOKIE_DOMAIN"),
 		LogLevel:     v.GetString("LOG_LEVEL"),

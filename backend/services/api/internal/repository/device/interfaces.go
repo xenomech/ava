@@ -16,6 +16,7 @@ type Repository interface {
 	ListByHub(ctx context.Context, tenantID, hubID uuid.UUID) ([]*model.Device, error)
 	GetByID(ctx context.Context, tenantID, id uuid.UUID) (*model.Device, error)
 	GetWithRelations(ctx context.Context, tenantID, id uuid.UUID) (*model.Device, error)
+	ListWithRelations(ctx context.Context, tenantID uuid.UUID, ids []uuid.UUID) ([]*model.Device, error)
 	Update(ctx context.Context, tenantID, id uuid.UUID, fields map[string]any) error
 	ApplyState(ctx context.Context, hubID uuid.UUID, externalID string, state json.RawMessage) (*model.Device, error)
 	MarkHubDevicesOffline(ctx context.Context, hubID uuid.UUID) (int64, error)

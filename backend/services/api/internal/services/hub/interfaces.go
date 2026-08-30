@@ -20,22 +20,33 @@ type Service interface {
 	Activate(ctx context.Context, tenantID, userID uuid.UUID, userCode string) (*dto.HubResponse, error)
 	ListByTenant(ctx context.Context, tenantID uuid.UUID) ([]*dto.HubResponse, error)
 	Revoke(ctx context.Context, tenantID, hubID uuid.UUID) error
-	ApplyPresence(ctx context.Context, hubID uuid.UUID, online bool) (*model.Hub, error)
+	ApplyPresence(ctx context.Context, hubID uuid.UUID, online bool) error
 	ValidateDevice(ctx context.Context, hubID uuid.UUID) (*model.Hub, error)
+}
+
+type DeviceRegistry interface {
+	MarkHubOffline(ctx context.Context, tenantID, hubID uuid.UUID) error
 }
 
 type hubService struct {
 	hubRepo      hubrepo.Repository
 	tenantRepo   tenantrepo.Repository
 	events       eventsvc.Service
+	devices      DeviceRegistry
 	tokenManager jwt.TokenManager
 }
 
-func NewService(hubRepo hubrepo.Repository, tenantRepo tenantrepo.Repository, events eventsvc.Service) Service {
+func NewService(
+	hubRepo hubrepo.Repository,
+	tenantRepo tenantrepo.Repository,
+	events eventsvc.Service,
+	devices DeviceRegistry,
+) Service {
 	return &hubService{
 		hubRepo:      hubRepo,
 		tenantRepo:   tenantRepo,
 		events:       events,
+		devices:      devices,
 		tokenManager: jwt.NewTokenManager(),
 	}
 }

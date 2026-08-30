@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
 	"ava/hub/internal/device"
+	"ava/pkg/wire"
 )
 
 const (
@@ -28,6 +30,9 @@ type pilotParams struct {
 	State   *bool `json:"state,omitempty"`
 	Dimming *int  `json:"dimming,omitempty"`
 	Temp    *int  `json:"temp,omitempty"`
+	R       *int  `json:"r,omitempty"`
+	G       *int  `json:"g,omitempty"`
+	B       *int  `json:"b,omitempty"`
 }
 
 type pilotResult struct {
@@ -35,6 +40,9 @@ type pilotResult struct {
 	State   bool   `json:"state"`
 	Dimming int    `json:"dimming"`
 	Temp    int    `json:"temp"`
+	R       int    `json:"r"`
+	G       int    `json:"g"`
+	B       int    `json:"b"`
 }
 
 type systemConfigResult struct {
@@ -60,8 +68,7 @@ type response struct {
 
 type Light struct {
 	info         device.Info
-	capabilities device.Capability
-	limits       device.Limits
+	capabilities wire.Capabilities
 	transport    transport
 }
 
@@ -69,11 +76,25 @@ func New(ip string, timeout time.Duration) *Light {
 	return newWith(ip, newUDPTransport(timeout))
 }
 
+func Open(spec *device.Spec) *Light {
+	light := New(spec.IP, spec.Timeout)
+
+	if len(spec.Capabilities) > 0 {
+		light.capabilities = spec.Capabilities
+	}
+
+	if spec.ID != "" {
+		light.info.ID = spec.ID
+		light.info.MAC = spec.ID
+	}
+
+	return light
+}
+
 func newWith(ip string, t transport) *Light {
 	return &Light{
 		info:         device.Info{Vendor: Vendor, IP: ip},
-		capabilities: device.CapabilityBrightness | device.CapabilityColorTemp,
-		limits:       device.Limits{}.WithDefaults(MinDimming, MaxDimming, MinKelvin, MaxKelvin),
+		capabilities: tunableWhite(MinDimming, MaxDimming, MinKelvin, MaxKelvin),
 		transport:    t,
 	}
 }
@@ -82,26 +103,48 @@ func (l *Light) Info() device.Info {
 	return l.info
 }
 
-func (l *Light) Capabilities() device.Capability {
+func (l *Light) Capabilities() wire.Capabilities {
 	return l.capabilities
 }
 
-func (l *Light) Limits() device.Limits {
-	return l.limits
-}
-
-func (l *Light) State(ctx context.Context) (device.State, error) {
+func (l *Light) State(ctx context.Context) (wire.State, error) {
 	var result pilotResult
 
 	if err := l.call(ctx, request{Method: "getPilot", Params: struct{}{}}, &result); err != nil {
-		return device.State{}, err
+		return nil, err
 	}
 
-	return device.State{
-		Power:      result.State,
-		Brightness: result.Dimming,
-		ColorTemp:  result.Temp,
-	}, nil
+	state := wire.State{wire.TraitPower: wire.Bool(result.State)}
+
+	if l.capabilities.Has(wire.TraitBrightness) && result.Dimming > 0 {
+		state[wire.TraitBrightness] = wire.Number(float64(result.Dimming))
+	}
+
+	if l.capabilities.Has(wire.TraitColorTemp) {
+		state[wire.TraitColorTemp] = optionalNumber(result.Temp)
+	}
+
+	if l.capabilities.Has(wire.TraitColor) {
+		state[wire.TraitColor] = optionalColor(result.R, result.G, result.B)
+	}
+
+	return state, nil
+}
+
+func optionalNumber(value int) wire.Value {
+	if value <= 0 {
+		return wire.Value{}
+	}
+
+	return wire.Number(float64(value))
+}
+
+func optionalColor(red, green, blue int) wire.Value {
+	if red+green+blue <= 0 {
+		return wire.Value{}
+	}
+
+	return wire.Text(formatHex(red, green, blue))
 }
 
 func (l *Light) Identify(ctx context.Context) (device.Info, error) {
@@ -115,35 +158,56 @@ func (l *Light) Identify(ctx context.Context) (device.Info, error) {
 	l.info.Model = result.ModuleName
 	l.info.ID = result.MAC
 	l.info.LastSeen = time.Now()
-	l.capabilities = capabilitiesFor(result.ModuleName)
-
-	l.limits = l.readLimits(ctx)
+	l.capabilities = l.describe(ctx, result.ModuleName)
 
 	return l.info, nil
 }
 
-func (l *Light) readLimits(ctx context.Context) device.Limits {
+func (l *Light) describe(ctx context.Context, moduleName string) wire.Capabilities {
+	class := classOf(moduleName)
+	if class == classSocket {
+		return wire.Capabilities{device.Switch(wire.TraitPower)}
+	}
+
+	dimMin, kelvinMin, kelvinMax := float64(MinDimming), float64(MinKelvin), float64(MaxKelvin)
+
 	var model modelConfigResult
+	if err := l.call(ctx, request{Method: "getModelConfig", Params: struct{}{}}, &model); err == nil {
+		if model.MinDimLevel > 0 {
+			dimMin = float64(model.MinDimLevel)
+		}
 
-	if err := l.call(ctx, request{Method: "getModelConfig", Params: struct{}{}}, &model); err != nil {
-		return device.Limits{}.WithDefaults(MinDimming, MaxDimming, MinKelvin, MaxKelvin)
+		if low, high, ok := kelvinBounds(&model); ok {
+			kelvinMin, kelvinMax = float64(low), float64(high)
+		}
 	}
 
-	limits := device.Limits{BrightnessMin: model.MinDimLevel, BrightnessMax: MaxDimming}
-
-	if low, high, ok := kelvinBounds(&model); ok {
-		limits.KelvinMin = low
-		limits.KelvinMax = high
+	capabilities := wire.Capabilities{
+		device.Switch(wire.TraitPower),
+		device.Bounded(wire.TraitBrightness, dimMin, MaxDimming, "%"),
 	}
 
-	if !l.capabilities.Has(device.CapabilityColorTemp) {
-		limits.KelvinMin = 0
-		limits.KelvinMax = 0
-
-		return limits.WithDefaults(MinDimming, MaxDimming, 0, 0)
+	if class == classDimmable {
+		return capabilities
 	}
 
-	return limits.WithDefaults(MinDimming, MaxDimming, MinKelvin, MaxKelvin)
+	capabilities = append(capabilities, device.Bounded(wire.TraitColorTemp, kelvinMin, kelvinMax, "K"))
+
+	if class == classColor {
+		capabilities = append(capabilities, wire.Capability{
+			Trait: wire.TraitColor, Kind: wire.KindColor, Access: wire.AccessReadWrite,
+		})
+	}
+
+	return capabilities
+}
+
+func tunableWhite(dimMin, dimMax, kelvinMin, kelvinMax float64) wire.Capabilities {
+	return wire.Capabilities{
+		device.Switch(wire.TraitPower),
+		device.Bounded(wire.TraitBrightness, dimMin, dimMax, "%"),
+		device.Bounded(wire.TraitColorTemp, kelvinMin, kelvinMax, "K"),
+	}
 }
 
 func kelvinBounds(model *modelConfigResult) (low, high int, ok bool) {
@@ -161,49 +225,77 @@ func kelvinBounds(model *modelConfigResult) (low, high int, ok bool) {
 	return 0, 0, false
 }
 
-func capabilitiesFor(moduleName string) device.Capability {
+type class int
+
+const (
+	classTunable class = iota
+	classColor
+	classDimmable
+	classSocket
+)
+
+func classOf(moduleName string) class {
 	parts := strings.Split(moduleName, "_")
 	if len(parts) < 2 {
-		return device.CapabilityBrightness | device.CapabilityColorTemp
+		return classTunable
 	}
 
 	identifier := strings.ToUpper(parts[1])
 
 	switch {
 	case strings.Contains(identifier, "RGB"):
-		return device.CapabilityBrightness | device.CapabilityColorTemp | device.CapabilityColor
+		return classColor
 	case strings.Contains(identifier, "TW"):
-		return device.CapabilityBrightness | device.CapabilityColorTemp
+		return classTunable
 	case strings.Contains(identifier, "SOCKET"):
-		return 0
+		return classSocket
 	default:
-		return device.CapabilityBrightness
+		return classDimmable
 	}
 }
 
-func (l *Light) SetPower(ctx context.Context, on bool) error {
-	return l.setPilot(ctx, pilotParams{State: &on})
-}
-
-func (l *Light) SetBrightness(ctx context.Context, percent int) error {
-	if !l.capabilities.Has(device.CapabilityBrightness) {
-		return device.Unsupported(Vendor, device.CapabilityBrightness)
+func (l *Light) Apply(ctx context.Context, trait wire.Trait, value wire.Value) error {
+	capability, ok := l.capabilities.Find(trait)
+	if !ok || !capability.Writable() {
+		return device.Unsupported(Vendor, trait)
 	}
 
-	level := device.Clamp(percent, l.limits.BrightnessMin, l.limits.BrightnessMax)
-	on := true
+	value = capability.Clamp(value)
 
-	return l.setPilot(ctx, pilotParams{State: &on, Dimming: &level})
-}
-
-func (l *Light) SetColorTemp(ctx context.Context, kelvin int) error {
-	if !l.capabilities.Has(device.CapabilityColorTemp) {
-		return device.Unsupported(Vendor, device.CapabilityColorTemp)
+	if err := capability.Validate(value); err != nil {
+		return err
 	}
 
-	temp := device.Clamp(kelvin, l.limits.KelvinMin, l.limits.KelvinMax)
+	switch trait {
+	case wire.TraitPower:
+		on, _ := value.Bool()
 
-	return l.setPilot(ctx, pilotParams{Temp: &temp})
+		return l.setPilot(ctx, pilotParams{State: &on})
+	case wire.TraitBrightness:
+		level, _ := value.Number()
+		dimming := int(level)
+		on := true
+
+		return l.setPilot(ctx, pilotParams{State: &on, Dimming: &dimming})
+	case wire.TraitColorTemp:
+		kelvin, _ := value.Number()
+		temp := int(kelvin)
+
+		return l.setPilot(ctx, pilotParams{Temp: &temp})
+	case wire.TraitColor:
+		hex, _ := value.Text()
+
+		red, green, blue, err := parseHex(hex)
+		if err != nil {
+			return err
+		}
+
+		on := true
+
+		return l.setPilot(ctx, pilotParams{State: &on, R: &red, G: &green, B: &blue})
+	default:
+		return device.Unsupported(Vendor, trait)
+	}
 }
 
 func (l *Light) setPilot(ctx context.Context, params pilotParams) error {
@@ -239,4 +331,27 @@ func (l *Light) call(ctx context.Context, req request, out any) error {
 	}
 
 	return nil
+}
+
+func parseHex(hex string) (red, green, blue int, err error) {
+	if len(hex) != 7 || hex[0] != '#' {
+		return 0, 0, 0, fmt.Errorf("wiz: color must look like #rrggbb, got %q", hex)
+	}
+
+	channels := [3]int{}
+
+	for at := range channels {
+		value, convErr := strconv.ParseUint(hex[1+at*2:3+at*2], 16, 8)
+		if convErr != nil {
+			return 0, 0, 0, fmt.Errorf("wiz: color %q is not hexadecimal", hex)
+		}
+
+		channels[at] = int(value)
+	}
+
+	return channels[0], channels[1], channels[2], nil
+}
+
+func formatHex(red, green, blue int) string {
+	return fmt.Sprintf("#%02x%02x%02x", red, green, blue)
 }

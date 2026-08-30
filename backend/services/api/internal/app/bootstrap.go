@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"ava/api/config"
+	"ava/api/internal/broker"
 	"ava/api/internal/controller"
 	"ava/api/internal/db"
 	"ava/api/internal/middleware"
@@ -12,11 +13,9 @@ import (
 	"ava/api/internal/routes"
 	"ava/api/internal/services"
 	"ava/pkg/logger"
-	"ava/pkg/mqtt"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -28,11 +27,11 @@ const (
 )
 
 type App struct {
-	Config    *config.Config
-	DB        *gorm.DB
-	Service   *services.Service
-	Publisher *mqtt.Client
-	Fiber     *fiber.App
+	Config  *config.Config
+	DB      *gorm.DB
+	Service *services.Service
+	Broker  *broker.Broker
+	Fiber   *fiber.App
 }
 
 func Bootstrap(ctx context.Context) (*App, error) {
@@ -40,44 +39,66 @@ func Bootstrap(ctx context.Context) (*App, error) {
 
 	logger.Init(cfg.ServerEnv, cfg.LogLevel)
 
-	database, err := connectDatabase(cfg)
+	database, err := db.Connect(&db.PostgresConfig{
+		Host:     cfg.DBHost,
+		Port:     cfg.DBPort,
+		User:     cfg.DBUser,
+		Password: cfg.DBPassword,
+		Database: cfg.DBDatabase,
+		SSLMode:  cfg.DBSSLMode(),
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	publisher := connectBroker(ctx, cfg)
+	if err := db.Migrate(database); err != nil {
+		disconnect(database)
+
+		return nil, err
+	}
+
+	messages, err := broker.Connect(ctx, broker.Config{URL: cfg.MQTTBrokerURL})
+	if err != nil {
+		logger.Warn("MQTT_UNAVAILABLE", logger.Err(err))
+	}
 
 	var commander services.Commander
-	if publisher != nil {
-		commander = publisher
+	if messages != nil {
+		commander = messages
 	}
 
 	service := services.NewService(repository.NewRepository(database), commander)
 
-	app := &App{
-		Config:    cfg,
-		DB:        database,
-		Service:   service,
-		Publisher: publisher,
-		Fiber:     buildFiber(cfg, service),
-	}
-
-	app.listenForState(ctx)
-	app.listenForPresence(ctx)
-
-	return app, nil
+	return &App{
+		Config:  cfg,
+		DB:      database,
+		Service: service,
+		Broker:  messages,
+		Fiber:   buildFiber(cfg, service),
+	}, nil
 }
 
 func (a *App) Run(ctx context.Context) error {
+	a.Broker.Listen(ctx, a.Service.Device.ApplyReportedState, a.Service.Hub.ApplyPresence)
+
+	listenErr := make(chan error, 1)
+
 	go func() {
 		logger.Info("SERVER_STARTED", logger.String("port", a.Config.Port))
 
 		if err := a.Fiber.Listen(":" + a.Config.Port); err != nil {
-			logger.Error("SERVER_START_ERROR", logger.Err(err))
+			listenErr <- err
 		}
 	}()
 
-	<-ctx.Done()
+	select {
+	case err := <-listenErr:
+		logger.Error("SERVER_START_ERROR", logger.Err(err))
+
+		return err
+	case <-ctx.Done():
+	}
+
 	logger.Info("SHUTDOWN_SIGNAL_RECEIVED")
 
 	if err := a.Fiber.ShutdownWithTimeout(shutdownTimeout); err != nil {
@@ -94,13 +115,16 @@ func (a *App) Close() {
 		return
 	}
 
-	a.Publisher.Close()
-
-	if err := db.Disconnect(a.DB); err != nil {
-		logger.Error("DB_DISCONNECT_ERROR", logger.Err(err))
-	}
+	a.Broker.Close()
+	disconnect(a.DB)
 
 	logger.Sync()
+}
+
+func disconnect(database *gorm.DB) {
+	if err := db.Disconnect(database); err != nil {
+		logger.Error("DB_DISCONNECT_ERROR", logger.Err(err))
+	}
 }
 
 func buildFiber(cfg *config.Config, service *services.Service) *fiber.App {
@@ -127,43 +151,4 @@ func buildFiber(cfg *config.Config, service *services.Service) *fiber.App {
 	routes.AddRoutes(server, controller.NewController(service), mw)
 
 	return server
-}
-
-func connectDatabase(cfg *config.Config) (*gorm.DB, error) {
-	sslMode := "require"
-	if cfg.ServerEnv == "local" {
-		sslMode = "disable"
-	}
-
-	database, err := db.Connect(&db.PostgresConfig{
-		Host:     cfg.DBHost,
-		Port:     cfg.DBPort,
-		User:     cfg.DBUser,
-		Password: cfg.DBPassword,
-		Database: cfg.DBDatabase,
-		SSLMode:  sslMode,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	if err := db.Migrate(database); err != nil {
-		return nil, err
-	}
-
-	return database, nil
-}
-
-func connectBroker(ctx context.Context, cfg *config.Config) *mqtt.Client {
-	publisher, err := mqtt.Connect(ctx, &mqtt.Options{
-		BrokerURL: cfg.MQTTBrokerURL,
-		ClientID:  "ava-api-" + uuid.NewString(),
-	})
-	if err != nil {
-		logger.Warn("MQTT_UNAVAILABLE", logger.Err(err))
-
-		return nil
-	}
-
-	return publisher
 }

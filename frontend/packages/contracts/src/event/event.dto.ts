@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { deviceDto, type DeviceAction } from "../device";
+import { deviceDto, type TraitValue } from "../device";
 
 export const deviceStateEvent = z.object({
   type: z.literal("device.state"),
@@ -36,8 +36,8 @@ export const avaEvent = z.discriminatedUnion("type", [
 export type DeviceCommandFrame = {
   type: "device.command";
   device_id: string;
-  action: DeviceAction;
-  value: boolean | number;
+  trait: string;
+  value: TraitValue;
 };
 
 export type CommandRejectedEvent = z.infer<typeof commandRejectedEvent>;

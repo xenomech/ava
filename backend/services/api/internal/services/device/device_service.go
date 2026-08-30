@@ -2,6 +2,7 @@ package device
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"ava/api/internal/dto"
@@ -18,8 +19,22 @@ func (s *deviceService) SyncFromHub(ctx context.Context, tenantID, hubID uuid.UU
 
 	devices := make([]*model.Device, 0, len(req.Devices))
 
-	for _, item := range req.Devices {
-		device := model.NewDevice(tenantID, hubID, item.ExternalID, item.Name, item.Kind, model.DeviceStatus(item.Status), item.State)
+	for at := range req.Devices {
+		item := &req.Devices[at]
+
+		device := model.NewDevice(tenantID, hubID, &model.Reported{
+			ExternalID:   item.ExternalID,
+			Name:         item.Name,
+			Kind:         item.Kind,
+			Vendor:       item.Vendor,
+			Model:        item.Model,
+			IP:           item.IP,
+			Parent:       item.Parent,
+			Status:       model.DeviceStatus(item.Status),
+			Capabilities: encode(item.Capabilities, "[]"),
+			State:        encode(item.State, "{}"),
+		})
+
 		if device.Status == model.DeviceStatusOnline {
 			device.LastSeenAt = &now
 		}
@@ -105,14 +120,20 @@ func (s *deviceService) Update(
 	tenantID, deviceID uuid.UUID,
 	req *dto.UpdateDeviceRequest,
 ) (*dto.DeviceResponse, error) {
-	fields := make(map[string]any, 2)
+	fields := make(map[string]any, 3)
 
 	if req.Name != nil {
 		fields["name"] = *req.Name
 	}
 
-	if req.Room != nil {
-		fields["room"] = *req.Room
+	if req.ClearRoom {
+		fields["room_id"] = nil
+	} else if req.RoomID != nil {
+		fields["room_id"] = *req.RoomID
+	}
+
+	if req.Appliance != nil {
+		fields["appliance"] = *req.Appliance
 	}
 
 	if len(fields) == 0 {
@@ -137,4 +158,13 @@ func (s *deviceService) Update(
 	}
 
 	return toDeviceResponse(device), nil
+}
+
+func encode(value any, fallback string) json.RawMessage {
+	raw, err := json.Marshal(value)
+	if err != nil {
+		return json.RawMessage(fallback)
+	}
+
+	return raw
 }

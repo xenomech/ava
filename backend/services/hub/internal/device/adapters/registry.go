@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 
-	"ava/hub/external/tuya"
 	"ava/hub/external/wiz"
 	"ava/hub/internal/device"
 )
@@ -18,21 +17,12 @@ func Open(spec *device.Spec) (device.Device, error) {
 
 	switch spec.Vendor {
 	case device.VendorWiz:
-		return wiz.New(spec.IP, spec.Timeout), nil
-	case device.VendorTuya:
-		return tuya.New(&tuya.Config{
-			ID:           spec.ID,
-			IP:           spec.IP,
-			Name:         spec.Name,
-			LocalKey:     spec.LocalKey,
-			Capabilities: spec.Capabilities,
-			Timeout:      spec.Timeout,
-		})
+		return wiz.Open(spec), nil
 	default:
 		return nil, fmt.Errorf("%w: %q", ErrUnknownVendor, spec.Vendor)
 	}
 }
 
 func Vendors() []device.Vendor {
-	return []device.Vendor{device.VendorWiz, device.VendorTuya}
+	return []device.Vendor{device.VendorWiz}
 }

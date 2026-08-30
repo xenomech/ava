@@ -12,10 +12,10 @@ var rootCmd = &cobra.Command{
 	Short: "Talk to smart devices on this network",
 	Long: `avactl (` + Version + `)
 
-Discover and drive WiZ and Tuya devices directly over the LAN, without the
+Discover and drive WiZ devices directly over the LAN, without the
 server or the hub. Useful for confirming a device answers before pairing a hub,
 and for debugging one that has stopped responding.`,
-	Version:       Version,
+	Version:       versionString(),
 	SilenceUsage:  true,
 	SilenceErrors: true,
 }
@@ -30,5 +30,4 @@ func Execute() {
 func init() {
 	rootCmd.AddCommand(discoverCmd)
 	rootCmd.AddCommand(wizCmd)
-	rootCmd.AddCommand(tuyaCmd)
 }

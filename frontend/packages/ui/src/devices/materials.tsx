@@ -57,7 +57,7 @@ export function Materials({ m }: { m: ReturnType<typeof useMaterials> }) {
       </linearGradient>
 
       <filter id={m.soft} x="-90%" y="-90%" width="280%" height="280%">
-        <feGaussianBlur stdDeviation="15" />
+        <feGaussianBlur stdDeviation="11" />
       </filter>
       <filter id={m.glow} x="-70%" y="-70%" width="240%" height="240%">
         <feGaussianBlur stdDeviation="5" />

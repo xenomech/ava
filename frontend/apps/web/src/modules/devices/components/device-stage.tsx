@@ -1,5 +1,17 @@
 import { Device, DeviceHalo, cn, type DeviceKind } from "@ava/ui";
-import { deviceProfile, type DeviceDto } from "@ava/contracts";
+import {
+  TRAIT_BRIGHTNESS,
+  TRAIT_COLOR,
+  TRAIT_COLOR_TEMP,
+  deviceProfile,
+  emitsLight,
+  isOn,
+  numberOf,
+  supports,
+  traitValue,
+  type DeviceDto,
+} from "@ava/contracts";
+import { PlugZapIcon } from "lucide-react";
 
 import { kelvinToCss } from "@/shared/lib/kelvin";
 
@@ -8,13 +20,32 @@ export function deviceKind(device: DeviceDto): DeviceKind {
 }
 
 export function deviceLevel(device: DeviceDto): number {
-  if (!device.state.power) return 0;
+  if (!isOn(device)) return 0;
+  if (!supports(device, TRAIT_BRIGHTNESS)) return 100;
 
-  return device.state.brightness ?? 100;
+  return numberOf(device, TRAIT_BRIGHTNESS) ?? 100;
+}
+
+export function OnAPlug({ className }: { className?: string }) {
+  return (
+    <span
+      title="On a smart plug"
+      aria-label="On a smart plug"
+      className={cn(
+        "grid size-6 place-items-center rounded-full border border-border bg-surface text-subtle",
+        className,
+      )}
+    >
+      <PlugZapIcon className="size-3.5" aria-hidden />
+    </span>
+  );
 }
 
 export function deviceColor(device: DeviceDto): string {
-  return kelvinToCss(device.state.color_temp ?? 2700);
+  const picked = traitValue(device, TRAIT_COLOR);
+  if (typeof picked === "string" && picked !== "") return picked;
+
+  return kelvinToCss(numberOf(device, TRAIT_COLOR_TEMP) ?? 2700);
 }
 
 export function DeviceStage({
@@ -46,7 +77,10 @@ export function DeviceStage({
             )}
             style={{ "--level": level, "--lit": color } as React.CSSProperties}
           >
-            <DeviceHalo className="w-[46%]" />
+            {emitsLight(deviceKind(device)) ? <DeviceHalo className="w-[46%]" /> : null}
+            {device.kind === "plug" && device.appliance ? (
+              <OnAPlug className="absolute right-0 top-0" />
+            ) : null}
             <Device
               kind={deviceKind(device)}
               level={level}

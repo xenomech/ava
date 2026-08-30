@@ -166,5 +166,48 @@ jobs:
         if: matrix.goos == 'linux'
         with:
           name: avahub-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: hub/dist/avahub-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: backend/services/hub/dist/avahub-${{ matrix.goos }}-${{ matrix.goarch }}
+          if-no-files-found: error
 
+  web-lint:
+    name: Web lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: frontend/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Install
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+      - name: Lint
+        working-directory: frontend
+        run: pnpm oxlint
+
+  web-build:
+    name: Web build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: frontend/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Install
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+      - name: Production build
+        working-directory: frontend
+        run: pnpm -F web build
+      - name: Type check (needs routeTree.gen.ts, which the build generates)
+        working-directory: frontend
+        run: pnpm check-types

@@ -195,20 +195,20 @@ func (s *hubService) Revoke(ctx context.Context, tenantID, hubID uuid.UUID) erro
 	return nil
 }
 
-func (s *hubService) ApplyPresence(ctx context.Context, hubID uuid.UUID, online bool) (*model.Hub, error) {
+func (s *hubService) ApplyPresence(ctx context.Context, hubID uuid.UUID, online bool) error {
 	hub, changed, err := s.hubRepo.SetPresence(ctx, hubID, online, time.Now())
 	if err != nil {
 		if serrors.Is(err, hubrepo.ErrHubNotFound) {
-			return nil, ErrHubNotFound
+			return ErrHubNotFound
 		}
 
 		logger.Error("hub.ApplyPresence", logger.Err(err))
 
-		return nil, err
+		return err
 	}
 
 	if !changed {
-		return hub, nil
+		return nil
 	}
 
 	logger.Info("HUB_PRESENCE_CHANGED",
@@ -220,7 +220,13 @@ func (s *hubService) ApplyPresence(ctx context.Context, hubID uuid.UUID, online 
 		s.events.PublishJSON(hub.TenantID, dto.NewHubPresenceEvent(hub.ID, hub.IsOnline()))
 	}
 
-	return hub, nil
+	if !hub.IsOnline() && s.devices != nil {
+		if err := s.devices.MarkHubOffline(ctx, hub.TenantID, hub.ID); err != nil {
+			logger.Warn("HUB_PRESENCE_CASCADE_FAILED", logger.Any("hub.ID", hub.ID), logger.Err(err))
+		}
+	}
+
+	return nil
 }
 
 func (s *hubService) ValidateDevice(ctx context.Context, hubID uuid.UUID) (*model.Hub, error) {

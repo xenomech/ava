@@ -8,18 +8,18 @@ import (
 	"time"
 
 	"ava/hub/internal/device"
+	"ava/pkg/wire"
 )
 
 const (
 	BroadcastAddr = "255.255.255.255"
 
-	probeCount    = 4
-	probeInterval = 400 * time.Millisecond
+	probeInterval = 500 * time.Millisecond
 )
 
 type Found struct {
 	Info  device.Info
-	State device.State
+	State wire.State
 }
 
 func Discover(ctx context.Context, timeout time.Duration) ([]Found, error) {
@@ -57,17 +57,24 @@ func Discover(ctx context.Context, timeout time.Duration) ([]Found, error) {
 		return nil, fmt.Errorf("wiz: broadcast: %w", err)
 	}
 
-	go reprobe(ctx, conn, target, probe)
+	go reprobe(ctx, conn, target, probe, deadline)
 
 	return collect(ctx, conn), nil
 }
 
-func reprobe(ctx context.Context, conn net.PacketConn, target net.Addr, probe []byte) {
-	for range probeCount - 1 {
+func reprobe(ctx context.Context, conn net.PacketConn, target net.Addr, probe []byte, deadline time.Time) {
+	ticker := time.NewTicker(probeInterval)
+	defer ticker.Stop()
+
+	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-time.After(probeInterval):
+		case <-ticker.C:
+		}
+
+		if !time.Now().Before(deadline) {
+			return
 		}
 
 		if _, err := conn.WriteTo(probe, target); err != nil {
@@ -120,11 +127,21 @@ func collect(ctx context.Context, conn net.PacketConn) []Found {
 				MAC:      result.MAC,
 				LastSeen: time.Now(),
 			},
-			State: device.State{
-				Power:      result.State,
-				Brightness: result.Dimming,
-				ColorTemp:  result.Temp,
-			},
+			State: pilotState(&result),
 		})
 	}
+}
+
+func pilotState(result *pilotResult) wire.State {
+	state := wire.State{wire.TraitPower: wire.Bool(result.State)}
+
+	if result.Dimming > 0 {
+		state[wire.TraitBrightness] = wire.Number(float64(result.Dimming))
+	}
+
+	if result.Temp > 0 {
+		state[wire.TraitColorTemp] = wire.Number(float64(result.Temp))
+	}
+
+	return state
 }

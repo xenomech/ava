@@ -18,6 +18,7 @@ func AddRoutes(app *fiber.App, ctrl *controller.Controller, mw *middleware.Middl
 	tenantRoutes(api.Group("/tenants"), ctrl.Tenant, mw)
 	flowRoutes(api.Group("/flows"), ctrl.Flow, mw)
 	hubRoutes(api.Group("/hubs"), ctrl.Hub, ctrl.Device, mw)
+	roomRoutes(api.Group("/rooms"), ctrl.Room, mw)
 	deviceRoutes(api.Group("/devices"), ctrl.Device, mw)
 	socketRoutes(api.Group("/socket"), ctrl.Socket, mw)
 }
