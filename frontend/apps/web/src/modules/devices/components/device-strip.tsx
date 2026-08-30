@@ -3,7 +3,8 @@ import type { DeviceDto } from "@ava/contracts";
 import { Link } from "@tanstack/react-router";
 
 import { AddDevices } from "./add-devices";
-import { OnAPlug, deviceColor, deviceKind, deviceLabel, deviceLevel } from "./device-stage";
+import { deviceColor, deviceKind, deviceLabel, deviceLevel } from "../lib/device-view";
+import { OnAPlug } from "./on-a-plug";
 
 /**
  * The room's devices as a carousel you can thumb through.

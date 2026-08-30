@@ -7,10 +7,11 @@ import { useState } from "react";
 import { hubQueries } from "@/modules/hub";
 import { Loader } from "@/shared/components/loader";
 import { DeviceControls } from "../components/device-controls";
-import { OnAPlug, deviceColor, deviceKind, deviceLevel } from "../components/device-stage";
+import { deviceColor, deviceKind, deviceLevel } from "../lib/device-view";
+import { OnAPlug } from "../components/on-a-plug";
 import { Missing, NoDevices } from "../components/empty-state";
 import { HubOfflineNotice } from "../components/hub-notice";
-import { useDevices } from "../use-devices";
+import { useDevices } from "../hooks/use-devices";
 
 /**
  * A device that is not in any room.

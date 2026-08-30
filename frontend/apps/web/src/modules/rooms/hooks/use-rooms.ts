@@ -3,8 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { isApiError } from "@/config/http/request";
-import { createRoom, deleteRoom, updateRoom } from "./api";
-import { roomQueries } from "./queries";
+import { createRoom, deleteRoom, updateRoom } from "../api";
+import { roomQueries } from "../queries";
 
 function reason(error: unknown, fallback: string) {
   return isApiError(error) ? error.message : fallback;

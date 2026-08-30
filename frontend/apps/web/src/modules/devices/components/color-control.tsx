@@ -3,7 +3,7 @@ import { MarkerSlider, cn } from "@ava/ui";
 import { parseColor } from "@/shared/lib/color";
 import { kelvinToCss } from "@/shared/lib/kelvin";
 import { ColourPad, tintCss, tintHex, tintOf, type Tint } from "./colour-pad";
-import { useLiveSlider } from "../use-live-slider";
+import { useLiveSlider } from "../hooks/use-live-slider";
 
 const KELVIN_STEP = 50;
 

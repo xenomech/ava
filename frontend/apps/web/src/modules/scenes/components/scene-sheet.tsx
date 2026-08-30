@@ -12,9 +12,9 @@ import type { DeviceDto, SceneDto } from "@ava/contracts";
 import { Trash2Icon } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { capture, describe, matches, scenePreview } from "../capture";
+import { capture, describe, matches, scenePreview } from "../lib/capture";
 import { SceneLights } from "./scene-lights";
-import { useSceneActions } from "../use-scenes";
+import { useSceneActions } from "../hooks/use-scenes";
 
 /**
  * The scenes a room has, and the one it is about to get.

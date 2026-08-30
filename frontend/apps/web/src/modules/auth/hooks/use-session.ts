@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 
-import { logout } from "./api";
-import { SESSION_QUERY_KEY, sessionQuery } from "./queries";
+import { logout } from "../api";
+import { SESSION_QUERY_KEY, sessionQuery } from "../queries";
 
 export function useSession() {
   const { data, isPending } = useQuery(sessionQuery);

@@ -22,9 +22,9 @@ import { AppliancePicker } from "./appliance-picker";
 import { ColorControl, WhiteControl } from "./color-control";
 import { RoomPicker } from "./room-picker";
 import { TraitControl, TraitReading } from "./trait-control";
-import { deviceColor } from "./device-stage";
-import { useDeviceControl } from "../use-devices";
-import { useLiveSlider } from "../use-live-slider";
+import { deviceColor } from "../lib/device-view";
+import { useDeviceControl } from "../hooks/use-devices";
+import { useLiveSlider } from "../hooks/use-live-slider";
 
 function Heading({ children }: { children: string }) {
   return (

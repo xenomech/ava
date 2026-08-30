@@ -5,9 +5,9 @@ import { toast } from "sonner";
 
 import { isApiError } from "@/config/http/request";
 import { useApplyTargets } from "@/modules/devices";
-import { createScene, deleteScene } from "./api";
-import { armScene, armedScene } from "./armed";
-import { sceneQueries } from "./queries";
+import { createScene, deleteScene } from "../api";
+import { armScene, armedScene } from "../lib/armed";
+import { sceneQueries } from "../queries";
 
 function reason(error: unknown, fallback: string) {
   return isApiError(error) ? error.message : fallback;

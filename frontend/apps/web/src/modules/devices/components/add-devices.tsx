@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import { isApiError } from "@/config/http/request";
 import { updateDevice } from "../api";
 import { deviceQueries } from "../queries";
-import { deviceColor, deviceKind, deviceLevel } from "./device-stage";
+import { deviceColor, deviceKind, deviceLevel } from "../lib/device-view";
 
 /**
  * Putting a device into a room, from the room.

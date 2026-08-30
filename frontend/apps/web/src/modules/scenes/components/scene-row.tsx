@@ -3,7 +3,7 @@ import { TRAIT_POWER, isOn, supports, type DeviceDto, type SceneDto } from "@ava
 import { PlusIcon } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
-import { matches, scenePreview, type ScenePreview } from "../capture";
+import { matches, scenePreview, type ScenePreview } from "../lib/capture";
 import { SceneLights } from "./scene-lights";
 import { SceneSheet } from "./scene-sheet";
 

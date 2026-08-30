@@ -27,20 +27,18 @@ import { Loader } from "@/shared/components/loader";
 import { useMediaQuery } from "@/shared/hooks/use-media-query";
 import { parseColor, warmth } from "@/shared/lib/color";
 import { kelvinToCss } from "@/shared/lib/kelvin";
-import { deviceColor, deviceKind, deviceLevel } from "../components/device-stage";
-import { DeviceDrawer, DevicePanel, ROOM_HEIGHT } from "../components/device-sheet";
+import { deviceColor, deviceKind, deviceLevel } from "../lib/device-view";
+import { DeviceDrawer, DevicePanel } from "../components/device-sheet";
+import { BESIDE, ROOM_HEIGHT } from "../constants";
 import { DeviceStrip } from "../components/device-strip";
 import { Missing } from "../components/empty-state";
 import { LightSweep } from "../components/light-sweep";
 import { RoomSwitch } from "../components/room-switch";
 import { deviceQueries } from "../queries";
-import { useDevices, useRoomPower } from "../use-devices";
+import { useDevices, useRoomPower } from "../hooks/use-devices";
 
 /** The room's own light, averaged, for the switch and the sweep to borrow. */
 const DEFAULT_KELVIN = 2700;
-
-/** Below this the controls arrive as a sheet; above it, as a column. */
-const BESIDE = "(min-width: 1024px)";
 
 /**
  * A room, as one surface.

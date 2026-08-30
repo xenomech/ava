@@ -1,8 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 
-import { NoDevices, NoRooms } from "@/modules/devices/components/empty-state";
-import { deviceQueries } from "@/modules/devices/queries";
+import { NoDevices, NoRooms, deviceQueries } from "@/modules/devices";
 import { hubQueries } from "@/modules/hub";
 import { recallRoom, roomQueries } from "@/modules/rooms";
 import { Loader } from "@/shared/components/loader";

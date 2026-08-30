@@ -1,6 +1,6 @@
 import { cn } from "@ava/ui";
 
-import { sceneColor, type ScenePreview } from "../capture";
+import { sceneColor, type ScenePreview } from "../lib/capture";
 
 /**
  * A scene drawn as the light it makes: one lamp per fixture, sized by
