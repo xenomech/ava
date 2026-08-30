@@ -49,7 +49,19 @@ a very long changelog. Pass an explicit starting point to trim it:
 
 ## Installing a hub on a Raspberry Pi
 
-64-bit Raspberry Pi OS, from a release:
+64-bit Raspberry Pi OS. The short way — installs the latest release, sets up the
+`avahub` systemd service, and prints the pairing code:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/xenomech/ava/main/scripts/install-hub.sh \
+  | sudo bash -s -- --api https://api.example.com --broker tcp://broker.example.com:1883
+```
+
+Re-running it with no flags upgrades the binary in place; configuration and the
+pairing state survive, so the hub does not need re-pairing. `--name` overrides
+the hub name and `--version vX.Y.Z` pins a release.
+
+The long way, by hand:
 
 ```sh
 curl -fsSLO https://github.com/xenomech/ava/releases/download/v0.2.0/avahub-linux-arm64

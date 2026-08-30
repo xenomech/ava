@@ -1,4 +1,4 @@
-import { SOUNDS, type SoundName } from "./sounds.data";
+import type { SoundName } from "./sounds.data";
 
 const KEY = "ava:v1:sound";
 const VOLUME = 0.22;
@@ -15,11 +15,33 @@ const VOLUME = 0.22;
  * interacted with, storage throws in private windows, and neither is worth an
  * error in a lighting app.
  */
-let enabled = read();
+let enabled: boolean | null = null;
 let unlocked = false;
 
 const listeners = new Set<(on: boolean) => void>();
 const pool = new Map<SoundName, HTMLAudioElement>();
+
+/* The audio data is ~12KB of base64 that no first paint needs, so it stays out
+   of the initial chunk and is fetched when sound first becomes possible. */
+let sounds: Record<SoundName, string> | null = null;
+let loading: Promise<void> | null = null;
+
+function load(): Promise<void> {
+  loading ??= import("./sounds.data").then(
+    (module) => {
+      sounds = module.SOUNDS;
+    },
+    () => undefined,
+  );
+
+  return loading;
+}
+
+function isEnabled(): boolean {
+  enabled ??= read();
+
+  return enabled;
+}
 
 function read(): boolean {
   try {
@@ -32,12 +54,12 @@ function read(): boolean {
 }
 
 function element(name: SoundName): HTMLAudioElement | null {
-  if (typeof Audio === "undefined") return null;
+  if (typeof Audio === "undefined" || !sounds) return null;
 
   let audio = pool.get(name);
 
   if (!audio) {
-    audio = new Audio(SOUNDS[name]);
+    audio = new Audio(sounds[name]);
     audio.preload = "auto";
     audio.volume = VOLUME;
     pool.set(name, audio);
@@ -47,16 +69,29 @@ function element(name: SoundName): HTMLAudioElement | null {
 }
 
 export function playSound(name: SoundName): void {
-  if (!enabled || !unlocked) return;
+  if (!isEnabled() || !unlocked) return;
 
+  /* The very first play may land before the data chunk has arrived; it plays a
+     few milliseconds late rather than being dropped — the page already has
+     user activation, so a slightly deferred play is still allowed. */
+  if (!sounds) {
+    void load().then(() => voice(name));
+
+    return;
+  }
+
+  voice(name);
+}
+
+function voice(name: SoundName): void {
   const audio = element(name);
   if (!audio) return;
 
   /* Cloned per play so a rapid second press is not swallowed by the first
      still being in flight. */
-  const voice = audio.cloneNode() as HTMLAudioElement;
-  voice.volume = VOLUME;
-  void voice.play().catch(() => undefined);
+  const clone = audio.cloneNode() as HTMLAudioElement;
+  clone.volume = VOLUME;
+  void clone.play().catch(() => undefined);
 }
 
 /**
@@ -66,10 +101,13 @@ export function playSound(name: SoundName): void {
  */
 export function unlockSound(): void {
   unlocked = true;
+  /* The unlocking gesture also starts the data fetch, so its own click — and
+     everything after it — has the audio ready. */
+  void load();
 }
 
 export function soundEnabled(): boolean {
-  return enabled;
+  return isEnabled();
 }
 
 export function setSoundEnabled(next: boolean): void {

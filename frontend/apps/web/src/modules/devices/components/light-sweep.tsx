@@ -1,4 +1,5 @@
 import { cn } from "@ava/ui";
+import { useMemo } from "react";
 
 import { hslToRgb, mix, parseColor, rgbToCss, rgbToHsl, type Rgb } from "@/shared/lib/color";
 
@@ -56,19 +57,8 @@ function sample(palette: Rgb[], position: number): Rgb {
   return mix(palette[index] ?? first, palette[index + 1] ?? first, span - index);
 }
 
-export function LightSweep({
-  colors,
-  direction,
-  /** Bumped on every flick. Remounts the element so the animation replays. */
-  play,
-}: {
-  /** The room's own colours, warmest first. */
-  colors: string[];
-  direction: "on" | "off";
-  play: number;
-}) {
-  if (play === 0) return null;
-
+/** The whole gradient for one palette and direction, or null for no palette. */
+function buildRamp(colors: string[], direction: "on" | "off"): string | null {
   const palette = colors.map(parseColor).filter((color): color is Rgb => color !== null);
 
   if (palette.length === 0) return null;
@@ -93,6 +83,26 @@ export function LightSweep({
     return [`${color} ${at}%`];
   });
 
+  return `linear-gradient(to bottom, ${ramp.join(", ")})`;
+}
+
+export function LightSweep({
+  colors,
+  direction,
+  /** Bumped on every flick. Remounts the element so the animation replays. */
+  play,
+}: {
+  /** The room's own colours, warmest first. */
+  colors: string[];
+  direction: "on" | "off";
+  play: number;
+}) {
+  /* The page re-renders at pointer rate during a drag; the ramp only changes
+     when the room's colours or the flick direction do. */
+  const ramp = useMemo(() => buildRamp(colors, direction), [colors, direction]);
+
+  if (play === 0 || ramp === null) return null;
+
   return (
     <div
       key={play}
@@ -105,7 +115,7 @@ export function LightSweep({
       <div
         className="size-full blur-2xl"
         style={{
-          background: `linear-gradient(to bottom, ${ramp.join(", ")})`,
+          background: ramp,
           maskImage: MASK,
           WebkitMaskImage: MASK,
         }}

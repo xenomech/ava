@@ -44,17 +44,14 @@ export function ForgotPasswordPage() {
         }}
       >
         <Field label="Email">
-          {(props) => (
-            <Input
-              {...props}
-              type="email"
-              autoComplete="email"
-              placeholder="you@home.com"
-              required
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-            />
-          )}
+          <Input
+            type="email"
+            autoComplete="email"
+            placeholder="you@home.com"
+            required
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+          />
         </Field>
 
         <FormError error={attempt.error} fallback="Could not send the reset link" />

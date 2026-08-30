@@ -28,7 +28,10 @@ const chip = cva(
   },
 );
 
-export type ChipProps = ComponentProps<"span"> & VariantProps<typeof chip> & { asChild?: boolean };
+/* `selectable` is ChipToggle's half of the cva — exposing it here would let it
+   leak onto the <span> as an unknown DOM attribute. */
+export type ChipProps = ComponentProps<"span"> &
+  Omit<VariantProps<typeof chip>, "selectable"> & { asChild?: boolean };
 
 export function Chip({ className, tone, asChild, ...props }: ChipProps) {
   const Comp = asChild ? Slot.Root : "span";

@@ -1,1 +1,1 @@
-export { AvaSocketProvider, useAvaSocket } from "./socket";
+export { AvaSocketProvider, useAvaSocket, useSocketConnected } from "./socket";

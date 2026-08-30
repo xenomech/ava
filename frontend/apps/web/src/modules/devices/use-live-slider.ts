@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 
 const LIVE_INTERVAL_MS = 400;
 
@@ -19,13 +19,9 @@ export function useLiveSlider<T>(
 
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const sentAt = useRef(0);
-  const previewRef = useRef(preview);
-  const commitRef = useRef(commit);
 
-  useEffect(() => {
-    previewRef.current = preview;
-    commitRef.current = commit;
-  });
+  const sendPreview = useEffectEvent((value: T) => preview(value));
+  const sendCommit = useEffectEvent((value: T) => commit(value));
 
   const cancel = useCallback(() => {
     clearTimeout(timer.current);
@@ -42,7 +38,7 @@ export function useLiveSlider<T>(
 
       if (elapsed >= LIVE_INTERVAL_MS) {
         sentAt.current = Date.now();
-        previewRef.current(value);
+        sendPreview(value);
 
         return;
       }
@@ -51,7 +47,7 @@ export function useLiveSlider<T>(
 
       timer.current = setTimeout(() => {
         sentAt.current = Date.now();
-        previewRef.current(value);
+        sendPreview(value);
       }, LIVE_INTERVAL_MS - elapsed);
     },
     [cancel],
@@ -62,10 +58,16 @@ export function useLiveSlider<T>(
       cancel();
       sentAt.current = Date.now();
       setDragging(null);
-      commitRef.current(value);
+      sendCommit(value);
     },
     [cancel],
   );
 
-  return { value: dragging ?? settled, dragging, change, release };
+  /** Abandon an in-flight drag without committing — an interrupted gesture. */
+  const reset = useCallback(() => {
+    cancel();
+    setDragging(null);
+  }, [cancel]);
+
+  return { value: dragging ?? settled, dragging, change, release, reset };
 }

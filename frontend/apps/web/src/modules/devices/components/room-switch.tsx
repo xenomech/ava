@@ -59,9 +59,13 @@ export function RoomSwitch({
     onFlick(next);
   };
 
-  const drag = useRef<{ startY: number; lastY: number; lastAt: number; speed: number } | null>(
-    null,
-  );
+  const drag = useRef<{
+    pointerId: number;
+    startY: number;
+    lastY: number;
+    lastAt: number;
+    speed: number;
+  } | null>(null);
 
   /* Written straight to the node. A pointermove fires far too often to be worth
      a render, and nothing else on the page reads the offset.
@@ -91,8 +95,13 @@ export function RoomSwitch({
   const down = (event: PointerEvent<HTMLButtonElement>) => {
     if (disabled) return;
 
+    /* Ignore a second finger landing on the plate: only the pointer that
+       started the drag may drive the paddle. */
+    if (drag.current) return;
+
     event.currentTarget.setPointerCapture(event.pointerId);
     drag.current = {
+      pointerId: event.pointerId,
       startY: event.clientY,
       lastY: event.clientY,
       lastAt: event.timeStamp,
@@ -103,7 +112,7 @@ export function RoomSwitch({
   const move = (event: PointerEvent<HTMLButtonElement>) => {
     const state = drag.current;
     const node = paddle.current;
-    if (!state || !node) return;
+    if (!state || !node || event.pointerId !== state.pointerId) return;
 
     const elapsed = event.timeStamp - state.lastAt;
 
@@ -125,7 +134,7 @@ export function RoomSwitch({
   const up = (event: PointerEvent<HTMLButtonElement>) => {
     const state = drag.current;
     const node = paddle.current;
-    if (!state) return;
+    if (!state || event.pointerId !== state.pointerId) return;
 
     drag.current = null;
     release();

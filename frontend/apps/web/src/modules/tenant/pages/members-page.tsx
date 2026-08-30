@@ -2,6 +2,7 @@ import {
   Button,
   Chip,
   Field,
+  FieldControl,
   Input,
   Select,
   SelectContent,
@@ -69,33 +70,30 @@ export function MembersPage() {
               label="Email"
               error={isApiError(invite.error) ? invite.error.details?.email : undefined}
             >
-              {(props) => (
-                <Input
-                  {...props}
-                  type="email"
-                  required
-                  placeholder="someone@example.com"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                />
-              )}
+              <Input
+                type="email"
+                required
+                placeholder="someone@example.com"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+              />
             </Field>
 
             <Field label="Role">
-              {({ id, ...props }) => (
-                <Select value={role} onValueChange={(value) => setRole(value as TenantRole)}>
-                  <SelectTrigger id={id} {...props}>
+              <Select value={role} onValueChange={(value) => setRole(value as TenantRole)}>
+                <FieldControl>
+                  <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
-                    {INVITABLE.map((value) => (
-                      <SelectItem key={value} value={value} className="capitalize">
-                        {value}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+                </FieldControl>
+                <SelectContent>
+                  {INVITABLE.map((value) => (
+                    <SelectItem key={value} value={value} className="capitalize">
+                      {value}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Field>
 
             <Button type="submit" loading={invite.isPending}>

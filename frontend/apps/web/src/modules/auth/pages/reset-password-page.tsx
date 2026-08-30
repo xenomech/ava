@@ -51,17 +51,14 @@ export function ResetPasswordPage() {
         }}
       >
         <Field label="New password" hint="At least 8 characters">
-          {(props) => (
-            <Input
-              {...props}
-              type="password"
-              autoComplete="new-password"
-              required
-              minLength={8}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-            />
-          )}
+          <Input
+            type="password"
+            autoComplete="new-password"
+            required
+            minLength={8}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
         </Field>
 
         <FormError error={attempt.error} fallback="Could not reset the password" />

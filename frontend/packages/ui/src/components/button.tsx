@@ -63,7 +63,13 @@ export function Button({
       data-loading={loading || undefined}
       {...props}
     >
-      {loading ? <Loader2Icon className="animate-spin" aria-hidden /> : null}
+      {loading ? (
+        /* The rotation lives on a span wrapper: animating the SVG element
+           itself keeps the browser from compositing it on the GPU. */
+        <span className="animate-spin [&_svg]:block" aria-hidden>
+          <Loader2Icon />
+        </span>
+      ) : null}
       {children}
     </Comp>
   );

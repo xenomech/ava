@@ -1,18 +1,27 @@
-import { useId } from "react";
+import { useId, useMemo } from "react";
+
+const COLONS = /:/g;
 
 export function useMaterials() {
-  const id = useId().replace(/:/g, "");
+  const raw = useId();
 
-  return {
-    id,
-    core: `core-${id}`,
-    env: `env-${id}`,
-    rim: `rim-${id}`,
-    metal: `metal-${id}`,
-    dark: `dark-${id}`,
-    soft: `soft-${id}`,
-    glow: `glow-${id}`,
-  };
+  /* One stable object per component instance: it is passed as a prop to every
+     shape, so a fresh object per render would keep any memoised shape from
+     ever bailing out. */
+  return useMemo(() => {
+    const id = raw.replace(COLONS, "");
+
+    return {
+      id,
+      core: `core-${id}`,
+      env: `env-${id}`,
+      rim: `rim-${id}`,
+      metal: `metal-${id}`,
+      dark: `dark-${id}`,
+      soft: `soft-${id}`,
+      glow: `glow-${id}`,
+    };
+  }, [raw]);
 }
 
 export function Materials({ m }: { m: ReturnType<typeof useMaterials> }) {
