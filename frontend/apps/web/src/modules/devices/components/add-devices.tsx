@@ -19,19 +19,7 @@ import { updateDevice } from "../api";
 import { deviceQueries } from "../queries";
 import { deviceColor, deviceKind, deviceLevel } from "../lib/device-view";
 
-/**
- * Putting a device into a room, from the room.
- *
- * Until this existed the only way to assign a device was the room picker inside
- * its own control sheet — and that sheet is reached *through* a room. A device
- * belonging to no room was therefore unreachable the moment a single room
- * existed: nothing linked to it, and the empty-state that listed loose devices
- * only appeared when there were no rooms at all.
- *
- * Devices already in another room are offered too, and say where they are.
- * Moving one is the same operation as adopting a loose one, so there is no
- * reason to make it a different screen.
- */
+/** Putting a device into a room from the room, which is the only way to reach a loose one. */
 export function AddDevices({
   roomId,
   roomName,

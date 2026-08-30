@@ -15,8 +15,7 @@ import { applyTargets, sendCommand } from "../api";
 import { applyLocally, claim, release } from "../lib/optimistic";
 import { deviceQueries } from "../queries";
 
-/* One shared empty list, so a pending query does not hand every consumer a
-   fresh [] whose downstream filters change identity each render. */
+// One shared empty list, so a pending query does not hand consumers a fresh [] each render.
 const NO_DEVICES: DeviceDto[] = [];
 
 export function useDevices() {
@@ -63,13 +62,7 @@ export function useDeviceControl() {
   );
 }
 
-/**
- * Push a batch of trait writes, showing them locally before the hub answers.
- *
- * Shared by the room switch and by scenes, because a scene is nothing more than
- * a batch of writes someone saved earlier — there is no second code path for
- * replaying one, and so no second place for the optimistic copy to drift.
- */
+/** Push a batch of trait writes, shown locally before the hub answers. */
 export function useApplyTargets() {
   const queryClient = useQueryClient();
 

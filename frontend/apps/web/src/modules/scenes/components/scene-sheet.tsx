@@ -16,22 +16,7 @@ import { capture, describe, matches, scenePreview } from "../lib/capture";
 import { SceneLights } from "./scene-lights";
 import { useSceneActions } from "../hooks/use-scenes";
 
-/**
- * The scenes a room has, and the one it is about to get.
- *
- * Every row here shows the same lit panel the carousel shows, because these are
- * the same objects seen from a different angle — a list of names with a count
- * beside them made you hold the mapping in your head, and the whole point of
- * drawing a scene as its light was to stop having to.
- *
- * The new scene is presented as a row of exactly that shape with its name still
- * blank: what you are doing is filling in the card that is about to join the
- * rail, and it is worth being literal about that.
- *
- * There is no renaming and no reordering. Both are real, neither is worth a
- * screen yet: a scene with the wrong name has existed for about ten seconds,
- * and deleting and saving again costs one more tap than renaming would.
- */
+/** The scenes a room has, and the one it is about to get. */
 export function SceneSheet({
   open,
   onOpenChange,
@@ -50,15 +35,11 @@ export function SceneSheet({
   const [name, setName] = useState("");
   const { save, remove } = useSceneActions(roomId);
 
-  /* Recomputed as the room reports, so the panel below is the scene that will
-     actually be written. Freezing it at open would be steadier to read and
-     occasionally a lie. */
+  // Recomputed as the room reports, so the panel is the scene that will be written.
   const targets = useMemo(() => capture(devices), [devices]);
   const preview = useMemo(() => scenePreview(null, devices), [devices]);
 
-  /* The name field starts blank each time the sheet opens. Cleared on close —
-     every close funnels through here, while opening is the parent's doing —
-     so no effect and no frame showing the old name. */
+  // Cleared on close rather than on open, so no effect and no frame of the old name.
   const openChange = (next: boolean) => {
     if (!next) setName("");
     onOpenChange(next);
@@ -85,9 +66,7 @@ export function SceneSheet({
 
         <DrawerBody className="grid content-start gap-5 pb-8 pt-4">
           {scenes.length > 0 ? (
-            /* Hairlines between rows rather than a border around each. Three
-               separately outlined boxes in a column read as three unrelated
-               things; a divided list reads as one. */
+            // Hairlines rather than a border each: a divided list reads as one thing.
             <ul className="grid divide-y divide-border border-y border-border">
               {scenes.map((scene) => (
                 <li key={scene.id} className="flex items-center gap-3 py-2.5">
@@ -148,9 +127,7 @@ export function SceneSheet({
               </p>
             ) : null}
 
-            {/* Plain rows, no box. The exact percentages and temperatures are
-                worth stating — this is the one moment the scene is legible —
-                but they are a caption to the panel above, not a table. */}
+            {/* Plain rows: a caption to the panel above, not a table. */}
             <ul className="grid gap-1">
               {devices.map((device) => (
                 <li key={device.id} className="flex items-baseline justify-between gap-4">

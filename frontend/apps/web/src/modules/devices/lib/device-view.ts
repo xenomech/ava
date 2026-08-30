@@ -24,12 +24,7 @@ export function deviceLevel(device: DeviceDto): number {
   return numberOf(device, TRAIT_BRIGHTNESS) ?? 100;
 }
 
-/**
- * What a device is doing, in the fewest words that stay true.
- *
- * A plug or a fan has no brightness, so `deviceLevel` reports 100 for them and
- * a bare percentage would claim a dimmer that is not there. Those read "On".
- */
+/** What a device is doing, where anything without a dimmer reads "On" rather than a percentage. */
 export function deviceLabel(device: DeviceDto): string {
   if (device.status === "offline") return "Offline";
   if (!isOn(device)) return "Off";

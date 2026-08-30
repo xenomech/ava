@@ -14,9 +14,7 @@ import (
 	"ava/pkg/logger"
 )
 
-// A username and a home slug are unique keys the person registering never sees.
-// Both are derived from the email local part so they stay recognisable in logs
-// and URLs, then disambiguated with a counter.
+// Usernames and home slugs are derived from the email local part, then disambiguated with a counter.
 
 const (
 	identifierFallback = "home"
@@ -24,8 +22,7 @@ const (
 	identifierAttempts = 50
 )
 
-// identifierBase reduces an email to a slug candidate that is always valid:
-// lowercase, no runs of separators, and at least three characters.
+// identifierBase reduces an email to a slug candidate that is always valid.
 func identifierBase(email string) string {
 	local, _, _ := strings.Cut(email, "@")
 
@@ -41,8 +38,7 @@ func identifierBase(email string) string {
 	return base
 }
 
-// candidate returns the nth name to try: the base itself first, then base-2,
-// base-3 and so on, so the common case reads as the person's own name.
+// candidate returns the nth name to try: the base itself first, then base-2, base-3 and so on.
 func candidate(base string, n int) string {
 	if n == 0 {
 		return base
@@ -85,10 +81,7 @@ func (s *authService) freeSlug(ctx context.Context, base string) (string, error)
 	})
 }
 
-// firstFree walks candidates until available says yes. If every candidate is
-// taken it falls back to a random suffix rather than failing the registration —
-// the name is cosmetic, and refusing a signup over it is the worse outcome. The
-// unique index stays the real guard.
+// firstFree walks candidates until one is free, falling back to a random suffix rather than failing signup.
 func firstFree(base string, available func(string) (bool, error)) (string, error) {
 	for n := range identifierAttempts {
 		name := candidate(base, n)

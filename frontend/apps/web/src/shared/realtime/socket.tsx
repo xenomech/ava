@@ -11,10 +11,7 @@ type AvaSocket = {
   subscribe: (listener: Listener) => () => void;
 };
 
-/* Two contexts on purpose. send/subscribe only touch refs and never change
-   identity, while connected flips on every reconnect — folding them into one
-   value made every consumer re-render (and ava-events re-subscribe its
-   handlers) each time the socket flapped, for a field none of them read. */
+// Two contexts: connected flips on every reconnect, and one value re-rendered every consumer.
 const SocketContext = createContext<AvaSocket>({
   send: () => false,
   subscribe: () => () => undefined,
@@ -26,10 +23,7 @@ export const useAvaSocket = () => use(SocketContext);
 export const useSocketConnected = () => use(SocketConnectedContext);
 
 function socketURL() {
-  /* The API base is absolute in development and a same-origin path in a
-     deployed build, where the web server proxies /api. `new URL` throws on a
-     bare path, so the page itself supplies the base — which is the right origin
-     in exactly the case where the path is relative. */
+  // `new URL` throws on the bare path a deployed build uses, so the page supplies the base.
   const url = new URL(`${env.VITE_API_URL}/socket`, window.location.origin);
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
 

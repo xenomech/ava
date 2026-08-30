@@ -11,8 +11,7 @@ function byCreation(one: DeviceDto, other: DeviceDto) {
   return one.created_at.localeCompare(other.created_at);
 }
 
-/* Reconciled, not taken at face value. Anything this browser is still writing
-   stays as the person left it until the house agrees or the hold expires. */
+// Reconciled, so anything this browser is still writing stays as the person left it.
 function replaceDevice(queryClient: QueryClient, device: DeviceDto) {
   const settled = reconcile(device);
 
@@ -41,8 +40,7 @@ function apply(queryClient: QueryClient, event: AvaEvent) {
       replaceHubDevices(queryClient, event.hub_id, event.devices);
       break;
     case "command.rejected":
-      /* The write is not ours to hold any more — let the refetch below say what
-         the device is really doing. */
+      // The write is not ours to hold any more; the refetch below says what is really true.
       release(event.device_id);
       toast.error(event.message);
       void queryClient.invalidateQueries({ queryKey: deviceQueries.all() });

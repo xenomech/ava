@@ -14,18 +14,7 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-// What a sweep is allowed to overwrite on a device it has seen before.
-//
-// Not "state". A sweep describes a device as it was when discovery read it, and
-// discovery takes several seconds — so writing that reading over the stored one
-// let a six-second-old snapshot undo a change made a second ago. The bulb had
-// the new colour and the app showed the old white, which is the worst way round
-// for the two to disagree.
-//
-// State arrives over the broker instead, where it is merged rather than
-// replaced: a reading can correct a trait or retire it, but it cannot revert
-// something newer than itself. A device seen for the first time still gets its
-// state at insert, because there is nothing there to protect.
+// What a sweep may overwrite on a known device; state is excluded so a stale reading cannot revert a change.
 var hubOwnedColumns = []string{
 	"kind",
 	"vendor",
@@ -191,16 +180,8 @@ func (r *deviceRepository) ApplyState(
 ) (*model.Device, error) {
 	var updated model.Device
 
-	/* Merge what was reported, then remove the traits reported as null. Built
-	   one `- ?` at a time rather than as an array parameter so it does not
-	   depend on the driver encoding a text[]; a device reports a handful of
-	   traits, never enough for the difference to matter. */
-	/* Parenthesised, because `-` binds tighter than `||`: written as
-	   `state || patch - 'color'` Postgres removes the key from the patch and
-	   then merges, which does nothing at all. The retirement read correctly and
-	   had never once run, so a bulb moved from colour to white kept its old
-	   colour key alongside the new temperature — and the app, seeing a
-	   temperature, drew white over the colour it had just been asked for. */
+	// Merge what was reported, then remove the traits reported as null, one `- ?` at a time.
+	// Parenthesised, because `-` binds tighter than `||` and would otherwise strip the key from the patch.
 	merge := "(coalesce(state, '{}'::jsonb) || ?::jsonb)"
 	args := []any{string(state)}
 

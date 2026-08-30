@@ -16,9 +16,7 @@ export function Page({
   className?: string;
 }) {
   return (
-    /* grid-cols-[minmax(0,1fr)]: a grid item defaults to min-width:auto, so a
-       long identifier or a wide row was widening the track and pushing the
-       whole page past the edge of the surface it sits on. */
+    // grid-cols-[minmax(0,1fr)]: min-width:auto let a wide row push the page past the surface.
     <div
       className={cn(
         "mx-auto grid w-full max-w-[720px] grid-cols-[minmax(0,1fr)] gap-6",

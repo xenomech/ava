@@ -4,20 +4,7 @@ import type { ReactNode } from "react";
 import { cn } from "../lib/utils";
 import { buttonVariants } from "./button";
 
-/**
- * A pause before something that cannot be undone.
- *
- * Radix's AlertDialog rather than a hand-rolled sheet, because the behaviour
- * that matters here is the part nobody writes by hand correctly: focus is
- * trapped and lands on the safe choice, Escape cancels, the page behind goes
- * inert, and the whole thing is announced as an alert rather than as a passing
- * region. A confirmation that can be dismissed by accident is worse than none,
- * because it teaches people the guard is there.
- *
- * Deliberately not used for everything. A scene takes ten seconds to rebuild
- * and asking about it would be nagging; a room takes every device in it down
- * with it, and that is worth a sentence.
- */
+/** A pause before something that cannot be undone, on Radix for correct focus trapping. */
 export function Confirm({
   open,
   onOpenChange,

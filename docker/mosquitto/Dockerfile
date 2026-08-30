@@ -1,13 +1,4 @@
-# The broker for a deployed environment.
-#
-# Compose can mount the config and the entrypoint straight off the host, so it
-# runs the stock eclipse-mosquitto image. Railway builds from the repo and has
-# no host to mount from, so the same two files are baked in here instead. Keep
-# this in step with the volumes in docker-compose.yml.
-#
-# No VOLUME instruction. Railway attaches one volume per service and declares it
-# in .railway/railway.ts; an anonymous Dockerfile volume it cannot satisfy makes
-# the deploy fail before it produces a single line of build log.
+# Deployed broker: config baked in because Railway has no host to mount from, and no VOLUME because Railway declares its own.
 FROM eclipse-mosquitto:2
 
 COPY docker/mosquitto/mosquitto.conf /mosquitto/config/mosquitto.conf

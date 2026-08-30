@@ -8,9 +8,7 @@ import { FormError } from "../components/form-error";
 import { register } from "../api";
 import { isApiError } from "@/config/http/request";
 
-// Three fields. The server derives the username and the home's URL, and the
-// home is named in onboarding — asking for either here would be asking someone
-// to invent an identifier before they have seen a single light.
+// Three fields: the server derives the username and URL, and onboarding names the home.
 export function RegisterPage() {
   const [form, setForm] = useState({ name: "", email: "", password: "" });
 

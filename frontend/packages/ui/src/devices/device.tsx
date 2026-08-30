@@ -44,8 +44,7 @@ const SHAPES: Record<DeviceKind, (props: ShapeProps) => React.ReactElement> = {
   speaker: Speaker,
 };
 
-/** Dispatcher for a runtime `kind`. A caller that knows its fixture statically
-    should import that shape directly and skip the other eight. */
+/** Dispatcher for a runtime `kind`; a static caller should import that shape directly. */
 export function Device({ kind, level = 0, color = "#ffb463", className, style }: DeviceProps) {
   const m = useMaterials();
   const Shape = SHAPES[kind];

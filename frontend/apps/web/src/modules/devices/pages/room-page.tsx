@@ -40,15 +40,7 @@ import { useDevices, useRoomPower } from "../hooks/use-devices";
 /** The room's own light, averaged, for the switch and the sweep to borrow. */
 const DEFAULT_KELVIN = 2700;
 
-/**
- * A room, as one surface.
- *
- * Nothing here navigates away. Picking a device out of the strip swaps the
- * middle of the room from its switch to the device itself and opens that
- * device's controls, but the room, its colours and its strip all stay put. The
- * selection lives in the URL, so it stays addressable and the back button
- * closes it.
- */
+/** A room as one surface: nothing navigates away, and the selection lives in the URL. */
 export function RoomPage() {
   const { roomId } = useParams({ from: "/_protected/rooms/$roomId" });
   const { device: selectedId } = useSearch({ from: "/_protected/rooms/$roomId" });
@@ -65,25 +57,19 @@ export function RoomPage() {
   const { armed, arm } = useArmedScene(roomId, scenes);
   const applyScene = useApplyScene();
 
-  /* The sweep is fire-and-forget: `play` remounts it so a second flick
-     restarts the animation instead of being swallowed mid-flight. */
+  // `play` remounts the sweep, so a second flick restarts it instead of being swallowed.
   const [sweep, setSweep] = useState({ play: 0, direction: "on" as "on" | "off" });
-  /* The in-flight brightness of whichever device is being dragged, so the
-     stage lights up before the hub has answered. */
+  // The dragged device's in-flight brightness, so the stage lights before the hub answers.
   const [dragging, setDragging] = useState<number | null>(null);
 
   const actions = useRoomActions({
     onDevicesMoved: () => void queryClient.invalidateQueries({ queryKey: deviceQueries.all() }),
   });
 
-  /* So `/` can come back here next time. Writing it on view rather than on
-     click means a bookmark or a shared link counts too. */
+  // So `/` comes back here; written on view so a bookmark or shared link counts too.
   useEffect(() => rememberRoom(roomId), [roomId]);
 
-  /* All of this is derived from the queries alone. Memoised because the page
-     re-renders at pointer rate while a brightness drag or a sweep is live, and
-     none of it changes then — recomputing palettes per pointer event was most
-     of the render cost. */
+  // Memoised because the page re-renders at pointer rate and none of this changes then.
   const inRoom = useMemo(
     () => devices.filter((device) => device.room_id === roomId),
     [devices, roomId],
@@ -103,19 +89,14 @@ export function RoomPage() {
     [inRoom],
   );
 
-  /* The hubs actually answering for this room, rather than every hub on the
-     account. A room is a promise about a handful of bulbs, and only the hubs
-     holding those bulbs have any bearing on whether it can be kept. */
+  // Only the hubs answering for this room, since no other hub bears on whether it works.
   const serving = useMemo(() => {
     const hubIds = new Set(inRoom.map((device) => device.hub_id));
 
     return (hubs.data ?? []).filter((entry) => hubIds.has(entry.id));
   }, [hubs.data, inRoom]);
 
-  /* The armed scene's colour, not the room's current one. Scrolling the
-     carousel arms without applying, so this is what makes that gesture visible:
-     the glow behind the plate and the paddle both move to the colour the switch
-     is now pointed at, before anything has been sent to a bulb. */
+  // The armed scene's colour, so arming by scroll is visible before anything is sent.
   const ambient = kelvinToCss(roomKelvin(inRoom));
   const lit = useMemo(
     () => (armed ? sceneColor(scenePreview(armed, inRoom), ambient) : ambient),
@@ -123,7 +104,7 @@ export function RoomPage() {
   );
   const palette = useMemo(() => roomPalette(inRoom, lit), [inRoom, lit]);
 
-  /* Stable, so SceneRow's scroll listener is not re-attached per render. */
+  // Stable, so SceneRow's scroll listener is not re-attached per render.
   const onArm = useCallback((scene: SceneDto | null) => arm(scene?.id ?? null), [arm]);
 
   if (isPending || roomsPending) return <Loader label="Loading room" />;
@@ -145,9 +126,7 @@ export function RoomPage() {
       ? ("device-offline" as const)
       : ("online" as const);
 
-  /* Up means whichever scene the row is pointed at, and "everything on" when
-     that is none. Down is always down: a scene describes a room that is on, so
-     there is nothing for it to say about turning the room off. */
+  // Up applies the armed scene, or everything on; down is always just off.
   const flick = (next: boolean) => {
     setSweep((current) => ({ play: current.play + 1, direction: next ? "on" : "off" }));
 
@@ -186,13 +165,10 @@ export function RoomPage() {
       <div
         className={cn(
           "relative grid min-h-0 min-w-0 flex-1 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden",
-          /* Laid across rather than down when the screen is short and wide. The
-             header keeps the full width; the switch and the room's furniture
-             share what is left, side by side. */
+          // Laid across rather than down when the screen is short and wide.
           "landscape-room:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]",
           "landscape-room:grid-rows-[auto_minmax(0,1fr)]",
-          /* The phone sheet rests over the lower half, so the room gives up
-             that half rather than centring the device behind it. */
+          // The phone sheet takes the lower half, so the room gives that half up.
           selected && !beside && ROOM_HEIGHT,
         )}
       >
@@ -213,8 +189,7 @@ export function RoomPage() {
         </header>
 
         {inRoom.length === 0 ? (
-          /* An empty room still gets the strip, because the strip is the only
-             way to put something in it. Without it the room is a dead end. */
+          // An empty room still gets the strip, the only way to put something in it.
           <>
             <div className="z-raised grid place-items-center px-6">
               <p className="max-w-[280px] text-center text-small text-muted">
@@ -253,9 +228,7 @@ export function RoomPage() {
               )}
             </div>
 
-            {/* Room mode's own furniture. On a phone the sheet takes the lower
-                half of the screen, so the count, the hint and the strip all
-                travel into it rather than sitting on top of the device. */}
+            {/* Room mode's furniture, which travels into the sheet on a phone. */}
             {selected && !beside ? null : (
               <footer
                 className={cn(
@@ -263,12 +236,7 @@ export function RoomPage() {
                   "landscape-room:content-center landscape-room:pt-5",
                 )}
               >
-                {/* The first thing to go when the screen is short. Once the
-                    carousel is there it is the least load-bearing line on the
-                    page: the centred card's lit dot already says whether the
-                    room matches what the switch is aimed at, and the strip
-                    below spells out every device by name. A tall phone has room
-                    to state the count anyway. */}
+                {/* First to go on a short screen: the strip already names every device. */}
                 <p className="hidden items-baseline gap-2 [@media(min-height:700px)]:flex">
                   {on === 0 ? (
                     <b className="text-hero font-semibold text-subtle">Off</b>
@@ -333,15 +301,7 @@ function DeviceOnStage({ device, level }: { device: DeviceDto; level: number | n
   );
 }
 
-/**
- * The colours the room will be holding once the switch settles, warmest first.
- *
- * Every light in the room, not only the ones currently on — flicking up turns
- * all of them on, so the sweep should be showing what is about to be true.
- * Plugs and fans are left out: they have a power state but no colour, and
- * including them would wash the ramp towards whatever `deviceColor` falls back
- * to rather than towards anything the room actually emits.
- */
+// Every light the room will hold once the switch settles, warmest first, plugs left out.
 function roomPalette(devices: DeviceDto[], fallback: string): string[] {
   const lights = devices
     .filter((device) => emitsLight(deviceKind(device)))

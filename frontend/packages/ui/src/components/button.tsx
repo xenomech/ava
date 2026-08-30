@@ -64,8 +64,7 @@ export function Button({
       {...props}
     >
       {loading ? (
-        /* The rotation lives on a span wrapper: animating the SVG element
-           itself keeps the browser from compositing it on the GPU. */
+        /* Rotation on a span wrapper: animating the SVG itself blocks GPU compositing. */
         <span className="animate-spin [&_svg]:block" aria-hidden>
           <Loader2Icon />
         </span>

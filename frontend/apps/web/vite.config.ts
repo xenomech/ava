@@ -48,9 +48,7 @@ export default defineConfig({
         name: "Ava",
         short_name: "Ava",
         description: "Ava - multi-tenant hub control",
-        /* Installed, this is a home-screen app rather than a page: no browser
-           chrome, and a background that matches the surface so the splash does
-           not flash white on a cold start. */
+        // Installed it is a home-screen app, not a page: no chrome, and no white splash on a cold start.
         display: "standalone",
         orientation: "portrait",
         start_url: "/",

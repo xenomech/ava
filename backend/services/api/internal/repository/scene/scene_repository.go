@@ -21,8 +21,7 @@ func (r *sceneRepository) ListByRoom(ctx context.Context, tenantID, roomID uuid.
 	return scenes, err
 }
 
-// Create writes the scene and its targets together, so a scene never exists
-// with half of the room in it.
+// Create writes the scene and its targets together, so a scene never exists with half of the room in it.
 func (r *sceneRepository) Create(ctx context.Context, scene *model.Scene) error {
 	return r.db.WithContext(ctx).Create(scene).Error
 }
@@ -40,10 +39,7 @@ func (r *sceneRepository) Delete(ctx context.Context, tenantID, roomID, sceneID 
 			return ErrSceneNotFound
 		}
 
-		/* The database cascade is on the hard delete, and this is a soft one, so
-		   the targets have to be swept by hand. Leaving them would mean a scene
-		   recreated under the same id — or a plain audit of the table — came back
-		   carrying the old room. */
+		// The cascade only fires on a hard delete, so a soft delete must sweep the targets by hand.
 		return dbTx.Where("scene_id = ?", sceneID).Delete(&model.SceneTarget{}).Error
 	})
 }
@@ -67,12 +63,7 @@ func (r *sceneRepository) NextPosition(ctx context.Context, tenantID, roomID uui
 	return *highest + 1, nil
 }
 
-// NameExists asks rather than relying on a unique index.
-//
-// A unique index plus soft deletes means a deleted scene keeps its name
-// reserved forever, and "Evening" is exactly the name someone deletes and then
-// wants back. Asking under the default scope, which excludes deleted rows, has
-// neither problem.
+// NameExists asks under the default scope rather than relying on an index, so a deleted name is free again.
 func (r *sceneRepository) NameExists(
 	ctx context.Context,
 	tenantID, roomID uuid.UUID,

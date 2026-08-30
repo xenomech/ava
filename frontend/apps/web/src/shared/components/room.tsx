@@ -3,12 +3,7 @@ import type { CSSProperties, ReactNode } from "react";
 
 import { kelvinToCss } from "@/shared/lib/kelvin";
 
-// The first run happens in a dark room that you gradually light. Each step
-// raises the level and warms the colour, so by the time setup is done the room
-// has come up from a cold, dead 1800K to the 2700K the console sits at. The
-// light is the product's only chroma, so it is also the only thing here that
-// carries colour — no brand gradient, because a brand gradient would mean
-// nothing.
+// First run lights a dark room step by step, and the light is the only colour on screen.
 export type RoomLight = {
   /** 0-100. Drives bloom size, opacity and how far the vignette closes in. */
   level: number;
@@ -44,11 +39,9 @@ export function Room({
         {
           "--lit": kelvinToCss(light.kelvin),
           "--level": level,
-          // Quadratic so the early steps stay genuinely dim. Linear opacity
-          // reads as "grey wash" rather than "a light that is barely on".
+          // Quadratic so the early steps stay dim: linear opacity reads as a grey wash.
           "--bloom-opacity": `calc(${level} / 100 * ${level} / 100 * 0.62)`,
-          // Colour temperature is the slowest thing on screen; it should feel
-          // like a room warming, not a value changing.
+          // Colour temperature is the slowest thing here: a room warming, not a value changing.
           transition: "background-color 1200ms var(--ease-in-out-quart)",
         } as CSSProperties
       }
@@ -84,8 +77,7 @@ function Bloom({ level }: { level: number }) {
   );
 }
 
-// The darkness closing in from the edges lifts as the room fills. It is what
-// makes the early steps feel like a room rather than a dark web page.
+// The darkness closing in from the edges lifts as the room fills, so it reads as a room.
 function Vignette({ level }: { level: number }) {
   return (
     <div

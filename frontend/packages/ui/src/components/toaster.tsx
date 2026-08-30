@@ -5,26 +5,7 @@ import { cn } from "../lib/utils";
 
 const WIDTH = "min(400px, calc(100vw - 24px))";
 
-/**
- * Toasts, in the app's own language.
- *
- * Three deliberate departures from Sonner's defaults.
- *
- * They sit at the top rather than the bottom, because the bottom of every
- * screen here is already spoken for — the device strip on a room, the sheet
- * that rises over it, the controls along the foot of a device. A toast down
- * there lands on the thing the person is using.
- *
- * `richColors` is off. It paints the whole toast a stock green or red that
- * belongs to no part of this app; tone is carried the way `Chip` carries it, by
- * the icon and a tinted edge over the ordinary raised surface.
- *
- * And everything is `unstyled`. Sonner injects its stylesheet at runtime, so it
- * lands after Tailwind and wins every specificity tie — a `bg-raised` on the
- * toast simply loses to `[data-sonner-toast]`. Its defaults are all guarded
- * behind `data-styled=true`, which `unstyled` turns off, so this is the
- * supported way out rather than an escalation war.
- */
+/** Toasts at the top, fully unstyled — Sonner's runtime sheet outranks Tailwind otherwise. */
 export function Toaster({ className, toastOptions, ...props }: ComponentProps<typeof Sonner>) {
   return (
     <Sonner
@@ -33,10 +14,7 @@ export function Toaster({ className, toastOptions, ...props }: ComponentProps<ty
       gap={10}
       visibleToasts={3}
       className={cn("font-sans", className)}
-      /* Inline, because below 600px Sonner swaps top-center for its own
-         full-bleed left/right offsets and the container ends up wider than the
-         screen. A stylesheet cannot outrank that reliably; an inline style can,
-         and it keeps one centred column at every width. */
+      /* Inline: below 600px Sonner's own full-bleed offsets outrank a stylesheet. */
       style={
         {
           "--width": WIDTH,
@@ -49,17 +27,11 @@ export function Toaster({ className, toastOptions, ...props }: ComponentProps<ty
       toastOptions={{
         ...toastOptions,
         unstyled: true,
-        /* Inline, for the same reason the container is. Below 600px Sonner's own
-           sheet sizes a toast at `100% - 32px`, leaving it narrower than the
-           strip it sits in — off-centre, with stacked toasts at differing widths
-           showing out from behind each other. A class cannot outrank that. */
+        /* Inline for the same reason: below 600px Sonner's sheet sizes toasts off-centre. */
         style: { width: "100%", ...toastOptions?.style },
         classNames: {
           toast: cn(
-            /* w-full, not the --width expression: the toaster is already that
-               wide and centred, and sizing the toast independently left it
-               narrower than its own container — off to one side, with stacked
-               toasts at differing widths poking out from behind each other. */
+            /* w-full: sizing the toast independently left it narrower than its container. */
             "pointer-events-auto flex w-full items-center gap-3 rounded-lg p-3.5",
             "border border-border bg-raised text-fg",
             "shadow-[0_20px_44px_-18px_rgb(0_0_0/0.75)]",

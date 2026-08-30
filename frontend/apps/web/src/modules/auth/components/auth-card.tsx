@@ -4,9 +4,7 @@ import { Reveal } from "@/shared/components/reveal";
 import { Room, ROOM_STAGES } from "@/shared/components/room";
 import { Wordmark } from "@/shared/components/wordmark";
 
-// Signing in is the first thing anyone sees, so it stands in the same room as
-// setup — just a little further along, since you already have a home to get
-// back into.
+// Signing in stands in the same room as setup, just a little further along.
 export function AuthCard({
   title,
   description,

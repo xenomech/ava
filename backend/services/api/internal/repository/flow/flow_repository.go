@@ -103,15 +103,7 @@ func (r *flowRepository) UpdateStep(ctx context.Context, tenantID uuid.UUID, ste
 	return nil
 }
 
-// ReplaceSteps swaps a flow's steps for a new set and rewinds it to the first
-// one. Used when a definition changes under somebody part-way through it.
-//
-// The flow row itself is never removed. Its unique key is (tenant, user, type)
-// and that index ignores deleted_at, so a soft-deleted flow would hold the key
-// against its own replacement; hard-deleting instead would throw away the record
-// that the person ever started. Neither is needed — this is the same flow re-cut
-// against the new definition, so only the steps change. The previous steps are
-// soft deleted and stay queryable as history.
+// ReplaceSteps swaps a flow's steps for a new set and rewinds it, never removing the flow row itself.
 func (r *flowRepository) ReplaceSteps(ctx context.Context, tenantID uuid.UUID, flow *model.Flow, steps []model.FlowStep) error {
 	return r.db.WithContext(ctx).Transaction(func(dbTx *gorm.DB) error {
 		if err := dbTx.Where("tenant_id = ? AND flow_id = ?", tenantID, flow.ID).

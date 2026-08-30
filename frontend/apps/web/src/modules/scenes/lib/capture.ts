@@ -14,18 +14,7 @@ import {
 
 import { kelvinToCss } from "@/shared/lib/kelvin";
 
-/**
- * The room, frozen: what to save when someone says "remember this".
- *
- * Only what a person would recognise on the switch — whether each thing is on,
- * and if it is, how bright and what colour. The rest of a device's traits are
- * either readings, which cannot be set, or settings nobody thinks of as part of
- * "how the room looks".
- *
- * A device that is off is stored as off and nothing more. Its brightness while
- * dark is not a fact about the room, and replaying it would make the light
- * flare at the old level for the moment before the power target lands.
- */
+/** The room frozen: only power, and for anything on, its brightness and colour. */
 export function capture(devices: DeviceDto[]): SceneTargetDto[] {
   return devices.flatMap((device) => {
     if (device.room_id === undefined || !supports(device, TRAIT_POWER)) return [];
@@ -40,10 +29,7 @@ export function capture(devices: DeviceDto[]): SceneTargetDto[] {
       targets.push({ device_id: device.id, trait: TRAIT_BRIGHTNESS, value: brightness });
     }
 
-    /* A light holds a colour or a temperature, never both — the hub clears
-       whichever one you did not set — so the scene stores whichever it is
-       actually showing. Storing both would mean replaying one and immediately
-       contradicting it with the other. */
+    // A light holds a colour or a temperature, never both, so store the live one.
     const color = traitValue(device, TRAIT_COLOR);
     const kelvin = numberOf(device, TRAIT_COLOR_TEMP);
 
@@ -57,15 +43,7 @@ export function capture(devices: DeviceDto[]): SceneTargetDto[] {
   });
 }
 
-/**
- * Whether the room is, right now, doing what this scene says.
- *
- * Numbers are compared loosely. A bulb asked for 60% reports back 60% most of
- * the time and 61% sometimes, and a scene that can never light up because of
- * rounding is worse than no indicator at all. Two percent of the value covers
- * that drift without letting genuinely different settings pass — at 2700K it
- * allows 54 degrees, well inside one step of the warmth slider.
- */
+/** Whether the room is doing what this scene says; numbers allow 2% of drift. */
 export function matches(scene: SceneDto, devices: DeviceDto[]): boolean {
   const known = new Map(devices.map((device) => [device.id, device]));
 
@@ -93,16 +71,7 @@ export function matches(scene: SceneDto, devices: DeviceDto[]): boolean {
 /** One device under a scene. `color: null` means the scene leaves it off. */
 export type ScenePreview = { id: string; color: string | null; level: number };
 
-/**
- * The room as this scene would leave it, device by device.
- *
- * What a scene card draws instead of writing its name. A room has three or four
- * fixtures, and a scene is mostly a statement about which of them are lit and
- * how warmly — that is a picture, and a picture is read faster than "Evening".
- *
- * `null` is the default scene, everything on, which is stored nowhere: it is
- * every device at whatever colour it is already holding.
- */
+/** The room as this scene would leave it; `null` is the default, everything on. */
 export function scenePreview(scene: SceneDto | null, devices: DeviceDto[]): ScenePreview[] {
   return devices
     .filter((device) => supports(device, TRAIT_POWER))

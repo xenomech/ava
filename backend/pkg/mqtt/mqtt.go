@@ -31,18 +31,7 @@ type Options struct {
 	ClientID  string
 	Username  string
 	Password  string
-	// Credentials, when set, is asked for a username and password on every
-	// connection attempt, reconnects included, and takes precedence over the
-	// static pair above.
-	//
-	// A broker that rotates a client's password mid-session is otherwise
-	// unsurvivable: the credentials handed to the client at construction are
-	// the only ones it will ever present, so it retries the stale password
-	// until someone restarts the process. Asking each time turns a rotation
-	// into a reconnect.
-	//
-	// It is called from the library's connection goroutine, so an
-	// implementation that reads changing state has to do its own locking.
+	// Credentials, when set, is asked afresh on every connection attempt so a rotated password survives.
 	Credentials func() (username, password string)
 	WillTopic   string
 	Will        []byte
@@ -70,11 +59,7 @@ func Connect(ctx context.Context, opts *Options) (*Client, error) {
 		SetAutoReconnect(true).
 		SetConnectRetry(true).
 		SetConnectRetryInterval(5 * time.Second).
-		/* Short, because the common reason to be dropped here is a password
-		   rotation and the reconnect that follows is the whole command channel
-		   coming back. A minute of backoff spent presenting credentials that
-		   are about to be replaced anyway is a minute of a switch that does
-		   nothing. */
+		// Short, because a drop here is usually a password rotation and the reconnect restores commands.
 		SetMaxReconnectInterval(15 * time.Second).
 		SetKeepAlive(30 * time.Second).
 		SetConnectionLostHandler(func(_ paho.Client, err error) {
@@ -110,13 +95,7 @@ func Connect(ctx context.Context, opts *Options) (*Client, error) {
 	return client, nil
 }
 
-// Subscribe records the topic as wanted and subscribes if the connection is up.
-//
-// The record is kept even when the subscribe fails, so `resume` reinstates it on
-// the next connect. Storing it only on success meant a broker that was slow to
-// accept the first connection left the caller subscribed to nothing for the
-// lifetime of the process: the error was logged once at boot, the client
-// reconnected seconds later, and `resume` then had an empty set to replay.
+// Subscribe records the topic as wanted even when the subscribe fails, so resume can replay it later.
 func (c *Client) Subscribe(ctx context.Context, topic string, handler Handler) error {
 	c.mu.Lock()
 	c.subs[topic] = handler
@@ -175,12 +154,7 @@ func (c *Client) Publish(ctx context.Context, topic string, payload []byte, reta
 	return nil
 }
 
-// Connected reports whether the client currently holds a session with the
-// broker.
-//
-// Worth asking, because losing one is quiet: the library reports a connection
-// dropping but says nothing at all about a reconnect attempt that is refused,
-// so a client with bad credentials retries forever and logs nothing either way.
+// Connected reports whether the client holds a broker session, since a refused reconnect is silent.
 func (c *Client) Connected() bool {
 	return c != nil && c.inner != nil && c.inner.IsConnected()
 }

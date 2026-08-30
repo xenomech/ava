@@ -4,13 +4,10 @@ import { Reveal } from "@/shared/components/reveal";
 import { Wordmark } from "@/shared/components/wordmark";
 import { kelvinToCss } from "@/shared/lib/kelvin";
 
-// Device writes whatever it is given straight into --lit, so it has to be a
-// real colour. Passing "var(--lit)" makes the variable reference itself, which
-// resolves to nothing and leaves the bulb dark.
+// A real colour: Device writes it into --lit, so "var(--lit)" would self-reference.
 const EMBER = kelvinToCss(1900);
 
-// Before any question, one screen that is just the product's idea: a single
-// light in a dark room. Nothing to fill in, one thing to press.
+// Before any question, one screen that is just the idea: a light in a dark room.
 export function Welcome({ onBegin }: { onBegin: () => void }) {
   return (
     <div className="grid justify-items-center gap-10 text-center">

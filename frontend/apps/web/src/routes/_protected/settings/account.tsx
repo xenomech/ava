@@ -9,9 +9,7 @@ import { switchTenant, useSession, useSignOut } from "@/modules/auth";
 import { tenantQueries } from "@/modules/tenant";
 import { Page, Section } from "@/shared/components/page";
 
-// Signing out and switching home both used to live in the top bar. With the bar
-// gone they need a home of their own, and they are account concerns rather than
-// home settings, so they get their own tab.
+// Signing out and switching home are account concerns, not home settings, so they get a tab.
 function Account() {
   const { user, tenant } = useSession();
   const navigate = useNavigate();

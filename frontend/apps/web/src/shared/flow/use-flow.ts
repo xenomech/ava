@@ -25,12 +25,7 @@ export type Flow = {
   retry: () => void;
 };
 
-/**
- * The flow state machine, with no opinion about how it looks. Onboarding wraps
- * this in a full-screen cinematic layout; anything else can render it as a
- * plain form. Keeping the machine separate is what lets the two differ without
- * either one growing a `variant` prop.
- */
+/** The flow state machine, with no opinion about how it looks, so no caller needs a `variant`. */
 export function useFlow(
   flowType: string,
   toPayload: (stepId: string, values: Record<string, string>) => unknown,
@@ -39,9 +34,7 @@ export function useFlow(
   const queryClient = useQueryClient();
   const flowQuery = useQuery(flowQueries.state(flowType));
 
-  // The query cache is the only copy of the flow. Mirroring it into component
-  // state meant a rejected step wrote to the mirror and left the cache holding
-  // a different answer.
+  // The query cache is the only copy: a mirror in state left a rejected step disagreeing with it.
   const flow = flowQuery.data ?? null;
   const setFlow = (next: FlowStateDto) => queryClient.setQueryData(flowQueries.key(flowType), next);
 
@@ -49,8 +42,7 @@ export function useFlow(
 
   const step = flow?.steps.find((entry) => entry.id === flow.current_step) ?? null;
 
-  // Derived during render rather than in an effect: as an effect this chained
-  // off the query and let a new step paint holding the old step's answers.
+  // Derived during render: as an effect, a new step painted holding the old step's answers.
   const [valuesFor, setValuesFor] = useState(flow?.current_step);
 
   if (valuesFor !== flow?.current_step) {

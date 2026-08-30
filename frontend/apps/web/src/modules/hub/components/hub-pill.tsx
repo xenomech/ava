@@ -1,36 +1,19 @@
 import { cn } from "@ava/ui";
 import type { HubDto } from "@ava/contracts";
 
-/**
- * How long a hub can go quiet before the room stops believing in it.
- *
- * Matches the grace the API applies when it decides whether to accept a
- * command, so the pill and the thing it is describing agree. A hub reports
- * every thirty seconds, which gives it several missed beats before anyone
- * panics.
- */
+// How long a hub can go quiet; matches the grace the API applies to commands.
 const GRACE_MS = 3 * 60 * 1000;
 
 export type HubHealth = "connected" | "unreachable" | "offline";
 
-/**
- * What the room can actually expect of its hub.
- *
- * Three states rather than two, because the middle one is real and cost a whole
- * afternoon to find: a hub can be perfectly alive — heartbeating, syncing
- * devices, reporting for duty over HTTP — while the channel that carries
- * commands is dead. Everything looked healthy and nothing worked. Flattening
- * that into "offline" would be a lie, and flattening it into "connected" is the
- * lie we already lived through.
- */
+/** What the room can expect of its hub; a hub can be alive but unable to command. */
 export function hubHealth(hub: HubDto, now = Date.now()): HubHealth {
   if (hub.status === "revoked") return "offline";
   if (hub.online) return "connected";
 
   const seen = hub.last_seen_at ? Date.parse(hub.last_seen_at) : Number.NaN;
 
-  /* Heard from, but not reachable: it is there and something between here and
-     it is broken. That is worth telling apart from silence. */
+  // Heard from but not reachable is worth telling apart from silence.
   return Number.isNaN(seen) || now - seen > GRACE_MS ? "offline" : "unreachable";
 }
 
@@ -40,13 +23,7 @@ const TONE: Record<HubHealth, { dot: string; says: string }> = {
   offline: { dot: "bg-danger", says: "offline" },
 };
 
-/**
- * The hub, named, with a light on it.
- *
- * Sits beside the room's name because it qualifies the room: everything on this
- * screen is a promise about a set of bulbs, and this says whether the promise
- * can currently be kept.
- */
+/** The hub, named, with a light on it; it qualifies the room beside it. */
 export function HubPill({ hub, className }: { hub: HubDto; className?: string }) {
   const health = hubHealth(hub);
   const tone = TONE[health];
@@ -65,8 +42,7 @@ export function HubPill({ hub, className }: { hub: HubDto; className?: string })
         className={cn(
           "size-1.5 shrink-0 rounded-full transition-colors duration-300 ease-out",
           tone.dot,
-          /* Only the state that wants attention gets any. A steady green ring
-             on a screen you look at every day is just decoration. */
+          // Only the state that wants attention gets any; a steady ring is decoration.
           health === "unreachable" && "animate-pulse",
         )}
       />

@@ -29,10 +29,7 @@ function DrawerContent({
   ...props
 }: ComponentProps<typeof Vaul.Content> & {
   children: ReactNode;
-  /**
-   * The drag handle only makes sense on a sheet you pull up. A drawer coming in
-   * from the side has nothing to grab, and the pill reads as a stray artefact.
-   */
+  /** The drag handle only makes sense on a sheet you pull up, not a side drawer. */
   grabber?: boolean;
 }) {
   return (

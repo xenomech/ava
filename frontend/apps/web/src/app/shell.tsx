@@ -8,25 +8,13 @@ import { MenuHandle } from "./menu-handle";
 /** Where the rail replaces the pull-down. Matches the `md:` classes below. */
 const RAIL = "(min-width: 768px)";
 
-/**
- * No top bar. The window is the app: navigation down the side, the light
- * filling everything else.
- *
- * Pure layout: what fills the nav and palette slots is the composition root's
- * business (see app.tsx) — the shell knows nothing about any module.
- *
- * On a phone the sidebar becomes a panel pulled down from the top edge, so the
- * only permanent chrome is a handle the width of two fingers.
- */
+/** Pure layout with no top bar: the composition root decides what fills the slots. */
 export function Shell({ nav, palette }: { nav: ReactNode; palette?: ReactNode }) {
-  /* Mounted per form factor rather than hidden with CSS: a display:none rail
-     still runs every query and re-renders on every data change. */
+  // Mounted per form factor: a display:none rail still runs every query and re-renders.
   const rail = useMediaQuery(RAIL);
 
   return (
-    /* pl/pr-safe rather than a blanket inset: the top and bottom are handled
-       by the surfaces that actually touch them, so a landscape notch does not
-       steal height from a portrait screen. */
+    // pl/pr-safe only: the surfaces that touch the top and bottom edges handle those themselves.
     <div
       className={cn(
         "grid h-dvh bg-surface pl-safe pr-safe",
@@ -45,8 +33,7 @@ export function Shell({ nav, palette }: { nav: ReactNode; palette?: ReactNode })
           "mb-[max(0.5rem,env(safe-area-inset-bottom))] mt-[max(0.5rem,env(safe-area-inset-top))]",
         )}
       >
-        {/* One nav slot, two presentations: the pull-down renders the same
-            node so the phone can never drift from the desktop. */}
+        {/* The pull-down renders the same node, so the phone can never drift from the desktop. */}
         {rail ? null : <MenuHandle>{nav}</MenuHandle>}
 
         <Outlet />

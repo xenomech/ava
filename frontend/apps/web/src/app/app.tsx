@@ -7,11 +7,7 @@ import { RoomRail } from "@/modules/rooms";
 import { AvaSocketProvider } from "@/shared/realtime";
 import { Shell } from "./shell";
 
-/**
- * The composition root: the one place that knows which modules fill the
- * shell's slots. The shell itself stays a pure layout, and every module stays
- * ignorant of where in the chrome it appears.
- */
+/** The composition root: the one place that knows which modules fill the shell's slots. */
 export function AppShell() {
   return (
     <AvaSocketProvider>
@@ -21,8 +17,7 @@ export function AppShell() {
   );
 }
 
-/* Each module keeps its own cache in step with the socket; mounting the hooks
-   is all the wiring there is. */
+// Each module keeps its own cache in step with the socket; mounting the hooks is all the wiring.
 function RealtimeSync() {
   useDeviceEvents();
   useHubEvents();

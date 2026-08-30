@@ -11,9 +11,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// buildSteps turns a definition into a fresh set of steps with the first one
-// active. Shared by creating a flow and re-cutting one, so both agree on what
-// "the steps for this flow" means.
+// buildSteps turns a definition into a fresh set of steps with the first one active.
 func buildSteps(tenantID, flowID uuid.UUID, def *Definition) []model.FlowStep {
 	steps := make([]model.FlowStep, len(def.Steps))
 

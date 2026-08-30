@@ -6,10 +6,7 @@ import (
 	"ava/pkg/wire"
 )
 
-// What a real bulb in colour mode looks like coming out of discovery, and what
-// one in white mode looks like. The sync that consumes this replaces a device's
-// stored state, so anything missing here is destroyed rather than merely
-// omitted.
+// The sync replaces a device's stored state, so anything missing here is destroyed, not merely omitted.
 func TestDiscoveryDescribesColourAndWhiteCompletely(t *testing.T) {
 	cases := map[string]struct {
 		result   pilotResult
@@ -52,8 +49,7 @@ func TestDiscoveryDescribesColourAndWhiteCompletely(t *testing.T) {
 	}
 }
 
-// The colour a bulb reports has to survive the round trip, or the room comes
-// back a slightly different shade every half minute.
+// The colour a bulb reports must survive the round trip, or the room shifts shade every half minute.
 func TestDiscoveryRoundTripsTheExactColour(t *testing.T) {
 	state := pilotState(&pilotResult{State: true, Dimming: 80, R: 51, G: 204, B: 255})
 

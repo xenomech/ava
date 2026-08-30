@@ -3,8 +3,7 @@ import { Link } from "@tanstack/react-router";
 
 import { useSession } from "../hooks/use-session";
 
-// Where the prototype had "Add a hub" and "Settings", one target now stands for
-// the account and everything configurable behind it.
+// One target for the account and everything configurable behind it.
 export function UserPill() {
   const { user, tenant } = useSession();
   const initial = (user?.name ?? user?.email ?? "?").trim().slice(0, 1).toUpperCase();

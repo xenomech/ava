@@ -9,8 +9,7 @@ export type ShapeProps = {
   style?: CSSProperties;
 };
 
-/* How strongly a part glows at the current --level. Shared by every shape so
-   two fixtures at the same brightness read as the same amount of light. */
+// How strongly a part glows at --level, shared so equal brightness reads equally.
 const litCore = {
   opacity: "calc(var(--level) / 100 * var(--level) / 100 * 0.30)",
 } satisfies CSSProperties;
@@ -19,8 +18,7 @@ const litSource = { opacity: "calc(0.14 + var(--level) / 100 * 0.86)" } satisfie
 
 const TRANSITION = { transition: "opacity 420ms var(--motion-out-soft)" } satisfies CSSProperties;
 
-/* Pre-merged: the design page renders 27 devices at once, and spreading these
-   per node per render allocated hundreds of identical objects. */
+// Pre-merged: spreading these per node per render allocated hundreds of identical objects.
 export const LIT_CORE = { ...litCore, ...TRANSITION } satisfies CSSProperties;
 export const LIT_SOFT = { ...litSoft, ...TRANSITION } satisfies CSSProperties;
 export const LIT_SOURCE = { ...litSource, ...TRANSITION } satisfies CSSProperties;

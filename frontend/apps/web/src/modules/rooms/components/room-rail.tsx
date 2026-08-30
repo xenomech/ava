@@ -17,27 +17,16 @@ import { deviceColor, useDevices } from "@/modules/devices";
 import { NewRoom } from "./new-room";
 import { moved, useRoomActions, useRooms } from "../hooks/use-rooms";
 
-/**
- * The room rail from the settled desktop design: rooms are the navigation, and
- * each one carries its own name plus how much of it is lit.
- *
- * Reordering and deleting a room sit on its row here rather than in the room's
- * own heading. Both are about a room's place in this list, and putting them on
- * the page you are looking at meant a permanent row of buttons — one of them
- * destructive — crowding the title on a phone.
- *
- * Shared by the desktop rail and the phone drawer so the two cannot drift.
- */
+/** Rooms as the navigation, shared by the desktop rail and the phone drawer. */
 export function RoomRail() {
   const { rooms } = useRooms();
   const { devices } = useDevices();
   const actions = useRoomActions();
 
-  /* One dialog for the whole list rather than one per row: only ever one room
-     is being deleted, and mounting a portal per room to say so is waste. */
+  // One dialog for the whole list: only ever one room is being deleted.
   const [doomed, setDoomed] = useState<RoomDto | null>(null);
 
-  /* One pass over the devices for the whole rail, not two filters per room. */
+  // One pass over the devices for the whole rail, not two filters per room.
   const byRoom = useMemo(() => {
     const map = new Map<string, { count: number; lit: DeviceDto[] }>();
 
@@ -127,8 +116,7 @@ function RoomRow({
   const first = lit[0];
 
   return (
-    /* The trigger sits over the link rather than inside it: an anchor may not
-       contain a button, and nesting them breaks both. */
+    // The trigger sits over the link: an anchor may not contain a button.
     <div className="group/room relative">
       <Link
         to="/rooms/$roomId"

@@ -149,17 +149,7 @@ func (c *Controller) Revoke(ctx *fiber.Ctx) error {
 	return response.Send(ctx, fiber.StatusOK, nil, "")
 }
 
-// Heartbeat records that a hub is alive, and whether it can still be reached.
-//
-// Those are not the same thing, and treating them as one is what let a hub sit
-// there looking healthy while every command vanished. Heartbeats and device
-// syncs are HTTP; commands travel over the broker. When the broker stopped
-// accepting the hub, the HTTP half carried on perfectly and nothing noticed —
-// the API went on publishing into a topic with no subscriber and reporting
-// success, because publishing had in fact succeeded.
-//
-// The hub is the only party that can know whether its command channel is up, so
-// it is asked to say.
+// Heartbeat records that a hub is alive and, separately, whether its broker command channel is still up.
 func (c *Controller) Heartbeat(ctx *fiber.Ctx) error {
 	hubID, ok := ctx.Locals("hubID").(uuid.UUID)
 	if !ok {

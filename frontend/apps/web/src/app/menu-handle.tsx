@@ -4,18 +4,7 @@ import { useRef, useState, type PointerEvent, type ReactNode } from "react";
 /** A downward drag this far on the handle counts as pulling the menu open. */
 const PULL = 10;
 
-/**
- * The navigation, pulled down from the top edge.
- *
- * A hamburger in the corner is the wrong shape for a phone held in one hand:
- * it is the furthest point from the thumb, and it spends the whole time
- * floating over content it has nothing to do with. This is the gesture people
- * already know from the status bar — a handle at the top edge that you tap, or
- * drag down, and the panel comes with it.
- *
- * Drag-to-open is wired here rather than left to the sheet, which only knows
- * how to be dragged once it is already open.
- */
+/** The navigation, pulled down from the top edge rather than hidden behind a corner hamburger. */
 export function MenuHandle({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const from = useRef<number | null>(null);
@@ -49,8 +38,7 @@ export function MenuHandle({ children }: { children: ReactNode }) {
         onPointerUp={up}
         onPointerCancel={up}
         className={cn(
-          /* A wide, shallow target: easy to hit without looking, and it never
-             covers anything because the page starts below it. */
+          // A wide, shallow target: easy to hit without looking, and it covers nothing.
           "group absolute inset-x-0 top-0 z-sticky grid h-11 touch-none place-items-center md:hidden",
           "focus-visible:outline-none",
         )}
@@ -78,8 +66,7 @@ export function MenuHandle({ children }: { children: ReactNode }) {
 
           <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-2">{children}</div>
 
-          {/* The handle repeats at the bottom of the sheet, where the panel now
-              ends and the thumb already is. */}
+          {/* The handle repeats at the bottom, where the panel ends and the thumb already is. */}
           <span
             aria-hidden
             className="mx-auto mb-3 h-1 w-10 shrink-0 rounded-full bg-border-strong"

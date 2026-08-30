@@ -43,18 +43,7 @@ func (s *sceneService) ListByRoom(
 	return out, nil
 }
 
-// Create stores what the caller says the room is doing right now.
-//
-// The snapshot is taken on the client rather than read back out of the
-// database, and deliberately: the person is saving the room they can see, which
-// includes the brightness they finished dragging a moment ago and the hub has
-// not confirmed yet. Reading the stored state instead would quietly save a
-// slightly older room than the one on screen.
-//
-// What the server does insist on is that every device named is a device of
-// this tenant, in this room. Capability checks are left to apply — that is the
-// path with the authority, and a scene saved today should not become
-// unsaveable because a bulb is unplugged.
+// Create stores the client's own snapshot of the room, checking only that each device belongs to this room.
 func (s *sceneService) Create(
 	ctx context.Context,
 	tenantID, roomID uuid.UUID,
@@ -131,8 +120,7 @@ func (s *sceneService) Delete(ctx context.Context, tenantID, roomID, sceneID uui
 	return nil
 }
 
-// plan turns the requested targets into rows, dropping anything that is not a
-// device of this room and keeping only the last value given for a trait.
+// plan turns requested targets into rows, dropping devices outside the room and keeping a trait's last value.
 func plan(wanted []dto.SceneTargetRequest, inRoom []uuid.UUID) ([]model.SceneTarget, error) {
 	allowed := make(map[uuid.UUID]struct{}, len(inRoom))
 	for _, id := range inRoom {

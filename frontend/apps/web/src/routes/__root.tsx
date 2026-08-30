@@ -8,8 +8,7 @@ import { RouteErrorBoundary } from "@/shared/layouts/route-error-boundary";
 
 import "../index.css";
 
-/* Dev-only, and lazy even then: the root route is in every page's first chunk,
-   and a static import here would ship both devtool bundles to production. */
+// Dev-only and lazy: a static import here would ship both devtool bundles to production.
 const RouterDevtools = import.meta.env.DEV
   ? lazy(() =>
       import("@tanstack/react-router-devtools").then((module) => ({

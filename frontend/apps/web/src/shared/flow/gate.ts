@@ -18,9 +18,7 @@ export async function requireFlowCompleted({
   try {
     flow = await queryClient.ensureQueryData(flowQueries.state(flowType));
   } catch (error: unknown) {
-    /* No flow on record means nothing to complete. Anything else — a network
-       failure, a 500 — must not silently pass the gate as if it had been
-       checked; it rethrows for the route's error boundary. */
+    // No flow on record means nothing to complete; anything else must not silently pass the gate.
     if (isApiError(error) && error.status === 404) return;
 
     throw error;

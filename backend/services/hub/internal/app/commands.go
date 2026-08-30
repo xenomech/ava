@@ -107,16 +107,7 @@ func (a *App) handleCommand(ctx context.Context, payload []byte) {
 	a.publishState(ctx, cmd.DeviceID, target)
 }
 
-// confirm says what was just set, before anyone asks the bulb about it.
-//
-// The device accepted the write, so its new value is already known and worth
-// saying straight away. Reading it back first costs a second round trip — 12ms
-// on a good day, but a single dropped packet puts it behind the transport's
-// retry backoff and the room then sits unchanged for well over a second with
-// nothing to show for the tap.
-//
-// State events merge rather than replace, so naming one trait is safe: the full
-// read that follows fills in the rest, and corrects this if the bulb disagreed.
+// confirm says what was just set, so the tap shows at once rather than after a second round trip.
 func (a *App) confirm(ctx context.Context, deviceID string, trait wire.Trait, value wire.Value) {
 	if a.mqtt == nil {
 		return

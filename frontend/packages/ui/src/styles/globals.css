@@ -145,8 +145,7 @@
   --ease-spring: var(--motion-spring);
   --ease-drawer: var(--motion-drawer);
 
-  /* Entrances and exits. Weak to strong — the further something travels, the
-     stronger the curve it can carry. */
+  /* Entrances and exits, weak to strong: further travel carries a stronger curve. */
   --ease-out-quart: cubic-bezier(0.165, 0.84, 0.44, 1);
   --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
   /* On-screen movement, where the element has to brake as well as start. */
@@ -157,16 +156,13 @@
   --animate-slide-up: slide-up 220ms var(--ease-out-soft);
   --animate-slide-in-end: slide-in-end 260ms var(--ease-drawer);
 
-  /* First-run only. Marketing pacing rather than product pacing: this is seen
-     once, so it is allowed to take its time. */
+  /* First-run only. Seen once, so it is allowed marketing pacing, not product pacing. */
   --animate-rise: rise 780ms var(--ease-out-expo) both;
   --animate-bloom-in: bloom-in 1400ms var(--ease-out-expo) both;
   --animate-breathe: breathe 7s ease-in-out infinite;
   --animate-sweep: sweep 2.8s var(--ease-out-quart) infinite;
 
-  /* A room answering a flick of its switch. Long for product UI, but this is
-     the confirmation for the one gesture the room has, and it plays over the
-     whole surface rather than on a control. */
+  /* Long, but it confirms the room's one gesture across the whole surface. */
   --animate-light-up: light-up 1500ms var(--ease-out-quart) both;
   --animate-light-down: light-down 1500ms var(--ease-out-quart) both;
 }
@@ -182,10 +178,7 @@
   --z-tooltip: 80;
 }
 
-/* The tokens above are only variables: Tailwind has no z-index theme namespace,
-   so `z-sticky` and friends silently produced no CSS and every element using
-   them fell back to `z-index: auto`. Portalled things survived on DOM order
-   alone; anything in the normal flow did not. These declare the real utilities. */
+/* Tailwind has no z-index theme namespace, so those tokens produced no CSS at all. */
 @utility z-base {
   z-index: var(--z-base);
 }
@@ -211,9 +204,7 @@
   z-index: var(--z-tooltip);
 }
 
-/* A carousel should show that it scrolls by having a card half off the edge,
-   not by drawing a bar under it. Touch surfaces have no bar anyway, so this
-   only removes one that desktop would have added. */
+/* A half-visible card is how a carousel shows that it scrolls, so the bar adds nothing. */
 @utility no-scrollbar {
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -223,29 +214,15 @@
   }
 }
 
-/* A phone on its side: wide, and far too short to stack anything.
-   The room needs about 450px of vertical run for a header, a switch, its scene
-   carousel, a readout and a device strip, and a landscape handset offers 400.
-   No amount of shrinking closes that, so below this the room stops stacking and
-   lays itself out across instead — which is what the extra width was for. */
+/* A landscape handset is too short to stack the room, so it lays out across instead. */
 @custom-variant landscape-room {
   @media (max-height: 540px) and (min-width: 600px) {
     @slot;
   }
 }
 
-/* The room switch's depth, written as real CSS.
-   Tailwind's `shadow-[...]` builds `box-shadow` out of five custom properties
-   and wraps every colour in `var(--tw-shadow-color, ...)`. On these four the
-   composition collapsed to fully transparent — `--tw-shadow` held the right
-   value and `box-shadow` still computed to nothing — so the switch had been
-   rendering completely flat: no cast shadow, no recessed rail, no glow around
-   the lit paddle. An identical inline `box-shadow` renders correctly, which is
-   the whole argument for declaring these here. Layered, colour-bound shadows on
-   a bespoke object are not what arbitrary utilities are for. */
-/* Lift for anything floating over the page. Declared here for the same reason
-   the switch's shadows are: Tailwind's `shadow-[...]` composes box-shadow out of
-   five custom properties and quietly resolves to fully transparent for these. */
+/* Tailwind's `shadow-[...]` resolved to transparent here, so the switch rendered flat. */
+/* Lift for anything floating over the page, declared here for that same reason. */
 @utility dialog-lift {
   box-shadow: 0 24px 60px -20px rgb(0 0 0 / 0.8);
 }
@@ -273,10 +250,7 @@
     inset 0 1px 0 rgb(255 255 255 / 0.4);
 }
 
-/* Grows a small inline link to a thumb-sized target without moving anything.
-   An inline "Forgot?" is 37x16 — correct typography, impossible to hit — and
-   padding it would push the line it sits on around. The pseudo-element takes
-   the taps instead, and only where there is no pointer to aim with. */
+/* Grows a small inline link to a thumb-sized target without moving the line it sits on. */
 @utility tap {
   position: relative;
 
@@ -295,8 +269,7 @@
   }
 }
 
-/* Room to breathe under the notch and above the home indicator. Zero in a
-   browser tab, so these are safe to apply unconditionally. */
+/* Room under the notch and home indicator, and zero in a browser tab. */
 @utility pt-safe {
   padding-top: env(safe-area-inset-top);
 }
@@ -338,8 +311,7 @@
   }
 }
 
-/* Content arriving in the first-run. Travels further and slower than product
-   UI, and only ever moves transform/opacity. */
+/* First-run content travels further and slower, and only ever moves transform/opacity. */
 @keyframes rise {
   from {
     opacity: 0;
@@ -365,8 +337,7 @@
   }
 }
 
-/* A filament never sits perfectly still. Very slow and very small — enough to
-   read as alive, not enough to notice as motion. */
+/* A filament never sits still: enough to read as alive, not enough to see as motion. */
 @keyframes breathe {
   0%,
   100% {
@@ -391,17 +362,13 @@
   }
 }
 
-/* Light travelling out from the switch. It never rests anywhere: the bands
-   pass across the room and leave, so the surface behind them is unchanged
-   once the room has settled at its new state. */
+/* Light travels out from the switch and leaves the surface behind it unchanged. */
 @keyframes light-up {
   0% {
     opacity: 0;
     transform: translate3d(-50%, 100%, 0);
   }
-  /* Opacity is keyed separately from travel. On one curve the band was gone
-     inside 200ms while it was still climbing, so it arrives fast, holds long
-     enough to be read as light, and only then leaves. */
+  /* Opacity is keyed apart from travel, or the band dies while it is still climbing. */
   12% {
     opacity: 0.52;
   }
@@ -448,8 +415,7 @@
     line-height: 1.45;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
-    /* Installed on a phone this is an app, not a page. Rubber-banding the whole
-       document behind a fixed layout looks like the app has come loose. */
+    /* Installed on a phone this is an app, and rubber-banding looks like it came loose. */
     overscroll-behavior: none;
   }
 
@@ -475,9 +441,7 @@
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
-    /* Delays have to go too. Zeroing only the duration on a staggered reveal
-       leaves the content invisible for the length of its delay, which is worse
-       than the animation it was meant to spare. */
+    /* Delays go too, or a staggered reveal stays invisible for the length of its delay. */
     animation-delay: 0ms !important;
     transition-duration: 0.01ms !important;
     transition-delay: 0ms !important;

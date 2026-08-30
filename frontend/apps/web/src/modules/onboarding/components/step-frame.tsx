@@ -3,9 +3,7 @@ import type { ReactNode } from "react";
 
 import { Reveal } from "@/shared/components/reveal";
 
-// One question, filling the screen. No card, no border, nothing competing with
-// the sentence you are being asked. Everything cascades in from the top down so
-// the eye is led through it in reading order rather than arriving at once.
+// One question filling the screen, cascading in so the eye reads top to bottom.
 export function StepFrame({
   eyebrow,
   title,
@@ -20,11 +18,7 @@ export function StepFrame({
   description?: string;
   children: ReactNode;
   error?: string | null;
-  /**
-   * The single way forward. There is deliberately never a second one: on the
-   * hub step an un-paired Continue could only ever fail, so instead of sitting
-   * next to Skip looking like its twin, it is simply not rendered.
-   */
+  /** The single way forward; a second button could only ever fail, so there is none. */
   action: {
     label: string;
     loading?: boolean;
@@ -89,9 +83,7 @@ export function StepFrame({
   );
 }
 
-// Where you are, without repeating the headline underneath it. The segments
-// carry the progress; the word stays constant so the eye ignores it after the
-// first screen.
+// Where you are: the segments carry the progress, the word stays constant.
 export function Eyebrow({ at, total }: { at: number; total: number }) {
   return (
     <div className="flex items-center gap-3.5">

@@ -6,12 +6,7 @@ import { hubQueries } from "@/modules/hub";
 import { recallRoom, roomQueries } from "@/modules/rooms";
 import { Loader } from "@/shared/components/loader";
 
-/**
- * `/` is not a page. Rooms are the surface the app is built around, so the
- * root sends you to the one you were last in — or the first one, on a new
- * browser. It only renders anything at all when there is no room to send you
- * to, which is the state a brand new account starts in.
- */
+/** `/` is not a page: it redirects to the last room, and only renders when there is none. */
 export const Route = createFileRoute("/_protected/")({
   beforeLoad: async ({ context }) => {
     const rooms = await context.queryClient.ensureQueryData(roomQueries.list());
@@ -19,8 +14,7 @@ export const Route = createFileRoute("/_protected/")({
     if (rooms.length === 0) return;
 
     const last = recallRoom();
-    /* A remembered id from another account will not be in this list, so the
-       check that keeps the redirect valid is also what keeps it private. */
+    // A remembered id from another account is not in this list, so the check keeps it private.
     const target = rooms.find((room) => room.id === last) ?? rooms[0];
 
     if (target) {

@@ -10,12 +10,7 @@ import (
 const (
 	Port        = 38899
 	maxAttempts = 4
-	// A reply normally lands in about 12ms, so a quarter second before trying
-	// again was mostly spent waiting rather than recovering: one dropped packet
-	// turned a 12ms call into well over a second, which is long enough that the
-	// tap looks ignored. 40ms is still more than three times the usual round
-	// trip, and the doubling keeps a genuinely unreachable bulb from being
-	// hammered.
+	// A reply normally lands in about 12ms, so a longer wait spends a dropped packet looking ignored.
 	initialBackoff = 40 * time.Millisecond
 	readBuffer     = 2048
 )
