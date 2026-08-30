@@ -1,6 +1,8 @@
 package controller
 
 import (
+	"context"
+
 	authctrl "ava/api/internal/controller/auth"
 	devicectrl "ava/api/internal/controller/device"
 	flowctrl "ava/api/internal/controller/flow"
@@ -25,7 +27,7 @@ type Controller struct {
 	Health *healthctrl.Controller
 }
 
-func NewController(service *services.Service) *Controller {
+func NewController(life context.Context, service *services.Service) *Controller {
 	return &Controller{
 		Auth:   authctrl.NewController(service.Auth),
 		Tenant: tenantctrl.NewController(service.Tenant),
@@ -34,7 +36,7 @@ func NewController(service *services.Service) *Controller {
 		Scene:  scenectrl.NewController(service.Scene),
 		Hub:    hubctrl.NewController(service.Hub),
 		Device: devicectrl.NewController(service.Device),
-		Socket: socketctrl.NewController(service.Event, service.Device),
+		Socket: socketctrl.NewController(life, service.Event, service.Device),
 		Health: healthctrl.NewController(service.Health),
 	}
 }

@@ -42,7 +42,7 @@ func (c *Controller) Serve(conn *websocket.Conn) {
 	stream, unsubscribe := c.events.Subscribe(tenantID)
 	defer unsubscribe()
 
-	ctx, stop := context.WithCancel(context.Background())
+	ctx, stop := context.WithCancel(c.life)
 	defer stop()
 
 	outbound := make(chan []byte, outboundSize)
