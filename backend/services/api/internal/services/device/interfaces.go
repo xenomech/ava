@@ -2,6 +2,7 @@ package device
 
 import (
 	"context"
+	"sync"
 
 	"ava/api/internal/dto"
 	devicerepo "ava/api/internal/repository/device"
@@ -30,6 +31,10 @@ type deviceService struct {
 	deviceRepo devicerepo.Repository
 	commander  Commander
 	events     eventsvc.Service
+
+	// The last device list broadcast per hub, so an unchanged sweep stays quiet.
+	listsMu sync.Mutex
+	lists   map[uuid.UUID][32]byte
 }
 
 func NewService(deviceRepo devicerepo.Repository, commander Commander, events eventsvc.Service) Service {

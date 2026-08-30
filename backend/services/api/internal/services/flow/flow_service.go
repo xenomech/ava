@@ -3,6 +3,7 @@ package flow
 import (
 	"context"
 	"encoding/json"
+	"slices"
 
 	"ava/api/internal/dto"
 	"ava/api/internal/model"
@@ -25,7 +26,72 @@ func (s *flowService) GetFlow(ctx context.Context, tenantID, userID uuid.UUID, f
 		return nil, err
 	}
 
+	// Steps are copied into the database when the flow is created, so changing a
+	// definition leaves anyone mid-flow holding steps the app can no longer
+	// render. Re-cut those steps against the current definition. A finished flow
+	// is left exactly as it is — the record that this person completed onboarding
+	// is the point of keeping it.
+	if flow.Status != model.FlowStatusCompleted && !matchesDefinition(flow, flowType) {
+		return s.rebuildFlow(ctx, tenantID, flow, flowType)
+	}
+
 	return toFlowStateResponse(flow), nil
+}
+
+// rebuildFlow re-cuts an unfinished flow against the current definition, keeping
+// the flow row and losing only the answers to steps that no longer exist.
+func (s *flowService) rebuildFlow(ctx context.Context, tenantID uuid.UUID, flow *model.Flow, flowType string) (*dto.FlowStateResponse, error) {
+	def, err := GetDefinition(flowType)
+	if err != nil || len(def.Steps) == 0 {
+		return nil, ErrInvalidFlowType
+	}
+
+	metadata, err := encodeMetadata(def)
+	if err != nil {
+		return nil, err
+	}
+
+	logger.Info("flow.rebuild",
+		logger.String("flow.type", flowType),
+		logger.Any("flow.ID", flow.ID),
+	)
+
+	flow.Status = model.FlowStatusInProgress
+	flow.CurrentStepID = def.Steps[0].ID
+	flow.Metadata = metadata
+
+	if err := s.flowRepo.ReplaceSteps(ctx, tenantID, flow, buildSteps(tenantID, flow.ID, def)); err != nil {
+		logger.Error("flow.rebuild.ReplaceSteps", logger.Err(err))
+
+		return nil, err
+	}
+
+	return toFlowStateResponse(flow), nil
+}
+
+// matchesDefinition reports whether a stored flow still has exactly the steps
+// the registry describes, in the same order.
+func matchesDefinition(flow *model.Flow, flowType string) bool {
+	def, err := GetDefinition(flowType)
+	if err != nil {
+		return false
+	}
+
+	if len(flow.Steps) != len(def.Steps) {
+		return false
+	}
+
+	ordered := make([]model.FlowStep, len(flow.Steps))
+	copy(ordered, flow.Steps)
+	slices.SortFunc(ordered, func(a, b model.FlowStep) int { return a.StepOrder - b.StepOrder })
+
+	for i := range def.Steps {
+		if ordered[i].StepID != def.Steps[i].ID {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (s *flowService) SubmitStep(ctx context.Context, tenantID, userID uuid.UUID, flowType, stepID string, req *dto.SubmitStepRequest) (*dto.FlowStateResponse, error) {
@@ -213,40 +279,13 @@ func (s *flowService) createFlow(ctx context.Context, tenantID, userID uuid.UUID
 		return nil, ErrInvalidFlowType
 	}
 
-	metadataJSON := json.RawMessage("{}")
-
-	if def.Metadata != nil {
-		encoded, err := json.Marshal(def.Metadata)
-		if err != nil {
-			logger.Error("flow.createFlow.metadata", logger.Err(err))
-
-			return nil, err
-		}
-
-		metadataJSON = encoded
+	metadataJSON, err := encodeMetadata(def)
+	if err != nil {
+		return nil, err
 	}
 
 	flow := model.NewFlow(tenantID, userID, flowType, def.Steps[0].ID, metadataJSON)
-
-	steps := make([]model.FlowStep, len(def.Steps))
-
-	for i, stepDef := range def.Steps {
-		status := model.FlowStepStatusPending
-		if i == 0 {
-			status = model.FlowStepStatusInProgress
-		}
-
-		steps[i] = model.NewFlowStep(
-			tenantID,
-			flow.ID,
-			stepDef.ID,
-			stepDef.Title,
-			stepDef.Description,
-			i,
-			status,
-			stepDef.Skippable,
-		)
-	}
+	steps := buildSteps(tenantID, flow.ID, def)
 
 	if err := s.flowRepo.CreateFlowWithSteps(ctx, flow, steps); err != nil {
 		if serrors.Is(err, flowrepo.ErrFlowAlreadyExists) {

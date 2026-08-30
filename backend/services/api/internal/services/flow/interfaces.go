@@ -5,8 +5,8 @@ import (
 
 	"ava/api/internal/dto"
 	flowrepo "ava/api/internal/repository/flow"
+	hubrepo "ava/api/internal/repository/hub"
 	membershiprepo "ava/api/internal/repository/membership"
-	userrepo "ava/api/internal/repository/user"
 	tenantsvc "ava/api/internal/services/tenant"
 
 	"github.com/google/uuid"
@@ -27,11 +27,11 @@ type flowService struct {
 func NewService(
 	flowRepo flowrepo.Repository,
 	tenantService tenantsvc.Service,
-	userRepo userrepo.Repository,
 	membershipRepo membershiprepo.Repository,
+	hubRepo hubrepo.Repository,
 ) Service {
 	return &flowService{
 		flowRepo: flowRepo,
-		handlers: buildHandlers(tenantService, userRepo, membershipRepo),
+		handlers: buildHandlers(tenantService, membershipRepo, hubRepo),
 	}
 }

@@ -1,7 +1,7 @@
 import {
-  TRAIT_BRIGHTNESS,
   TRAIT_POWER,
   supports,
+  type ApplyTargetRequest,
   type DeviceDto,
   type TraitValue,
 } from "@ava/contracts";
@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { useAvaSocket } from "@/shared/realtime";
 import { isApiError } from "@/config/http/request";
 import { applyTargets, sendCommand } from "./api";
+import { applyLocally, claim, release } from "./optimistic";
 import { deviceQueries } from "./queries";
 
 export function useDevices() {
@@ -25,22 +26,14 @@ export function useDevices() {
   };
 }
 
-function applyLocally(device: DeviceDto, trait: string, value: TraitValue): DeviceDto {
-  const state = { ...device.state, [trait]: value };
-
-  if (trait === TRAIT_BRIGHTNESS && typeof value === "number") {
-    state[TRAIT_POWER] = value > 0;
-  }
-
-  return { ...device, state };
-}
-
 export function useDeviceControl() {
   const queryClient = useQueryClient();
   const socket = useAvaSocket();
 
   return useCallback(
     (device: DeviceDto, trait: string, value: TraitValue) => {
+      claim(device.id, trait, value);
+
       queryClient.setQueryData<DeviceDto[]>(deviceQueries.list().queryKey, (current) =>
         current?.map((entry) =>
           entry.id === device.id ? applyLocally(entry, trait, value) : entry,
@@ -57,6 +50,7 @@ export function useDeviceControl() {
       if (sent) return;
 
       void sendCommand(device.id, { trait, value }).catch((error: unknown) => {
+        release(device.id, trait);
         toast.error(isApiError(error) ? error.message : "The hub did not accept that");
         void queryClient.invalidateQueries({ queryKey: deviceQueries.all() });
       });
@@ -65,25 +59,37 @@ export function useDeviceControl() {
   );
 }
 
-export function useRoomPower() {
+/**
+ * Push a batch of trait writes, showing them locally before the hub answers.
+ *
+ * Shared by the room switch and by scenes, because a scene is nothing more than
+ * a batch of writes someone saved earlier — there is no second code path for
+ * replaying one, and so no second place for the optimistic copy to drift.
+ */
+export function useApplyTargets() {
   const queryClient = useQueryClient();
 
   return useCallback(
-    async (devices: DeviceDto[], on: boolean) => {
-      const targets = devices
-        .filter((device) => device.status !== "offline" && supports(device, TRAIT_POWER))
-        .map((device) => ({ device_id: device.id, trait: TRAIT_POWER, value: on }));
-
+    async (targets: ApplyTargetRequest[]) => {
       if (targets.length === 0) {
         toast.error("Nothing here can be switched");
 
         return;
       }
 
-      const ids = new Set(targets.map((target) => target.device_id));
+      const byDevice = new Map<string, ApplyTargetRequest[]>();
+      for (const target of targets) {
+        claim(target.device_id, target.trait, target.value);
+        byDevice.set(target.device_id, [...(byDevice.get(target.device_id) ?? []), target]);
+      }
 
       queryClient.setQueryData<DeviceDto[]>(deviceQueries.list().queryKey, (current) =>
-        current?.map((entry) => (ids.has(entry.id) ? applyLocally(entry, TRAIT_POWER, on) : entry)),
+        current?.map((entry) =>
+          (byDevice.get(entry.id) ?? []).reduce(
+            (device, target) => applyLocally(device, target.trait, target.value),
+            entry,
+          ),
+        ),
       );
 
       try {
@@ -93,10 +99,26 @@ export function useRoomPower() {
           toast.warning(`${result.applied.length} changed, ${result.skipped.length} skipped`);
         }
       } catch (error: unknown) {
+        for (const target of targets) release(target.device_id, target.trait);
+
         toast.error(isApiError(error) ? error.message : "The hub did not accept that");
         void queryClient.invalidateQueries({ queryKey: deviceQueries.all() });
       }
     },
     [queryClient],
+  );
+}
+
+export function useRoomPower() {
+  const apply = useApplyTargets();
+
+  return useCallback(
+    (devices: DeviceDto[], on: boolean) =>
+      apply(
+        devices
+          .filter((device) => device.status !== "offline" && supports(device, TRAIT_POWER))
+          .map((device) => ({ device_id: device.id, trait: TRAIT_POWER, value: on })),
+      ),
+    [apply],
   );
 }

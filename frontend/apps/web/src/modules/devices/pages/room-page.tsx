@@ -1,0 +1,335 @@
+import { Device, DeviceHalo, cn } from "@ava/ui";
+import {
+  TRAIT_COLOR_TEMP,
+  TRAIT_POWER,
+  emitsLight,
+  isOn,
+  numberOf,
+  supports,
+  type DeviceDto,
+  type SceneDto,
+} from "@ava/contracts";
+import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+
+import { HubPill, hubQueries } from "@/modules/hub";
+import { RoomHeading, rememberRoom, useRoomActions, useRooms } from "@/modules/rooms";
+import {
+  SceneRow,
+  sceneColor,
+  scenePreview,
+  useApplyScene,
+  useArmedScene,
+  useScenes,
+} from "@/modules/scenes";
+import { Loader } from "@/shared/components/loader";
+import { useMediaQuery } from "@/shared/hooks/use-media-query";
+import { parseColor, warmth } from "@/shared/lib/color";
+import { kelvinToCss } from "@/shared/lib/kelvin";
+import { deviceColor, deviceKind, deviceLevel } from "../components/device-stage";
+import { DeviceSheet, ROOM_HEIGHT } from "../components/device-sheet";
+import { DeviceStrip } from "../components/device-strip";
+import { Missing } from "../components/empty-state";
+import { LightSweep } from "../components/light-sweep";
+import { RoomSwitch } from "../components/room-switch";
+import { deviceQueries } from "../queries";
+import { useDevices, useRoomPower } from "../use-devices";
+
+/** The room's own light, averaged, for the switch and the sweep to borrow. */
+const DEFAULT_KELVIN = 2700;
+
+/** Below this the controls arrive as a sheet; above it, as a column. */
+const BESIDE = "(min-width: 1024px)";
+
+/**
+ * A room, as one surface.
+ *
+ * Nothing here navigates away. Picking a device out of the strip swaps the
+ * middle of the room from its switch to the device itself and opens that
+ * device's controls, but the room, its colours and its strip all stay put. The
+ * selection lives in the URL, so it stays addressable and the back button
+ * closes it.
+ */
+export function RoomPage() {
+  const { roomId } = useParams({ from: "/_protected/rooms/$roomId" });
+  const { device: selectedId } = useSearch({ from: "/_protected/rooms/$roomId" });
+  const navigate = useNavigate();
+
+  const { rooms, isPending: roomsPending } = useRooms();
+  const { devices, isPending } = useDevices();
+  const hubs = useQuery(hubQueries.list());
+  const queryClient = useQueryClient();
+  const setRoomPower = useRoomPower();
+  const beside = useMediaQuery(BESIDE);
+
+  const { scenes, isPending: scenesPending } = useScenes(roomId);
+  const { armed, arm } = useArmedScene(roomId, scenes);
+  const applyScene = useApplyScene();
+
+  /* The sweep is fire-and-forget: `play` remounts it so a second flick
+     restarts the animation instead of being swallowed mid-flight. */
+  const [sweep, setSweep] = useState({ play: 0, direction: "on" as "on" | "off" });
+  /* The in-flight brightness of whichever device is being dragged, so the
+     stage lights up before the hub has answered. */
+  const [dragging, setDragging] = useState<number | null>(null);
+
+  const actions = useRoomActions({
+    onDevicesMoved: () => void queryClient.invalidateQueries({ queryKey: deviceQueries.all() }),
+  });
+
+  /* So `/` can come back here next time. Writing it on view rather than on
+     click means a bookmark or a shared link counts too. */
+  useEffect(() => rememberRoom(roomId), [roomId]);
+
+  if (isPending || roomsPending) return <Loader label="Loading room" />;
+
+  const room = rooms.find((entry) => entry.id === roomId);
+
+  if (!room) {
+    return (
+      <Missing title="That room is gone" detail="It may have been deleted from another device." />
+    );
+  }
+
+  const inRoom = devices.filter((device) => device.room_id === room.id);
+  const on = inRoom.filter(isOn).length;
+  const switchable = inRoom.filter(
+    (device) => device.status !== "offline" && supports(device, TRAIT_POWER),
+  );
+
+  const selected = inRoom.find((device) => device.id === selectedId);
+  const hub = (hubs.data ?? []).find((entry) => entry.id === selected?.hub_id);
+  const hubOffline = hub !== undefined && !hub.online;
+
+  /* The hubs actually answering for this room, rather than every hub on the
+     account. A room is a promise about a handful of bulbs, and only the hubs
+     holding those bulbs have any bearing on whether it can be kept. */
+  const serving = (hubs.data ?? []).filter((entry) =>
+    inRoom.some((device) => device.hub_id === entry.id),
+  );
+
+  const kelvin = roomKelvin(inRoom);
+  /* The armed scene's colour, not the room's current one. Scrolling the
+     carousel arms without applying, so this is what makes that gesture visible:
+     the glow behind the plate and the paddle both move to the colour the switch
+     is now pointed at, before anything has been sent to a bulb. */
+  const ambient = kelvinToCss(kelvin);
+  const lit = armed ? sceneColor(scenePreview(armed, inRoom), ambient) : ambient;
+  const palette = roomPalette(inRoom, lit);
+
+  /* Up means whichever scene the row is pointed at, and "everything on" when
+     that is none. Down is always down: a scene describes a room that is on, so
+     there is nothing for it to say about turning the room off. */
+  const flick = (next: boolean) => {
+    setSweep((current) => ({ play: current.play + 1, direction: next ? "on" : "off" }));
+
+    if (next && armed) {
+      void applyScene(armed);
+
+      return;
+    }
+
+    void setRoomPower(inRoom, next);
+  };
+
+  const play = (scene: SceneDto | null) => {
+    arm(scene?.id ?? null);
+    setSweep((current) => ({ play: current.play + 1, direction: "on" }));
+
+    if (scene) void applyScene(scene);
+    else void setRoomPower(inRoom, true);
+  };
+
+  const close = () => void navigate({ to: "/rooms/$roomId", params: { roomId }, replace: true });
+
+  const strip = (
+    <DeviceStrip
+      devices={inRoom}
+      elsewhere={devices.filter((device) => device.room_id !== room.id)}
+      roomId={room.id}
+      roomName={room.name}
+      selectedId={selected?.id}
+      label={`Devices in ${room.name}`}
+    />
+  );
+
+  return (
+    <div className="relative flex h-full overflow-hidden">
+      <div
+        className={cn(
+          "relative grid min-h-0 min-w-0 flex-1 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden",
+          /* Laid across rather than down when the screen is short and wide. The
+             header keeps the full width; the switch and the room's furniture
+             share what is left, side by side. */
+          "landscape-room:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]",
+          "landscape-room:grid-rows-[auto_minmax(0,1fr)]",
+          /* The phone sheet rests over the lower half, so the room gives up
+             that half rather than centring the device behind it. */
+          selected && !beside && ROOM_HEIGHT,
+        )}
+      >
+        <LightSweep colors={palette} direction={sweep.direction} play={sweep.play} />
+
+        <header className="z-raised p-5 pt-11 sm:p-6 md:pt-6 landscape-room:col-span-2 landscape-room:pt-4">
+          <span className="font-mono text-caption uppercase tracking-caps text-subtle">Room</span>
+          <div className="mt-1 flex min-w-0 items-center gap-2">
+            <RoomHeading
+              room={room}
+              onRename={(name) => actions.rename.mutate({ id: room.id, name })}
+            />
+
+            {serving.map((entry) => (
+              <HubPill key={entry.id} hub={entry} />
+            ))}
+          </div>
+        </header>
+
+        {inRoom.length === 0 ? (
+          /* An empty room still gets the strip, because the strip is the only
+             way to put something in it. Without it the room is a dead end. */
+          <>
+            <div className="z-raised grid place-items-center px-6">
+              <p className="max-w-[280px] text-center text-small text-muted">
+                Nothing in here yet. Add a device to give this room a switch.
+              </p>
+            </div>
+
+            <footer className="z-raised p-5 sm:p-6">{strip}</footer>
+          </>
+        ) : (
+          <>
+            <div className="z-raised grid min-h-0 place-items-center px-5 sm:px-6">
+              {selected ? (
+                <DeviceOnStage key={selected.id} device={selected} level={dragging} />
+              ) : (
+                <div className="grid min-h-0 w-full grid-cols-[minmax(0,1fr)] justify-items-center gap-4">
+                  <RoomSwitch
+                    on={on > 0}
+                    disabled={switchable.length === 0}
+                    color={lit}
+                    label={`${room.name} lights`}
+                    onFlick={flick}
+                  />
+
+                  <SceneRow
+                    roomId={room.id}
+                    roomName={room.name}
+                    devices={inRoom}
+                    scenes={scenes}
+                    scenesReady={!scenesPending}
+                    armedId={armed?.id ?? null}
+                    onArm={(scene) => arm(scene?.id ?? null)}
+                    onApply={play}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Room mode's own furniture. On a phone the sheet takes the lower
+                half of the screen, so the count, the hint and the strip all
+                travel into it rather than sitting on top of the device. */}
+            {selected && !beside ? null : (
+              <footer
+                className={cn(
+                  "z-raised grid gap-4 p-5 pt-0 sm:p-6 sm:pt-0",
+                  "landscape-room:content-center landscape-room:pt-5",
+                )}
+              >
+                {/* The first thing to go when the screen is short. Once the
+                    carousel is there it is the least load-bearing line on the
+                    page: the centred card's lit dot already says whether the
+                    room matches what the switch is aimed at, and the strip
+                    below spells out every device by name. A tall phone has room
+                    to state the count anyway. */}
+                <p className="hidden items-baseline gap-2 [@media(min-height:700px)]:flex">
+                  {on === 0 ? (
+                    <b className="text-hero font-semibold text-subtle">Off</b>
+                  ) : (
+                    <>
+                      <b className="text-hero font-semibold tabular">{on}</b>
+                      <span className="font-mono text-small text-subtle tabular">
+                        of {inRoom.length} on
+                      </span>
+                    </>
+                  )}
+                </p>
+
+                {strip}
+              </footer>
+            )}
+          </>
+        )}
+      </div>
+
+      {selected ? (
+        <DeviceSheet
+          device={selected}
+          offline={selected.status === "offline" || hubOffline}
+          hubOffline={hubOffline}
+          strip={strip}
+          beside={beside}
+          onClose={close}
+          onLevelChange={setDragging}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+/** The device itself, standing where the room's switch was. */
+function DeviceOnStage({ device, level }: { device: DeviceDto; level: number | null }) {
+  const shown = level ?? deviceLevel(device);
+  const color = deviceColor(device);
+
+  return (
+    <div
+      className="relative grid size-full animate-fade-in place-items-center"
+      style={{ "--level": shown, "--lit": color } as React.CSSProperties}
+    >
+      {emitsLight(deviceKind(device)) ? <DeviceHalo className="w-[46%]" /> : null}
+      <Device
+        kind={deviceKind(device)}
+        level={shown}
+        color={color}
+        className={cn("h-[58%] max-h-[380px]", device.status === "offline" && "opacity-50")}
+      />
+    </div>
+  );
+}
+
+/**
+ * The colours the room will be holding once the switch settles, warmest first.
+ *
+ * Every light in the room, not only the ones currently on — flicking up turns
+ * all of them on, so the sweep should be showing what is about to be true.
+ * Plugs and fans are left out: they have a power state but no colour, and
+ * including them would wash the ramp towards whatever `deviceColor` falls back
+ * to rather than towards anything the room actually emits.
+ */
+function roomPalette(devices: DeviceDto[], fallback: string): string[] {
+  const lights = devices
+    .filter((device) => emitsLight(deviceKind(device)))
+    .map((device) => deviceColor(device));
+
+  const seen = new Set<string>();
+  const unique = lights.filter((color) => !seen.has(color) && seen.add(color));
+
+  if (unique.length === 0) return [fallback];
+
+  return unique
+    .map((color) => ({ color, rgb: parseColor(color) }))
+    .filter((entry) => entry.rgb !== null)
+    .sort((a, b) => warmth(b.rgb ?? [0, 0, 0]) - warmth(a.rgb ?? [0, 0, 0]))
+    .map((entry) => entry.color);
+}
+
+function roomKelvin(devices: DeviceDto[]): number {
+  const temps = devices
+    .map((device) => numberOf(device, TRAIT_COLOR_TEMP))
+    .filter((value): value is number => typeof value === "number");
+
+  if (temps.length === 0) return DEFAULT_KELVIN;
+
+  return Math.round(temps.reduce((sum, value) => sum + value, 0) / temps.length);
+}

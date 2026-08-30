@@ -9,6 +9,7 @@ import (
 	healthsvc "ava/api/internal/services/health"
 	hubsvc "ava/api/internal/services/hub"
 	roomsvc "ava/api/internal/services/room"
+	scenesvc "ava/api/internal/services/scene"
 	tenantsvc "ava/api/internal/services/tenant"
 )
 
@@ -22,6 +23,7 @@ type Service struct {
 	Flow   flowsvc.Service
 	Hub    hubsvc.Service
 	Room   roomsvc.Service
+	Scene  scenesvc.Service
 	Device devicesvc.Service
 	Event  eventsvc.Service
 	Health healthsvc.Service
@@ -35,8 +37,9 @@ func NewService(repo *repository.Repository, commander devicesvc.Commander, prov
 	return &Service{
 		Auth:   authsvc.NewService(repo.User, repo.Tenant, repo.Membership, repo.Session, repo.Token),
 		Tenant: tenantService,
-		Flow:   flowsvc.NewService(repo.Flow, tenantService, repo.User, repo.Membership),
+		Flow:   flowsvc.NewService(repo.Flow, tenantService, repo.Membership, repo.Hub),
 		Room:   roomsvc.NewService(repo.Room),
+		Scene:  scenesvc.NewService(repo.Scene, repo.Room),
 		Hub:    hubsvc.NewService(repo.Hub, repo.Tenant, eventService, deviceService, provisioner),
 		Device: deviceService,
 		Event:  eventService,

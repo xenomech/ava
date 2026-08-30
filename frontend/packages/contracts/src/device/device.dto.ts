@@ -33,8 +33,30 @@ export type CapabilityDto = z.infer<typeof capabilityDto>;
 export const traitValueSchema = z.union([z.boolean(), z.number(), z.string()]);
 export type TraitValue = z.infer<typeof traitValueSchema>;
 
-export const deviceStateDto = z.record(z.string(), traitValueSchema);
-export type DeviceStateDto = z.infer<typeof deviceStateDto>;
+/**
+ * A device's readings, with anything unreadable dropped rather than fatal.
+ *
+ * Traits arrive as null when a device retires one — a bulb given a colour stops
+ * reporting a temperature — and a strict record turned that single null into a
+ * validation failure for the entire request. Every device in the house came
+ * back empty because one bulb had changed colour, which is a spectacular
+ * penalty for a value nothing was going to read anyway.
+ *
+ * So a null is dropped and the device keeps its other traits. Everything else
+ * is still held to the contract: this is leniency about absence, not about
+ * shape.
+ */
+export const deviceStateDto = z
+  .record(z.string(), z.union([traitValueSchema, z.null()]))
+  .transform(
+    (state) =>
+      Object.fromEntries(Object.entries(state).filter(([, value]) => value !== null)) as Record<
+        string,
+        TraitValue
+      >,
+  );
+
+export type DeviceStateDto = Record<string, TraitValue>;
 
 export const deviceDto = z.object({
   id: z.uuid(),

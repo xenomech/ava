@@ -6,6 +6,7 @@ import (
 	hubrepo "ava/api/internal/repository/hub"
 	membershiprepo "ava/api/internal/repository/membership"
 	roomrepo "ava/api/internal/repository/room"
+	scenerepo "ava/api/internal/repository/scene"
 	sessionrepo "ava/api/internal/repository/session"
 	tenantrepo "ava/api/internal/repository/tenant"
 	tokenrepo "ava/api/internal/repository/token"
@@ -22,6 +23,7 @@ type Repository struct {
 	Token      tokenrepo.Repository
 	Flow       flowrepo.Repository
 	Room       roomrepo.Repository
+	Scene      scenerepo.Repository
 	Hub        hubrepo.Repository
 	Device     devicerepo.Repository
 }
@@ -35,6 +37,7 @@ func NewRepository(db *gorm.DB) *Repository {
 		Token:      tokenrepo.NewRepository(db),
 		Flow:       flowrepo.NewRepository(db),
 		Room:       roomrepo.NewRepository(db),
+		Scene:      scenerepo.NewRepository(db),
 		Hub:        hubrepo.NewRepository(db),
 		Device:     devicerepo.NewRepository(db),
 	}

@@ -25,7 +25,7 @@ export function VerifyEmailPage() {
         title="Link incomplete"
         description="This verification link is missing its token."
         footer={
-          <Link to="/auth/login" className="font-semibold text-fg">
+          <Link to="/auth/login" className="tap font-semibold text-fg">
             Back to sign in
           </Link>
         }
@@ -53,7 +53,7 @@ export function VerifyEmailPage() {
             : "This verification link has expired or was already used."
         }
         footer={
-          <Link to="/auth/login" className="font-semibold text-fg">
+          <Link to="/auth/login" className="tap font-semibold text-fg">
             Back to sign in
           </Link>
         }

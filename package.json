@@ -1,0 +1,8 @@
+{
+  "name": "ava-infra",
+  "private": true,
+  "description": "Holds only the Railway IaC toolchain. The application workspaces live in frontend/ and backend/; nothing here is built or published.",
+  "devDependencies": {
+    "railway": "^3.11.0"
+  }
+}

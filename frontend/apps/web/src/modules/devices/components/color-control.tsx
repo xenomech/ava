@@ -1,28 +1,58 @@
-import { Slider, Tabs, TabsContent, TabsList, TabsTrigger } from "@ava/ui";
+import { Slider, cn } from "@ava/ui";
 
-import { cssToHue, hueToHex } from "@/shared/lib/color";
+import { parseColor } from "@/shared/lib/color";
+import { kelvinToCss } from "@/shared/lib/kelvin";
+import { ColourPad, tintCss, tintHex, tintOf, type Tint } from "./colour-pad";
 import { useLiveSlider } from "../use-live-slider";
 
 const KELVIN_STEP = 50;
 
-const SWATCHES = [
-  { css: "#ff5a3c", name: "Ember" },
-  { css: "#ffb347", name: "Amber" },
-  { css: "#ffe28a", name: "Candle" },
-  { css: "#b8ff6b", name: "Lime" },
-  { css: "#4bffb5", name: "Mint" },
-  { css: "#4bd6ff", name: "Lagoon" },
-  { css: "#6b8cff", name: "Dusk" },
-  { css: "#b46bff", name: "Violet" },
-  { css: "#ff6bd6", name: "Blossom" },
-  { css: "#ffffff", name: "Cool white" },
-] as const;
+/** Where the whites start on a bulb that has only ever shown colour. */
+const DEFAULT_WHITE = 2700;
+
+/**
+ * The looks a room is actually set to, as positions on the pad.
+ *
+ * Written in the pad's own coordinates rather than as hex, so every swatch is
+ * somewhere the thumb can land. Hex carries a lightness the pad does not model,
+ * and a palette whose own colours its control cannot reproduce is a palette
+ * that argues with you: tapping one and then touching the pad used to hand the
+ * bulb a different colour than the one you had picked.
+ */
+const WHITES = [2200, 2700, 3500, 4600, 6000] as const;
+
+const COLOURS: { hue: number; whiteness: number; name: string }[] = [
+  { hue: 8, whiteness: 0.08, name: "Ember" },
+  { hue: 32, whiteness: 0.05, name: "Amber" },
+  { hue: 44, whiteness: 0.3, name: "Candle" },
+  { hue: 28, whiteness: 0.62, name: "Sand" },
+  { hue: 92, whiteness: 0.22, name: "Lime" },
+  { hue: 156, whiteness: 0.3, name: "Mint" },
+  { hue: 194, whiteness: 0.15, name: "Lagoon" },
+  { hue: 224, whiteness: 0.28, name: "Dusk" },
+  { hue: 274, whiteness: 0.32, name: "Violet" },
+  { hue: 320, whiteness: 0.28, name: "Blossom" },
+];
 
 const KELVIN_RAMP =
   "linear-gradient(to right, #ff9233, #ffbe7a, #ffe4c4, #ffffff, #d6e6ff, #a8c8ff)";
-const HUE_RAMP =
-  "linear-gradient(to right,#ff2d2d,#ffd400 17%,#4bff4b 33%,#00e5ff 50%,#2d6bff 67%,#b44bff 83%,#ff2d8a)";
 
+const clamp = (value: number, low: number, high: number) => Math.min(Math.max(value, low), high);
+
+/**
+ * Everything a light can be, on one surface.
+ *
+ * There is no White tab and no Colour tab. A bulb shows a colour or a
+ * temperature and never both, and the hub clears whichever one you did not set
+ * — so the mode was never really a setting, it was a fact about where the light
+ * already was. Every colour bug in this app has come from the seam between two
+ * tabs claiming otherwise: a tab that only swapped which slider was on screen
+ * left the bulb violet while the panel read 2700K, and a swatch that asked for
+ * RGB white left the panel reading Colour while the lamp looked white.
+ *
+ * The pad has no opinion to be wrong about. The app reads which trait to send
+ * from where the thumb is.
+ */
 export function ColorControl({
   color,
   kelvin,
@@ -44,19 +74,30 @@ export function ColorControl({
   onWhite: (kelvin: number) => void;
   onColor: (color: string) => void;
 }) {
-  const white = useLiveSlider(kelvin ?? kelvinMin, onWhitePreview, onWhite);
-  const hue = (cssToHue(color) / 360) * 100;
+  const send = (tint: Tint) => {
+    if (tint.mode === "white") onWhite(Math.round(tint.kelvin));
+    else onColor(tintHex(tint));
+  };
 
-  return (
-    <Tabs defaultValue={showColor && kelvin === null ? "color" : "white"} className="grid gap-2.5">
-      {showColor ? (
-        <TabsList className="w-full">
-          <TabsTrigger value="white">White</TabsTrigger>
-          <TabsTrigger value="color">Colour</TabsTrigger>
-        </TabsList>
-      ) : null}
+  const preview = (tint: Tint) => {
+    if (tint.mode === "white") onWhitePreview(Math.round(tint.kelvin));
+    else onColor(tintHex(tint));
+  };
 
-      <TabsContent value="white" className="grid gap-2">
+  const settled = tintOf(color, kelvin, kelvinMin, kelvinMax);
+  const pad = useLiveSlider<Tint>(settled, preview, send);
+
+  /* A bulb that only does tunable white gets the warmth track it always had —
+     a pad whose colour half is unreachable would be a lie about the hardware. */
+  const white = useLiveSlider(
+    clamp(kelvin ?? DEFAULT_WHITE, kelvinMin, kelvinMax),
+    onWhitePreview,
+    onWhite,
+  );
+
+  if (!showColor) {
+    return (
+      <div className="grid gap-2">
         <Slider
           value={[white.value]}
           min={kelvinMin}
@@ -66,40 +107,109 @@ export function ColorControl({
           disabled={disabled}
           aria-label="White temperature"
           aria-valuetext={`${white.value} kelvin`}
-          onValueChange={([v]) => white.change(v ?? kelvinMin)}
-          onValueCommit={([v]) => white.release(v ?? kelvinMin)}
+          onValueChange={([value]) => white.change(value ?? kelvinMin)}
+          onValueCommit={([value]) => white.release(value ?? kelvinMin)}
           style={{ background: KELVIN_RAMP }}
         />
         <p className="font-mono text-caption text-subtle tabular">{white.value}K</p>
-      </TabsContent>
+      </div>
+    );
+  }
 
-      <TabsContent value="color" className={showColor ? "grid gap-2.5" : "hidden"}>
-        <Slider
-          value={[hue]}
-          max={100}
-          step={1}
-          variant="marker"
-          disabled={disabled}
-          aria-label="Hue"
-          onValueCommit={([v]) => onColor(hueToHex(((v ?? 0) / 100) * 360))}
-          style={{ background: HUE_RAMP }}
-        />
+  return (
+    <div className="grid gap-2.5">
+      <ColourPad
+        tint={pad.value}
+        kelvinMin={kelvinMin}
+        kelvinMax={kelvinMax}
+        disabled={disabled}
+        onPreview={pad.change}
+        onCommit={pad.release}
+      />
 
-        <div className="grid grid-cols-5 gap-1.5">
-          {SWATCHES.map((s) => (
-            <button
-              key={s.css}
-              type="button"
+      <p className="flex items-baseline justify-between gap-4 font-mono text-caption text-subtle">
+        <span>{pad.value.mode === "white" ? `${Math.round(pad.value.kelvin)}K` : "Colour"}</span>
+        <span className="tabular">
+          {pad.value.mode === "white" ? "white" : tintHex(pad.value).toUpperCase()}
+        </span>
+      </p>
+
+      <div className="grid grid-cols-5 gap-1.5">
+        {WHITES.map((degrees) => (
+          <Swatch
+            key={degrees}
+            label={`${degrees}K white`}
+            css={kelvinToCss(degrees)}
+            pressed={pad.value.mode === "white" && Math.abs(pad.value.kelvin - degrees) < 60}
+            disabled={disabled}
+            onPick={() => pad.release({ mode: "white", kelvin: degrees })}
+          />
+        ))}
+
+        {COLOURS.map((swatch) => {
+          const tint: Tint = { mode: "colour", hue: swatch.hue, whiteness: swatch.whiteness };
+
+          return (
+            <Swatch
+              key={swatch.name}
+              label={swatch.name}
+              css={tintCss(tint)}
+              pressed={sameColour(color, tintCss(tint)) && kelvin === null}
               disabled={disabled}
-              aria-label={s.name}
-              aria-pressed={color === s.css}
-              onClick={() => onColor(s.css)}
-              style={{ background: s.css }}
-              className="aspect-square rounded-sm border border-border transition-transform duration-150 ease-out active:scale-95 disabled:opacity-40 aria-pressed:ring-2 aria-pressed:ring-fg aria-pressed:ring-offset-2 aria-pressed:ring-offset-surface"
+              onPick={() => pad.release(tint)}
             />
-          ))}
-        </div>
-      </TabsContent>
-    </Tabs>
+          );
+        })}
+      </div>
+    </div>
   );
+}
+
+function Swatch({
+  label,
+  css,
+  pressed,
+  disabled,
+  onPick,
+}: {
+  label: string;
+  css: string;
+  pressed: boolean;
+  disabled: boolean;
+  onPick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      aria-label={label}
+      aria-pressed={pressed}
+      onClick={onPick}
+      style={{ background: css }}
+      className={cn(
+        "aspect-square rounded-sm border border-border transition-transform duration-150",
+        "ease-out active:scale-95 disabled:opacity-40",
+        "aria-pressed:ring-2 aria-pressed:ring-fg aria-pressed:ring-offset-2",
+        "aria-pressed:ring-offset-surface",
+      )}
+    />
+  );
+}
+
+/**
+ * Whether two colours are the same lamp setting.
+ *
+ * Compared as numbers, not as strings: the same colour arrives as `#FFB347`
+ * from one place and `rgb(255 179 71)` from another, so a string comparison
+ * meant a swatch you had just tapped never looked tapped.
+ */
+function sameColour(left: string, right: string): boolean {
+  const a = parseColor(left);
+  const b = parseColor(right);
+
+  if (!a || !b) return false;
+
+  /* A hair of tolerance, because a bulb rounds what it is given and reports the
+     rounded value back. */
+  return a.every((channel, at) => Math.abs(channel - (b[at] ?? 0)) <= 2);
 }

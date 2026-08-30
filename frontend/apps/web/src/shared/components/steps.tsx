@@ -10,13 +10,10 @@ export function Steps({
   className?: string;
 }) {
   return (
-    <div className={cn("grid gap-2.5", className)}>
-      <div className="flex items-baseline justify-between gap-3">
-        <span className="text-small font-semibold">{labels[at]}</span>
-        <span className="font-mono text-caption text-subtle tabular">
-          {at + 1} of {labels.length}
-        </span>
-      </div>
+    <div className={cn("grid gap-2", className)}>
+      <span className="font-mono text-caption text-subtle tabular">
+        Step {at + 1} of {labels.length}
+      </span>
 
       <div className="flex gap-1" aria-hidden>
         {labels.map((label, i) => (

@@ -6,7 +6,52 @@ import (
 
 	"ava/api/internal/dto"
 	"ava/api/internal/model"
+	"ava/pkg/logger"
+
+	"github.com/google/uuid"
 )
+
+// buildSteps turns a definition into a fresh set of steps with the first one
+// active. Shared by creating a flow and re-cutting one, so both agree on what
+// "the steps for this flow" means.
+func buildSteps(tenantID, flowID uuid.UUID, def *Definition) []model.FlowStep {
+	steps := make([]model.FlowStep, len(def.Steps))
+
+	for i, stepDef := range def.Steps {
+		status := model.FlowStepStatusPending
+		if i == 0 {
+			status = model.FlowStepStatusInProgress
+		}
+
+		steps[i] = model.NewFlowStep(
+			tenantID,
+			flowID,
+			stepDef.ID,
+			stepDef.Title,
+			stepDef.Description,
+			i,
+			status,
+			stepDef.Skippable,
+		)
+	}
+
+	return steps
+}
+
+func encodeMetadata(def *Definition) (json.RawMessage, error) {
+	if def.Metadata == nil {
+		return json.RawMessage("{}"), nil
+	}
+
+	encoded, err := json.Marshal(def.Metadata)
+	if err != nil {
+		logger.Error("flow.encodeMetadata", logger.Err(err))
+
+		return nil, err
+	}
+
+	return encoded, nil
+}
 
 func emptyObjectIfBlank(raw json.RawMessage) json.RawMessage {
 	if len(raw) == 0 {

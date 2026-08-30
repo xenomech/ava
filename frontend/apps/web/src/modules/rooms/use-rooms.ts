@@ -10,6 +10,18 @@ function reason(error: unknown, fallback: string) {
   return isApiError(error) ? error.message : fallback;
 }
 
+/** The list with one room shifted a step, for the reorder mutation. */
+export function moved<T>(list: T[], index: number, direction: -1 | 1): T[] {
+  const target = index + direction;
+  if (target < 0 || target >= list.length) return list;
+
+  const next = [...list];
+  const [lifted] = next.splice(index, 1);
+  if (lifted !== undefined) next.splice(target, 0, lifted);
+
+  return next;
+}
+
 export function useRooms() {
   const query = useQuery(roomQueries.list());
 

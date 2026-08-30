@@ -2,6 +2,7 @@ package device
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"time"
 
@@ -85,12 +86,50 @@ func (s *deviceService) MarkHubOffline(ctx context.Context, tenantID, hubID uuid
 	return nil
 }
 
+// announceList tells every client what a hub now holds, when that has changed.
+//
+// A hub sweeps every thirty seconds whether or not anything happened, and this
+// list replaces a client's whole view of that hub. Sending it unconditionally
+// meant twice a minute every open browser threw away its devices and rebuilt
+// them from the wire — including any change the person was in the middle of
+// making, which reverted under their hand.
+//
+// Sweeps are almost always identical, so comparing costs nothing and the
+// broadcast usually does not happen at all. Anything that did change still
+// arrives, and per-device state still flows through its own event.
 func (s *deviceService) announceList(tenantID, hubID uuid.UUID, devices []*dto.DeviceResponse) {
 	if s.events == nil {
 		return
 	}
 
-	s.events.PublishJSON(tenantID, dto.NewDeviceListEvent(hubID, devices))
+	event := dto.NewDeviceListEvent(hubID, devices)
+
+	encoded, err := json.Marshal(event)
+	if err == nil && !s.listChanged(hubID, encoded) {
+		return
+	}
+
+	s.events.PublishJSON(tenantID, event)
+}
+
+// listChanged records the newest list for a hub and says whether it differs.
+func (s *deviceService) listChanged(hubID uuid.UUID, encoded []byte) bool {
+	sum := sha256.Sum256(encoded)
+
+	s.listsMu.Lock()
+	defer s.listsMu.Unlock()
+
+	if s.lists == nil {
+		s.lists = make(map[uuid.UUID][32]byte)
+	}
+
+	if previous, seen := s.lists[hubID]; seen && previous == sum {
+		return false
+	}
+
+	s.lists[hubID] = sum
+
+	return true
 }
 
 func (s *deviceService) ListByTenant(ctx context.Context, tenantID uuid.UUID) ([]*dto.DeviceResponse, error) {

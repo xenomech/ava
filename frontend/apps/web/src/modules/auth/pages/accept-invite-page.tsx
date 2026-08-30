@@ -37,7 +37,7 @@ export function AcceptInvitePage() {
     return (
       <AuthCard
         title="Invitation accepted"
-        description="You now have access to the workspace. Sign in to continue."
+        description="You now have access to that home. Sign in to continue."
       >
         <Link to="/auth/login" className={buttonVariants({ className: "w-full" })}>
           Sign in

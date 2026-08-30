@@ -1,140 +1,65 @@
-import {
-  Field,
-  Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@ava/ui";
-import { type FlowStepDto, type OnboardingMetadataDto } from "@ava/contracts";
+import { type FlowStepDto } from "@ava/contracts";
+
+import { BigField } from "./big-field";
+import { HubStep } from "./hub-step";
+
+const SUGGESTIONS = ["Home", "The flat", "Rowan Street"];
 
 export function StepFields({
   step,
-  metadata,
   values,
   onChange,
 }: {
   step: FlowStepDto;
-  metadata: OnboardingMetadataDto | null;
   values: Record<string, string>;
   onChange: (name: string, value: string) => void;
 }) {
   const errors = step.errors;
 
   switch (step.id) {
-    case "profile":
+    case "home":
       return (
-        <>
-          <Field label="Your name" error={errors.name}>
-            {(props) => (
-              <Input
-                {...props}
-                required
-                autoComplete="name"
-                value={values.name ?? ""}
-                onChange={(event) => onChange("name", event.target.value)}
-              />
-            )}
-          </Field>
+        <div className="grid gap-5">
+          <BigField
+            label="Home name"
+            placeholder="Home"
+            autoComplete="off"
+            required
+            value={values.name ?? ""}
+            error={errors.name}
+            hint="You can change this whenever you like."
+            onChange={(event) => onChange("name", event.target.value)}
+          />
 
-          <Field label="Phone" hint="Optional." error={errors.phone}>
-            {(props) => (
-              <Input
-                {...props}
-                type="tel"
-                autoComplete="tel"
-                value={values.phone ?? ""}
-                onChange={(event) => onChange("phone", event.target.value)}
-              />
-            )}
-          </Field>
-        </>
+          <div className="flex flex-wrap gap-2">
+            {SUGGESTIONS.map((suggestion) => (
+              <button
+                key={suggestion}
+                type="button"
+                onClick={() => onChange("name", suggestion)}
+                className="min-h-11 rounded-full border border-border px-4 text-small text-muted transition-colors duration-150 ease-out hover:border-border-strong hover:text-fg"
+              >
+                {suggestion}
+              </button>
+            ))}
+          </div>
+        </div>
       );
 
-    case "workspace":
+    case "hub":
       return (
-        <Field label="Home name" error={errors.name}>
-          {(props) => (
-            <Input
-              {...props}
-              required
-              value={values.name ?? ""}
-              onChange={(event) => onChange("name", event.target.value)}
-            />
-          )}
-        </Field>
-      );
-
-    case "invite_team":
-      return (
-        <>
-          <Field
-            label="Email addresses"
-            hint="Separate multiple addresses with commas."
-            error={errors.emails}
-          >
-            {(props) => (
-              <Input
-                {...props}
-                value={values.emails ?? ""}
-                placeholder="ana@example.com, sam@example.com"
-                onChange={(event) => onChange("emails", event.target.value)}
-              />
-            )}
-          </Field>
-
-          {metadata ? (
-            <Field label="Role" error={errors.role}>
-              {({ id, invalid, ...props }) => (
-                <Select
-                  value={values.role ?? metadata.invite_roles[0]?.value ?? ""}
-                  onValueChange={(role) => onChange("role", role)}
-                >
-                  <SelectTrigger id={id} invalid={invalid} {...props}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {metadata.invite_roles.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            </Field>
-          ) : null}
-        </>
+        <HubStep
+          code={values.user_code ?? ""}
+          onCodeChange={(value) => onChange("user_code", value)}
+          error={errors.user_code}
+        />
       );
 
     default:
       return (
-        <p className="text-small text-muted">
+        <p className="text-lead text-muted">
           This step is not supported by this version of the app. Skip it, or update the app.
         </p>
       );
-  }
-}
-
-export function toStepPayload(stepId: string, values: Record<string, string>): unknown {
-  switch (stepId) {
-    case "profile":
-      return { name: values.name ?? "", phone: values.phone || undefined };
-
-    case "workspace":
-      return { name: values.name ?? "" };
-
-    case "invite_team":
-      return {
-        emails: (values.emails ?? "")
-          .split(",")
-          .map((entry) => entry.trim())
-          .filter(Boolean),
-        role: values.role || undefined,
-      };
-
-    default:
-      return values;
   }
 }

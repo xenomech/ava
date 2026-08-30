@@ -27,13 +27,12 @@ func (a *App) startCommands(ctx context.Context, tokens *api.HubTokens) (*mqtt.C
 	}
 
 	client, err := mqtt.Connect(ctx, &mqtt.Options{
-		BrokerURL: a.cfg.MQTTBrokerURL,
-		ClientID:  "ava-hub-" + tokens.Hub.ID,
-		Username:  a.state.BrokerUsername,
-		Password:  a.state.BrokerPassword,
-		WillTopic: topics.Status,
-		Durable:   true,
-		Will:      offline,
+		BrokerURL:   a.cfg.MQTTBrokerURL,
+		ClientID:    "ava-hub-" + tokens.Hub.ID,
+		Credentials: a.brokerCredentials,
+		WillTopic:   topics.Status,
+		Durable:     true,
+		Will:        offline,
 		OnConnect: func(client *mqtt.Client) {
 			a.announce(ctx, client, topics, online)
 		},
@@ -104,7 +103,36 @@ func (a *App) handleCommand(ctx context.Context, payload []byte) {
 		logger.String("trait", string(cmd.Trait)),
 	)
 
+	a.confirm(ctx, cmd.DeviceID, cmd.Trait, cmd.Value)
 	a.publishState(ctx, cmd.DeviceID, target)
+}
+
+// confirm says what was just set, before anyone asks the bulb about it.
+//
+// The device accepted the write, so its new value is already known and worth
+// saying straight away. Reading it back first costs a second round trip — 12ms
+// on a good day, but a single dropped packet puts it behind the transport's
+// retry backoff and the room then sits unchanged for well over a second with
+// nothing to show for the tap.
+//
+// State events merge rather than replace, so naming one trait is safe: the full
+// read that follows fills in the rest, and corrects this if the bulb disagreed.
+func (a *App) confirm(ctx context.Context, deviceID string, trait wire.Trait, value wire.Value) {
+	if a.mqtt == nil {
+		return
+	}
+
+	payload, err := json.Marshal(wire.StateEvent{
+		DeviceID: deviceID,
+		State:    wire.State{trait: value},
+	})
+	if err != nil {
+		return
+	}
+
+	if err := a.mqtt.Publish(ctx, a.topics.State, payload, false); err != nil {
+		logger.Warn("CONFIRM_PUBLISH_FAILED", logger.String("error", err.Error()))
+	}
 }
 
 func (a *App) publishState(ctx context.Context, deviceID string, target device.Device) {
@@ -164,6 +192,7 @@ func (a *App) handleApply(ctx context.Context, payload []byte) {
 				return
 			}
 
+			a.confirm(ctx, target.DeviceID, target.Trait, target.Value)
 			a.publishState(ctx, target.DeviceID, handle)
 		}()
 	}

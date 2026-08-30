@@ -5,14 +5,7 @@
 }
 
 :{$PORT:8080} {
-	root * /srv
 	encode zstd gzip
-
-	@immutable path /assets/*
-	header @immutable Cache-Control "public, max-age=31536000, immutable"
-
-	@revalidate not path /assets/*
-	header @revalidate Cache-Control "no-cache, must-revalidate"
 
 	header {
 		X-Content-Type-Options nosniff
@@ -20,6 +13,37 @@
 		-Server
 	}
 
-	try_files {path} /index.html
-	file_server
+	# The API is served from this same origin rather than its own domain.
+	#
+	# Session cookies are SameSite=Lax, so a browser will not attach them to a
+	# request aimed at a different site. Railway gives each service its own
+	# *.up.railway.app host, and because up.railway.app is a public suffix those
+	# hosts are different sites and cannot share a cookie domain either. Split
+	# across two origins, signing in appears to work and every request after it
+	# comes back 401.
+	#
+	# These have to be `handle` blocks rather than bare directives. Caddy sorts
+	# directives by its own order, not by the order they are written, and
+	# try_files sorts ahead of reverse_proxy — so an /api request was rewritten
+	# to /index.html before the proxy ever saw it and the SPA answered 200 with
+	# HTML. `handle` blocks are mutually exclusive and run in source order.
+	#
+	# Caddy upgrades websockets through reverse_proxy, so /api/v1/socket rides
+	# along.
+	handle /api/* {
+		reverse_proxy {$API_UPSTREAM}
+	}
+
+	handle {
+		root * /srv
+
+		@immutable path /assets/*
+		header @immutable Cache-Control "public, max-age=31536000, immutable"
+
+		@revalidate not path /assets/*
+		header @revalidate Cache-Control "no-cache, must-revalidate"
+
+		try_files {path} /index.html
+		file_server
+	}
 }

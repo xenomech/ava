@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"sync"
 	"time"
 
 	"ava/pkg/logger"
@@ -19,13 +20,35 @@ import (
 const departTimeout = 2 * time.Second
 
 type App struct {
-	cfg      *config.Config
-	client   *api.Client
+	cfg    *config.Config
+	client *api.Client
+	// stateMu guards state, which the token loop replaces and the broker client
+	// reads from its own goroutine every time it dials.
+	stateMu  sync.RWMutex
 	state    *state.State
 	devices  *registry
 	lastSeen []inventory.Entry
 	mqtt     *mqtt.Client
 	topics   wire.Topics
+}
+
+// brokerCredentials is what the hub currently believes its broker login to be.
+//
+// Handed to the client as a function rather than a value so a rotation picked
+// up by the token loop reaches the next connection attempt. The API issues a
+// fresh broker password every time it refreshes the hub's token, and for as
+// long as this was read once at startup the hub spent the rest of its life
+// presenting the password it was born with: online over HTTP, refused by the
+// broker, and silent about both.
+func (a *App) brokerCredentials() (username, password string) {
+	a.stateMu.RLock()
+	defer a.stateMu.RUnlock()
+
+	if a.state == nil {
+		return "", ""
+	}
+
+	return a.state.BrokerUsername, a.state.BrokerPassword
 }
 
 func Bootstrap(_ context.Context) (*App, error) {
@@ -187,19 +210,34 @@ func (a *App) persist(tokens *api.HubTokens) error {
 		RefreshToken: tokens.RefreshToken,
 	}
 
+	a.stateMu.Lock()
+
 	if a.state != nil {
 		next.BrokerUsername = a.state.BrokerUsername
 		next.BrokerPassword = a.state.BrokerPassword
 	}
 
+	rotated := false
+
 	if tokens.Broker != nil {
+		rotated = tokens.Broker.Password != next.BrokerPassword
 		next.BrokerUsername = tokens.Broker.Username
 		next.BrokerPassword = tokens.Broker.Password
 	}
 
 	a.state = next
+	saved := state.Save(a.cfg.StateFile, a.state)
 
-	return state.Save(a.cfg.StateFile, a.state)
+	a.stateMu.Unlock()
+
+	/* Worth a line of its own. A rotation is the moment the broker stops
+	   accepting the connection the hub is holding, so it is the first thing to
+	   look for when commands stop arriving. */
+	if rotated {
+		logger.Info("BROKER_CREDENTIALS_ROTATED", logger.String("username", next.BrokerUsername))
+	}
+
+	return saved
 }
 
 func (a *App) heartbeatLoop(ctx context.Context, tokens *api.HubTokens) error {
@@ -209,8 +247,23 @@ func (a *App) heartbeatLoop(ctx context.Context, tokens *api.HubTokens) error {
 	defer ticker.Stop()
 
 	for {
-		if err := a.client.Heartbeat(ctx); err != nil {
+		connected := a.mqtt != nil && a.mqtt.Connected()
+
+		if err := a.client.Heartbeat(ctx, connected); err != nil {
 			logger.Warn("HEARTBEAT_FAILED", logger.String("error", err.Error()))
+		}
+
+		/* Said out loud on every beat, because the hub is perfectly capable of
+		   looking healthy while being deaf. Heartbeats and device syncs are
+		   HTTP and keep succeeding; commands arrive over the broker and do not.
+		   Nothing else in the system notices the difference — the library is
+		   silent about a refused reconnect, and the API's publish succeeds
+		   whether or not anyone is subscribed. */
+		if a.mqtt != nil && !connected {
+			logger.Warn("COMMAND_CHANNEL_DOWN",
+				logger.String("broker", a.cfg.MQTTBrokerURL),
+				logger.String("detail", "commands cannot reach this hub until it reconnects"),
+			)
 		}
 
 		select {

@@ -30,16 +30,14 @@ export function LoginPage() {
   return (
     <AuthCard
       title="Welcome back"
-      description="Sign in to take control of your space."
+      description="Sign in to your home."
       footer={
-        <div className="flex items-center justify-between">
-          <Link to="/auth/forgot-password" className="hover:text-fg">
-            Forgot password?
+        <>
+          New here?{" "}
+          <Link to="/auth/register" className="tap font-semibold text-fg hover:underline">
+            Set up your home
           </Link>
-          <Link to="/auth/register" className="font-semibold text-fg">
-            Create an account
-          </Link>
-        </div>
+        </>
       }
     >
       <form
@@ -63,7 +61,15 @@ export function LoginPage() {
           )}
         </Field>
 
-        <Field label="Password" error={fieldErrors?.password}>
+        <Field
+          label="Password"
+          error={fieldErrors?.password}
+          action={
+            <Link to="/auth/forgot-password" className="tap text-caption text-muted hover:text-fg">
+              Forgot?
+            </Link>
+          }
+        >
           {(props) => (
             <Input
               {...props}
@@ -79,8 +85,8 @@ export function LoginPage() {
 
         {fieldErrors ? null : <FormError error={attempt.error} fallback="Could not sign in" />}
 
-        <Button type="submit" className="mt-1 w-full" disabled={attempt.isPending}>
-          {attempt.isPending ? "Signing in…" : "Continue"}
+        <Button type="submit" block className="mt-1" loading={attempt.isPending}>
+          Continue
         </Button>
       </form>
     </AuthCard>

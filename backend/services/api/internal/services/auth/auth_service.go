@@ -22,11 +22,10 @@ import (
 	"github.com/google/uuid"
 )
 
-func (s *authService) Register(ctx context.Context, req *dto.RegisterRequest) (*dto.RegisterResponse, error) {
-	if !model.IsValidSlug(req.TenantSlug) {
-		return nil, ErrInvalidSlug
-	}
+// DefaultHomeName is what a new home is called until onboarding renames it.
+const DefaultHomeName = "My home"
 
+func (s *authService) Register(ctx context.Context, req *dto.RegisterRequest) (*dto.RegisterResponse, error) {
 	hashedPassword, err := HashPassword(req.Password)
 	if err != nil {
 		logger.Error("failed to hash password", logger.Err(err))
@@ -34,8 +33,20 @@ func (s *authService) Register(ctx context.Context, req *dto.RegisterRequest) (*
 		return nil, err
 	}
 
-	user := model.NewUser(req.Email, req.Username, req.Name, req.Phone, hashedPassword)
-	tenant := model.NewTenant(req.TenantName, req.TenantSlug)
+	base := identifierBase(req.Email)
+
+	username, err := s.freeUsername(ctx, base)
+	if err != nil {
+		return nil, err
+	}
+
+	slug, err := s.freeSlug(ctx, base)
+	if err != nil {
+		return nil, err
+	}
+
+	user := model.NewUser(req.Email, username, req.Name, "", hashedPassword)
+	tenant := model.NewTenant(DefaultHomeName, slug)
 	membership := model.NewTenantMembership(tenant.ID, user.ID, model.TenantRoleOwner)
 
 	if err := s.tenantRepo.CreateWithOwner(ctx, user, tenant, membership); err != nil {

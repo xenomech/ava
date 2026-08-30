@@ -31,8 +31,10 @@ import {
   Tabs,
   TabsList,
   TabsTrigger,
+  cn,
   type DeviceKind,
 } from "@ava/ui";
+import { toast } from "sonner";
 import { useLayoutEffect, useRef, useState } from "react";
 
 import { useTheme } from "@/shared/components/theme-provider";
@@ -243,6 +245,47 @@ export function DesignPage() {
           </div>
         </Section>
 
+        <Section title="Toasts">
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" size="sm" onClick={() => toast("Kitchen is all on")}>
+              Plain
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => toast.success("Reading lamp moved to Bedroom")}
+            >
+              Success
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => toast.warning("2 changed, 1 skipped")}
+            >
+              Warning
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => toast.error("The hub did not accept that")}
+            >
+              Error
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() =>
+                toast("A new version of Ava is ready", {
+                  description: "Reload to pick up the latest build.",
+                  action: { label: "Reload", onClick: () => undefined },
+                })
+              }
+            >
+              With an action
+            </Button>
+          </div>
+        </Section>
+
         <Section title="Drawer">
           <Drawer>
             <DrawerTrigger asChild>
@@ -349,9 +392,12 @@ function TypeRow({ name, klass, text }: { name: string; klass: string; text: str
   }, []);
 
   return (
-    <div className="flex items-baseline gap-4">
+    <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
       <code className="w-20 shrink-0 font-mono text-caption text-subtle">{name}</code>
-      <span ref={sample} className={klass}>
+      {/* The sample must be allowed to shrink: at a phone width the measured
+          size on the right was pushing the row past the viewport, which widens
+          the layout viewport and quietly rescales the whole page. */}
+      <span ref={sample} className={cn("min-w-0 flex-1 truncate", klass)}>
         {text}
       </span>
       <code className="ml-auto shrink-0 font-mono text-caption text-subtle tabular">{metrics}</code>

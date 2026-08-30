@@ -48,7 +48,15 @@ export default defineConfig({
         name: "Ava",
         short_name: "Ava",
         description: "Ava - multi-tenant hub control",
-        theme_color: "#0c0c0c",
+        /* Installed, this is a home-screen app rather than a page: no browser
+           chrome, and a background that matches the surface so the splash does
+           not flash white on a cold start. */
+        display: "standalone",
+        orientation: "portrait",
+        start_url: "/",
+        scope: "/",
+        theme_color: "#0b0b0d",
+        background_color: "#0b0b0d",
       },
       pwaAssets: { disabled: false, config: true },
       workbox: {

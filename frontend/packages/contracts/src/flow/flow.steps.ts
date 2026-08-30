@@ -1,29 +1,19 @@
 import { z } from "zod";
 
-import { tenantRoleSchema } from "../tenant/tenant.dto";
-
-export const profileStepData = z.object({
-  name: z.string().min(1, "Name is required"),
-  phone: z.string().optional(),
+export const homeStepData = z.object({
+  name: z.string().min(1, "Give your home a name"),
 });
 
-export const workspaceStepData = z.object({
-  name: z.string().min(1, "Workspace name is required"),
-});
+// The hub step carries no fields. Pairing runs through the hub activation
+// endpoint; submitting the step only asks the server to confirm a hub arrived.
+export const hubStepData = z.object({});
 
-export const inviteTeamStepData = z.object({
-  emails: z.array(z.email()),
-  role: tenantRoleSchema.optional(),
-});
-
-export type ProfileStepData = z.infer<typeof profileStepData>;
-export type WorkspaceStepData = z.infer<typeof workspaceStepData>;
-export type InviteTeamStepData = z.infer<typeof inviteTeamStepData>;
+export type HomeStepData = z.infer<typeof homeStepData>;
+export type HubStepData = z.infer<typeof hubStepData>;
 
 export const ONBOARDING_STEP_SCHEMAS = {
-  profile: profileStepData,
-  workspace: workspaceStepData,
-  invite_team: inviteTeamStepData,
+  home: homeStepData,
+  hub: hubStepData,
 } as const;
 
 export type OnboardingStepId = keyof typeof ONBOARDING_STEP_SCHEMAS;

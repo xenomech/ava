@@ -20,6 +20,7 @@
     "cmdk": "catalog:",
     "lucide-react": "catalog:",
     "radix-ui": "catalog:",
+    "sonner": "catalog:",
     "tailwind-merge": "catalog:",
     "vaul": "catalog:"
   },

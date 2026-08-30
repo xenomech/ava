@@ -149,9 +149,32 @@ func (c *Controller) Revoke(ctx *fiber.Ctx) error {
 	return response.Send(ctx, fiber.StatusOK, nil, "")
 }
 
+// Heartbeat records that a hub is alive, and whether it can still be reached.
+//
+// Those are not the same thing, and treating them as one is what let a hub sit
+// there looking healthy while every command vanished. Heartbeats and device
+// syncs are HTTP; commands travel over the broker. When the broker stopped
+// accepting the hub, the HTTP half carried on perfectly and nothing noticed —
+// the API went on publishing into a topic with no subscriber and reporting
+// success, because publishing had in fact succeeded.
+//
+// The hub is the only party that can know whether its command channel is up, so
+// it is asked to say.
 func (c *Controller) Heartbeat(ctx *fiber.Ctx) error {
-	if _, ok := ctx.Locals("hubID").(uuid.UUID); !ok {
+	hubID, ok := ctx.Locals("hubID").(uuid.UUID)
+	if !ok {
 		return response.Send(ctx, fiber.StatusUnauthorized, nil, "Unauthorized")
+	}
+
+	var req dto.HubHeartbeatRequest
+	if err := ctx.BodyParser(&req); err != nil {
+		req = dto.HubHeartbeatRequest{}
+	}
+
+	if req.BrokerConnected != nil {
+		if err := c.hubService.ApplyPresence(ctx.Context(), hubID, *req.BrokerConnected); err != nil {
+			return response.Send(ctx, fiber.StatusInternalServerError, nil, "Failed to record presence")
+		}
 	}
 
 	return response.Send(ctx, fiber.StatusOK, nil, "")

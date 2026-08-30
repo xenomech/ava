@@ -21,7 +21,11 @@ const SocketContext = createContext<AvaSocket>({
 export const useAvaSocket = () => use(SocketContext);
 
 function socketURL() {
-  const url = new URL(`${env.VITE_API_URL}/socket`);
+  /* The API base is absolute in development and a same-origin path in a
+     deployed build, where the web server proxies /api. `new URL` throws on a
+     bare path, so the page itself supplies the base — which is the right origin
+     in exactly the case where the path is relative. */
+  const url = new URL(`${env.VITE_API_URL}/socket`, window.location.origin);
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
 
   return url.toString();

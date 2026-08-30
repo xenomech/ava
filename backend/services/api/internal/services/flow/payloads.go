@@ -2,32 +2,18 @@ package flow
 
 import (
 	"encoding/json"
-
-	"ava/api/internal/model"
 )
 
-type ProfileStepData struct {
-	Name  string `json:"name"`
-	Phone string `json:"phone,omitempty"`
-}
-
-type WorkspaceStepData struct {
+type HomeStepData struct {
 	Name string `json:"name"`
 }
 
-type InviteTeamStepData struct {
-	Emails []string         `json:"emails"`
-	Role   model.TenantRole `json:"role,omitempty"`
-}
+// HubStepData carries nothing. Pairing happens through the hub activation
+// endpoint, which the client already calls; this step only records that a hub
+// arrived, so its handler reads the hub list rather than a payload.
+type HubStepData struct{}
 
-type RoleOption struct {
-	Value model.TenantRole `json:"value"`
-	Label string           `json:"label"`
-}
-
-type OnboardingMetadata struct {
-	InviteRoles []RoleOption `json:"invite_roles"`
-}
+type OnboardingMetadata struct{}
 
 func decodePayload[T any](data json.RawMessage) (T, error) {
 	var payload T

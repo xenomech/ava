@@ -7,11 +7,10 @@ import (
 
 	"ava/api/internal/dto"
 	"ava/api/internal/model"
+	hubrepo "ava/api/internal/repository/hub"
 	membershiprepo "ava/api/internal/repository/membership"
-	userrepo "ava/api/internal/repository/user"
 	tenantsvc "ava/api/internal/services/tenant"
 	"ava/api/pkg/serrors"
-	"ava/pkg/logger"
 
 	"github.com/google/uuid"
 )
@@ -21,68 +20,35 @@ type StepHandler interface {
 	Execute(ctx context.Context, tenantID, userID uuid.UUID, data json.RawMessage) error
 }
 
-type profileStepHandler struct {
-	userRepo userrepo.Repository
-}
-
-func (h *profileStepHandler) Validate(_ context.Context, _, _ uuid.UUID, data json.RawMessage) (model.StepErrors, error) {
-	payload, err := decodePayload[ProfileStepData](data)
-	if err != nil {
-		return nil, err
-	}
-
-	errs := model.StepErrors{}
-	if strings.TrimSpace(payload.Name) == "" {
-		errs["name"] = "Your name is required"
-	}
-
-	return errs, nil
-}
-
-func (h *profileStepHandler) Execute(ctx context.Context, _, userID uuid.UUID, data json.RawMessage) error {
-	payload, err := decodePayload[ProfileStepData](data)
-	if err != nil {
-		return err
-	}
-
-	update := &model.User{
-		Name:  strings.TrimSpace(payload.Name),
-		Phone: strings.TrimSpace(payload.Phone),
-	}
-	update.ID = userID
-
-	return h.userRepo.UpdateUser(ctx, update)
-}
-
-type workspaceStepHandler struct {
+type homeStepHandler struct {
 	tenantService  tenantsvc.Service
 	membershipRepo membershiprepo.Repository
 }
 
-func (h *workspaceStepHandler) Validate(ctx context.Context, tenantID, userID uuid.UUID, data json.RawMessage) (model.StepErrors, error) {
+func (h *homeStepHandler) Validate(ctx context.Context, tenantID, userID uuid.UUID, data json.RawMessage) (model.StepErrors, error) {
 	if err := requireTenantAdmin(ctx, h.membershipRepo, tenantID, userID); err != nil {
 		return nil, err
 	}
 
-	payload, err := decodePayload[WorkspaceStepData](data)
+	payload, err := decodePayload[HomeStepData](data)
 	if err != nil {
 		return nil, err
 	}
 
 	errs := model.StepErrors{}
 	if strings.TrimSpace(payload.Name) == "" {
-		errs["name"] = "Workspace name is required"
+		errs["name"] = "Give your home a name"
 	}
 
 	return errs, nil
 }
 
-func (h *workspaceStepHandler) Execute(ctx context.Context, tenantID, userID uuid.UUID, data json.RawMessage) error {
+func (h *homeStepHandler) Execute(ctx context.Context, tenantID, userID uuid.UUID, data json.RawMessage) error {
 	if err := requireTenantAdmin(ctx, h.membershipRepo, tenantID, userID); err != nil {
 		return err
 	}
 
-	payload, err := decodePayload[WorkspaceStepData](data)
+	payload, err := decodePayload[HomeStepData](data)
 	if err != nil {
 		return err
 	}
@@ -92,80 +58,29 @@ func (h *workspaceStepHandler) Execute(ctx context.Context, tenantID, userID uui
 	return err
 }
 
-type inviteTeamStepHandler struct {
-	tenantService  tenantsvc.Service
-	userRepo       userrepo.Repository
-	membershipRepo membershiprepo.Repository
+// hubStepHandler does not pair anything. The client pairs through the hub
+// activation endpoint and then submits this step, so all that is left is to
+// confirm a hub actually arrived. Someone whose hardware has not shipped yet
+// skips the step instead.
+type hubStepHandler struct {
+	hubRepo hubrepo.Repository
 }
 
-func (h *inviteTeamStepHandler) Validate(ctx context.Context, tenantID, userID uuid.UUID, data json.RawMessage) (model.StepErrors, error) {
-	if err := requireTenantAdmin(ctx, h.membershipRepo, tenantID, userID); err != nil {
-		return nil, err
-	}
-
-	payload, err := decodePayload[InviteTeamStepData](data)
+func (h *hubStepHandler) Validate(ctx context.Context, tenantID, _ uuid.UUID, _ json.RawMessage) (model.StepErrors, error) {
+	hubs, err := h.hubRepo.ListByTenant(ctx, tenantID)
 	if err != nil {
 		return nil, err
 	}
 
 	errs := model.StepErrors{}
-
-	emails := cleanEmails(payload.Emails)
-	if len(emails) == 0 {
-		errs["emails"] = "Add at least one email address, or skip this step"
-
-		return errs, nil
-	}
-
-	if payload.Role != "" && (!payload.Role.IsValid() || payload.Role == model.TenantRoleOwner) {
-		errs["role"] = "Choose either admin or member"
-	}
-
-	for _, addr := range emails {
-		if _, err := h.userRepo.GetUserByEmail(ctx, addr); err != nil {
-			if serrors.Is(err, userrepo.ErrUserNotFound) {
-				errs["emails"] = "No account exists for " + addr + " — they need to sign up first"
-
-				break
-			}
-
-			return nil, err
-		}
+	if len(hubs) == 0 {
+		errs["user_code"] = "Enter the code your hub is showing, or skip for now"
 	}
 
 	return errs, nil
 }
 
-func (h *inviteTeamStepHandler) Execute(ctx context.Context, tenantID, userID uuid.UUID, data json.RawMessage) error {
-	if err := requireTenantAdmin(ctx, h.membershipRepo, tenantID, userID); err != nil {
-		return err
-	}
-
-	payload, err := decodePayload[InviteTeamStepData](data)
-	if err != nil {
-		return err
-	}
-
-	role := model.TenantRoleMember
-	if payload.Role != "" {
-		role = payload.Role
-	}
-
-	for _, addr := range cleanEmails(payload.Emails) {
-		_, err := h.tenantService.Invite(ctx, tenantID, userID, &dto.InviteMemberRequest{Email: addr, Role: role})
-		if err == nil {
-			continue
-		}
-
-		if serrors.Is(err, tenantsvc.ErrAlreadyMember) || serrors.Is(err, tenantsvc.ErrAlreadyInvited) {
-			logger.Info("flow.invite_team.skipped", logger.String("email", addr), logger.Err(err))
-
-			continue
-		}
-
-		return err
-	}
-
+func (h *hubStepHandler) Execute(context.Context, uuid.UUID, uuid.UUID, json.RawMessage) error {
 	return nil
 }
 
@@ -190,30 +105,13 @@ func requireTenantAdmin(ctx context.Context, membershipRepo membershiprepo.Repos
 	return nil
 }
 
-func cleanEmails(emails []string) []string {
-	cleaned := make([]string, 0, len(emails))
-
-	for _, addr := range emails {
-		if trimmed := strings.TrimSpace(addr); trimmed != "" {
-			cleaned = append(cleaned, trimmed)
-		}
-	}
-
-	return cleaned
-}
-
 func buildHandlers(
 	tenantService tenantsvc.Service,
-	userRepo userrepo.Repository,
 	membershipRepo membershiprepo.Repository,
+	hubRepo hubrepo.Repository,
 ) map[string]StepHandler {
 	return map[string]StepHandler{
-		"onboarding:profile":   &profileStepHandler{userRepo: userRepo},
-		"onboarding:workspace": &workspaceStepHandler{tenantService: tenantService, membershipRepo: membershipRepo},
-		"onboarding:invite_team": &inviteTeamStepHandler{
-			tenantService:  tenantService,
-			userRepo:       userRepo,
-			membershipRepo: membershipRepo,
-		},
+		"onboarding:home": &homeStepHandler{tenantService: tenantService, membershipRepo: membershipRepo},
+		"onboarding:hub":  &hubStepHandler{hubRepo: hubRepo},
 	}
 }

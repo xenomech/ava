@@ -1,7 +1,10 @@
 export { cn } from "./lib/utils";
+export { onSoundChange, playSound, setSoundEnabled, soundEnabled, unlockSound } from "./lib/sound";
+export type { SoundName } from "./lib/sounds.data";
 
 export { Button, buttonVariants, type ButtonProps } from "./components/button";
 export { Chip, ChipToggle, type ChipProps } from "./components/chip";
+export { Confirm } from "./components/confirm";
 export {
   CommandDialog,
   CommandInput,
@@ -25,9 +28,11 @@ export {
 export { Field, type FieldProps } from "./components/field";
 export { Input, type InputProps } from "./components/input";
 export { Label } from "./components/label";
+export { Menu, MenuTrigger, MenuContent, MenuItem, MenuSeparator } from "./components/menu";
 export { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "./components/select";
 export { Slider, type SliderProps } from "./components/slider";
 export { Switch } from "./components/switch";
 export { Tabs, TabsList, TabsTrigger, TabsContent } from "./components/tabs";
+export { Toaster } from "./components/toaster";
 
 export { Device, DeviceHalo, type DeviceKind, type DeviceProps } from "./devices/device";

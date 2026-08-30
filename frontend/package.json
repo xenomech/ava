@@ -1,11 +1,11 @@
 {
   "name": "ava",
   "private": true,
-  "type": "module",
   "workspaces": [
     "apps/*",
     "packages/*"
   ],
+  "type": "module",
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",

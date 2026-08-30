@@ -7,10 +7,11 @@ import (
 
 type Room struct {
 	BaseModel
-	TenantID uuid.UUID `gorm:"type:uuid;not null;index;uniqueIndex:idx_room_tenant_name" json:"tenant_id"`
+	TenantID uuid.UUID `gorm:"type:uuid;not null;index" json:"tenant_id"`
 	Tenant   *Tenant   `gorm:"foreignKey:TenantID;constraint:OnDelete:CASCADE" json:"-"`
-	Name     string    `gorm:"type:varchar(80);not null;uniqueIndex:idx_room_tenant_name" json:"name"`
-	Position int       `gorm:"not null;default:0" json:"position"`
+	// Unique per tenant among live rows; the partial index is built in db.Migrate.
+	Name     string `gorm:"type:varchar(80);not null" json:"name"`
+	Position int    `gorm:"not null;default:0" json:"position"`
 }
 
 func (room *Room) BeforeCreate(tx *gorm.DB) error {

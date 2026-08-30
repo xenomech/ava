@@ -204,3 +204,32 @@ func TestAPlugReportsNoBrightnessAtAll(t *testing.T) {
 		t.Error("a plug reported brightness")
 	}
 }
+
+func TestANullTraitIsARetractionRatherThanAValue(t *testing.T) {
+	var reported wire.State
+	if err := json.Unmarshal([]byte(`{"power":true,"color":null,"brightness":40}`), &reported); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	set, cleared := reported.Settled()
+
+	if len(set) != 2 {
+		t.Errorf("kept %d values, want power and brightness only: %v", len(set), set)
+	}
+
+	if _, held := set[wire.TraitColor]; held {
+		t.Error("color was kept as a value")
+	}
+
+	if len(cleared) != 1 || cleared[0] != wire.TraitColor {
+		t.Errorf("cleared = %v, want [color]", cleared)
+	}
+}
+
+func TestAStateWithNothingToRetireReportsNoClears(t *testing.T) {
+	set, cleared := wire.State{wire.TraitPower: wire.Bool(false)}.Settled()
+
+	if len(set) != 1 || len(cleared) != 0 {
+		t.Errorf("set = %v, cleared = %v", set, cleared)
+	}
+}

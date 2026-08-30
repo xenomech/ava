@@ -1,7 +1,6 @@
 package flow
 
 import (
-	"ava/api/internal/model"
 	"ava/api/pkg/serrors"
 )
 
@@ -18,37 +17,29 @@ type Definition struct {
 	Metadata any
 }
 
-var inviteRoles = []RoleOption{
-	{Value: model.TenantRoleAdmin, Label: "Admin"},
-	{Value: model.TenantRoleMember, Label: "Member"},
-}
-
+// Onboarding asks for the two things the product cannot work without: what this
+// home is called, and a hub to reach the lights through. The person's own name
+// and their home's slug are already settled at registration, so re-asking them
+// here would be the same question twice. Inviting people lives in Settings —
+// it is not on the path to a working light.
 var registry = map[string]Definition{
 	"onboarding": {
 		Type: "onboarding",
 		Steps: []StepDefinition{
 			{
-				ID:          "profile",
-				Title:       "Confirm your details",
-				Description: "Tell us how your name should appear to your teammates",
+				ID:          "home",
+				Title:       "Name your home",
+				Description: "This is what you will see at the top of every screen",
 				Skippable:   false,
 			},
 			{
-				ID:          "workspace",
-				Title:       "Name your workspace",
-				Description: "Choose the name your team will see for this workspace",
-				Skippable:   true,
-			},
-			{
-				ID:          "invite_team",
-				Title:       "Invite your team",
-				Description: "Invite the people you work with, or do it later",
+				ID:          "hub",
+				Title:       "Connect your hub",
+				Description: "The hub is the box on your network that finds and drives your lights",
 				Skippable:   true,
 			},
 		},
-		Metadata: OnboardingMetadata{
-			InviteRoles: inviteRoles,
-		},
+		Metadata: OnboardingMetadata{},
 	},
 }
 

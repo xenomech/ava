@@ -8,14 +8,13 @@ import (
 	"github.com/google/uuid"
 )
 
+// RegisterRequest is deliberately three fields. A username and a home slug are
+// machine identifiers, not things someone setting up their lights should have to
+// invent, so Register derives both. The home is named later, during onboarding.
 type RegisterRequest struct {
-	Email      string `json:"email" validate:"required,email"`
-	Username   string `json:"username" validate:"required,min=3,max=30"`
-	Name       string `json:"name" validate:"required"`
-	Password   string `json:"password" validate:"required,min=8"`
-	Phone      string `json:"phone,omitempty"`
-	TenantName string `json:"tenant_name" validate:"required"`
-	TenantSlug string `json:"tenant_slug" validate:"required,min=3,max=40"`
+	Name     string `json:"name" validate:"required"`
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required,min=8"`
 }
 
 type LoginRequest struct {
