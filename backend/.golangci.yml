@@ -76,10 +76,6 @@ linters:
         text: G117
         linters:
           - gosec
-      - path: external/tuya/discover\.go
-        text: G101|G401|G501
-        linters:
-          - gosec
 
 formatters:
   enable:
