@@ -2,13 +2,7 @@ import type { RoomDto } from "@ava/contracts";
 import { cn } from "@ava/ui";
 import { useEffect, useRef, useState } from "react";
 
-/**
- * The room's name, and only that.
- *
- * Reordering and deleting belong to the list of rooms, not to the room you are
- * standing in, so they live on the sidebar row instead. Renaming stays here
- * because the name is the thing you are renaming — tap it and type.
- */
+/** The room's name, and only that: tap it to rename, in place. */
 export function RoomHeading({
   room,
   onRename,

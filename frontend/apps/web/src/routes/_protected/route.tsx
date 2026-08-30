@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { AppShell } from "@/app/shell";
+import { AppShell } from "@/app/app";
 import { requireAuth } from "@/modules/auth";
 import { requireOnboarded } from "@/modules/onboarding";
 

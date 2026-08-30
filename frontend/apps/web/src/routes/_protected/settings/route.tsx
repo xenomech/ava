@@ -1,9 +1,7 @@
 import { cn } from "@ava/ui";
 import { Link, Outlet, createFileRoute } from "@tanstack/react-router";
 
-// Everything configurable lives behind one door. People and hubs used to be
-// top-level destinations competing with the rooms; they are settings, so they
-// sit here as tabs.
+// Everything configurable lives behind one door, as tabs, rather than competing with the rooms.
 const TABS = [
   { to: "/settings", label: "General", exact: true },
   { to: "/settings/people", label: "People", exact: false },
@@ -14,16 +12,12 @@ const TABS = [
 
 function SettingsLayout() {
   return (
-    // Heading and tabs bring their own container; each tab's page keeps
-    // providing its own, so the two do not stack padding on each other.
+    // Heading and tabs bring their own container, so they do not stack padding on the tab's page.
     <div className="pt-3 md:pt-0">
       <div className="mx-auto grid w-full max-w-[720px] gap-4 px-5 pt-6 sm:px-8 sm:pt-8">
         <h1 className="text-display font-semibold">Settings</h1>
 
-        {/* Bled to the edge of the surface, so a tab that runs off the side is
-            visibly cut by the screen rather than by an invisible inner padding.
-            scroll-padding keeps the selected tab clear of that edge when the
-            row scrolls it into view. */}
+        {/* Bled to the edge, so an overflowing tab is cut by the screen, not by inner padding. */}
         <nav
           aria-label="Settings"
           className={cn(

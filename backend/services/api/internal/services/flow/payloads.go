@@ -8,9 +8,7 @@ type HomeStepData struct {
 	Name string `json:"name"`
 }
 
-// HubStepData carries nothing. Pairing happens through the hub activation
-// endpoint, which the client already calls; this step only records that a hub
-// arrived, so its handler reads the hub list rather than a payload.
+// HubStepData carries nothing, because its handler reads the hub list rather than a payload.
 type HubStepData struct{}
 
 type OnboardingMetadata struct{}

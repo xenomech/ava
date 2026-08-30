@@ -7,14 +7,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// Scene is a remembered arrangement of one room: what each device was doing at
-// the moment it was saved.
-//
-// It is a snapshot rather than a rule. Nothing here describes intent — no "warm
-// in the evening", no conditions — because a scene is captured from a room the
-// person has already set up by hand, and the only honest thing to store is what
-// they had. That also means a scene can be replayed by the ordinary batch apply
-// path with no special casing: it is already a list of targets.
+// Scene is a snapshot of one room, so it replays through the ordinary batch apply path as a list of targets.
 type Scene struct {
 	BaseModel
 	TenantID uuid.UUID     `gorm:"type:uuid;not null;index" json:"tenant_id"`
@@ -26,11 +19,7 @@ type Scene struct {
 	Targets  []SceneTarget `gorm:"foreignKey:SceneID;constraint:OnDelete:CASCADE" json:"targets"`
 }
 
-// SceneTarget is one trait of one device, frozen.
-//
-// Value is raw JSON rather than a typed column because a trait can be a
-// boolean, a number or a string, and wire.Value already knows how to read each
-// of those back out.
+// SceneTarget is one frozen trait of one device; Value is raw JSON as a trait may be bool, number or string.
 type SceneTarget struct {
 	BaseModel
 	SceneID  uuid.UUID       `gorm:"type:uuid;not null;index" json:"scene_id"`

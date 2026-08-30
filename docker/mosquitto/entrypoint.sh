@@ -1,9 +1,7 @@
 #!/bin/sh
 set -eu
 
-# Under /mosquitto/data, not /mosquitto/config: this is the one directory the
-# broker writes to, and it is the one a persistent volume can be mounted over
-# without hiding mosquitto.conf.
+# Under /mosquitto/data, the one writable directory a volume can mount over without hiding mosquitto.conf.
 config=/mosquitto/data/dynamic-security.json
 
 mkdir -p /mosquitto/data
@@ -19,11 +17,7 @@ if [ ! -f "$config" ]; then
   echo "bootstrapped dynamic security for ${MQTT_ADMIN_USERNAME:-ava-api}"
 fi
 
-# This script runs as root so it can write to a freshly attached volume, but
-# mosquitto drops to its own user before reading anything. Left root-owned at
-# 0600 the broker cannot read its own security config, and it says so only as
-# "File is not readable" while carrying on with an empty default — which denies
-# every client instead of failing outright.
+# We run as root but mosquitto drops privileges, and a root-owned 0600 config silently denies every client.
 chown -R mosquitto:mosquitto /mosquitto/data
 
 exec /usr/sbin/mosquitto -c /mosquitto/config/mosquitto.conf

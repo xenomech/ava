@@ -15,8 +15,7 @@ export function SettingsPage() {
   const isAdmin = session.isAdmin;
   const tenant = useQuery(tenantQueries.current());
 
-  /* The server name shows through until the user starts typing; a background
-     refetch can then no longer clobber a half-finished edit. */
+  // Null until typing starts, so a background refetch cannot clobber a live edit.
   const [draft, setDraft] = useState<string | null>(null);
   const name = draft ?? tenant.data?.name ?? "";
 

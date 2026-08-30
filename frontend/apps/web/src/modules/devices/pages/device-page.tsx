@@ -7,19 +7,13 @@ import { useState } from "react";
 import { hubQueries } from "@/modules/hub";
 import { Loader } from "@/shared/components/loader";
 import { DeviceControls } from "../components/device-controls";
-import { OnAPlug, deviceColor, deviceKind, deviceLevel } from "../components/device-stage";
+import { deviceColor, deviceKind, deviceLevel } from "../lib/device-view";
+import { OnAPlug } from "../components/on-a-plug";
 import { Missing, NoDevices } from "../components/empty-state";
 import { HubOfflineNotice } from "../components/hub-notice";
-import { useDevices } from "../use-devices";
+import { useDevices } from "../hooks/use-devices";
 
-/**
- * A device that is not in any room.
- *
- * Anything with a room opens inside that room instead, so this is the one case
- * with no surface to sit on. It is the same controls in a plain frame rather
- * than a second design: put the device in a room and it moves to the room page
- * for good.
- */
+/** A device in no room: the same controls in a plain frame, since it has no room to sit on. */
 export function LooseDevicePage() {
   const { deviceId } = useParams({ from: "/_protected/devices/$deviceId" });
   const { devices, isPending } = useDevices();

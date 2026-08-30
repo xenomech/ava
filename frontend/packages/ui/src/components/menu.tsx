@@ -33,11 +33,7 @@ function MenuContent({
   );
 }
 
-/**
- * `tone="danger"` for anything that destroys something. The item stays 44 tall
- * on touch and drops to 40 where there is a pointer, matching the rest of the
- * app's targets.
- */
+/** `tone="danger"` for anything destructive; 44 tall on touch, 40 with a pointer. */
 function MenuItem({
   className,
   tone,

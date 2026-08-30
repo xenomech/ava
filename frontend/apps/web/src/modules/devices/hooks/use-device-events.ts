@@ -1,18 +1,17 @@
-import { avaEvent, type DeviceDto, type HubDto } from "@ava/contracts";
+import type { AvaEvent, DeviceDto } from "@ava/contracts";
 import { useQueryClient, type QueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useCallback } from "react";
 import { toast } from "sonner";
 
-import { deviceQueries, reconcile, reconcileAll, release } from "@/modules/devices";
-import { hubQueries } from "@/modules/hub";
-import { useAvaSocket } from "@/shared/realtime";
+import { useAvaEvent } from "@/shared/realtime";
+import { reconcile, reconcileAll, release } from "../lib/optimistic";
+import { deviceQueries } from "../queries";
 
 function byCreation(one: DeviceDto, other: DeviceDto) {
   return one.created_at.localeCompare(other.created_at);
 }
 
-/* Reconciled, not taken at face value. Anything this browser is still writing
-   stays as the person left it until the house agrees or the hold expires. */
+// Reconciled, so anything this browser is still writing stays as the person left it.
 function replaceDevice(queryClient: QueryClient, device: DeviceDto) {
   const settled = reconcile(device);
 
@@ -32,18 +31,7 @@ function replaceHubDevices(queryClient: QueryClient, hubID: string, devices: Dev
   });
 }
 
-function setHubPresence(queryClient: QueryClient, hubID: string, online: boolean) {
-  queryClient.setQueryData<HubDto[]>(hubQueries.list().queryKey, (current) =>
-    current?.map((hub) => (hub.id === hubID && hub.online !== online ? { ...hub, online } : hub)),
-  );
-}
-
-function apply(queryClient: QueryClient, raw: string) {
-  const parsed = avaEvent.safeParse(JSON.parse(raw));
-  if (!parsed.success) return;
-
-  const event = parsed.data;
-
+function apply(queryClient: QueryClient, event: AvaEvent) {
   switch (event.type) {
     case "device.state":
       replaceDevice(queryClient, event.device);
@@ -51,12 +39,8 @@ function apply(queryClient: QueryClient, raw: string) {
     case "device.list":
       replaceHubDevices(queryClient, event.hub_id, event.devices);
       break;
-    case "hub.presence":
-      setHubPresence(queryClient, event.hub_id, event.online);
-      break;
     case "command.rejected":
-      /* The write is not ours to hold any more — let the refetch below say what
-         the device is really doing. */
+      // The write is not ours to hold any more; the refetch below says what is really true.
       release(event.device_id);
       toast.error(event.message);
       void queryClient.invalidateQueries({ queryKey: deviceQueries.all() });
@@ -64,11 +48,9 @@ function apply(queryClient: QueryClient, raw: string) {
   }
 }
 
-export function AvaEvents() {
+/** Keeps the device cache in step with what the house reports. */
+export function useDeviceEvents() {
   const queryClient = useQueryClient();
-  const socket = useAvaSocket();
 
-  useEffect(() => socket.subscribe((raw) => apply(queryClient, raw)), [socket, queryClient]);
-
-  return null;
+  useAvaEvent(useCallback((event: AvaEvent) => apply(queryClient, event), [queryClient]));
 }

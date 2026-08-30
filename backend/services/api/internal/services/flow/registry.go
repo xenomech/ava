@@ -17,11 +17,7 @@ type Definition struct {
 	Metadata any
 }
 
-// Onboarding asks for the two things the product cannot work without: what this
-// home is called, and a hub to reach the lights through. The person's own name
-// and their home's slug are already settled at registration, so re-asking them
-// here would be the same question twice. Inviting people lives in Settings —
-// it is not on the path to a working light.
+// Onboarding asks only for the two things the product cannot work without: a home name and a hub.
 var registry = map[string]Definition{
 	"onboarding": {
 		Type: "onboarding",

@@ -108,11 +108,7 @@ func (b *Broker) EnsureControlPlane(ctx context.Context, username string) error 
 			ACLs: []dynsecACL{
 				{ACLType: "publishClientSend", Topic: "ava/+/+/cmd", Allow: true},
 				{ACLType: "publishClientSend", Topic: "ava/+/+/apply", Allow: true},
-				// The control plane listens as well as sends. Without these it
-				// connects, subscribes to topics it is not allowed to read, and
-				// never learns a device's state or whether a hub is up. Nothing
-				// reports it: a denied subscription looks exactly like a topic
-				// nobody is publishing to.
+				// The control plane listens as well as sends, and a denied subscription fails silently.
 				{ACLType: "subscribePattern", Topic: stateTopicFilter, Allow: true},
 				{ACLType: "subscribePattern", Topic: presenceTopicFilter, Allow: true},
 				{ACLType: "publishClientReceive", Topic: stateTopicFilter, Allow: true},

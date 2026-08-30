@@ -15,15 +15,13 @@ import { Eyebrow, StepFrame } from "../components/step-frame";
 import { Welcome } from "../components/welcome";
 import { toStepPayload } from "../payload";
 
-// How lit the room is at each point in the sequence. Setup reads as the lights
-// coming up: dark and cold at the door, warm and full by the time you are in.
+// How lit the room is at each step, so setup reads as the lights coming up.
 const LIGHT_BY_STEP: Record<string, RoomLight> = {
   home: ROOM_STAGES.waking,
   hub: ROOM_STAGES.lit,
 };
 
-// Long enough to register as a payoff, short enough not to be in the way. The
-// console is already mounting behind it.
+// Long enough to register as a payoff, short enough not to be in the way.
 const FINALE_MS = 1100;
 
 export function OnboardingPage() {
@@ -34,8 +32,7 @@ export function OnboardingPage() {
   const [begun, setBegun] = useState(false);
   const [finishing, setFinishing] = useState(false);
 
-  // The home step renames the tenant server-side, so the cached session is
-  // stale the moment the flow completes.
+  // The home step renames the tenant, so the cached session is stale once done.
   const onCompleted = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY });
     setFinishing(true);
@@ -91,9 +88,7 @@ export function OnboardingPage() {
 
   if (!step) return <Loader label="Getting things ready" />;
 
-  // Until a hub exists, submitting the hub step can only come back as an error
-  // telling you to skip — so skipping *is* the way forward, and it is the only
-  // button shown. Once a hub is paired, Continue takes over.
+  // Until a hub exists, submitting can only fail, so skipping is the way forward.
   const satisfied = step.id !== "hub" || (hubs.data ?? []).length > 0;
 
   const action = satisfied
@@ -107,8 +102,7 @@ export function OnboardingPage() {
 
   return (
     <Room light={LIGHT_BY_STEP[step.id] ?? ROOM_STAGES.waking}>
-      {/* Remounting per step restarts the cascade, so each screen arrives
-          rather than swapping its text in place. */}
+      {/* Remounting per step restarts the cascade, so each screen arrives. */}
       <StepFrame
         key={step.id}
         eyebrow={<Eyebrow at={flow.at} total={total} />}

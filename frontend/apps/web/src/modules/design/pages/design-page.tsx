@@ -395,9 +395,7 @@ function TypeRow({ name, klass, text }: { name: string; klass: string; text: str
   return (
     <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
       <code className="w-20 shrink-0 font-mono text-caption text-subtle">{name}</code>
-      {/* The sample must be allowed to shrink: at a phone width the measured
-          size on the right was pushing the row past the viewport, which widens
-          the layout viewport and quietly rescales the whole page. */}
+      {/* The sample must shrink, or the metrics push the row past the viewport. */}
       <span ref={sample} className={cn("min-w-0 flex-1 truncate", klass)}>
         {text}
       </span>

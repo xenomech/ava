@@ -22,9 +22,9 @@ import { AppliancePicker } from "./appliance-picker";
 import { ColorControl, WhiteControl } from "./color-control";
 import { RoomPicker } from "./room-picker";
 import { TraitControl, TraitReading } from "./trait-control";
-import { deviceColor } from "./device-stage";
-import { useDeviceControl } from "../use-devices";
-import { useLiveSlider } from "../use-live-slider";
+import { deviceColor } from "../lib/device-view";
+import { useDeviceControl } from "../hooks/use-devices";
+import { useLiveSlider } from "../hooks/use-live-slider";
 
 function Heading({ children }: { children: string }) {
   return (
@@ -46,18 +46,7 @@ function Fact({ label, value, mono }: { label: string; value: string; mono?: boo
   );
 }
 
-/**
- * Everything about one device: what it is doing at the top, what it is at the
- * bottom, a rule between them.
- *
- * The two halves are used at completely different rates — power and brightness
- * several times a day, the room assignment and the vendor id once ever — so
- * they are separated rather than interleaved. They are not hidden: a disclosure
- * costs a tap every time and saves nothing that a divider does not.
- *
- * `onLevelChange` reports the in-flight slider value so the caller can light
- * the device on the stage while a drag is still happening.
- */
+/** Everything about one device: what it is doing on top, what it is below, a rule between. */
 export function DeviceControls({
   device,
   offline,
@@ -69,8 +58,7 @@ export function DeviceControls({
 }) {
   const control = useDeviceControl();
 
-  /* If we unmount mid-drag (sheet dismissed, another device picked) the caller
-     would otherwise keep painting the stage at our last in-flight level. */
+  // Unmounting mid-drag would otherwise leave the caller painting our last in-flight level.
   const onLevelChangeRef = useRef(onLevelChange);
   onLevelChangeRef.current = onLevelChange;
   useEffect(() => () => onLevelChangeRef.current?.(null), []);

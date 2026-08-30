@@ -132,19 +132,7 @@ func collect(ctx context.Context, conn net.PacketConn) []Found {
 	}
 }
 
-// pilotState turns a discovery reply into everything the bulb reported.
-//
-// This is a snapshot, not a patch: the sync it feeds replaces a device's stored
-// state outright, so a trait missing here is a trait erased. It had never read
-// r/g/b, which meant every sweep described a bulb in colour mode as having no
-// colour and no temperature either — and thirty seconds after setting a colour,
-// that empty description was written over the truth and the light fell back to
-// its default white. The colour returned the moment anything published real
-// state again, so the room flipped between the two on a thirty-second cycle.
-//
-// Light.State deliberately does the opposite and names the trait the bulb is
-// *not* using, with no value. That one is a patch, merged into what is already
-// stored, and the empty value is how it says "this no longer applies".
+// pilotState turns a discovery reply into a full snapshot, since a trait missing here is a trait erased.
 func pilotState(result *pilotResult) wire.State {
 	state := wire.State{wire.TraitPower: wire.Bool(result.State)}
 
@@ -152,13 +140,7 @@ func pilotState(result *pilotResult) wire.State {
 		state[wire.TraitBrightness] = wire.Number(float64(result.Dimming))
 	}
 
-	/* Both are always named, one of them with no value. A bulb holds a colour or
-	   a temperature and never both, so saying nothing about the one it is not
-	   using is not the same as saying it has stopped: this state is merged into
-	   what is already stored, and an omission would leave the retired trait
-	   sitting there for ever. An empty value is how a trait says it no longer
-	   applies. Callers that need a snapshot rather than a patch drop the empties
-	   with State.Settled. */
+	// Both are always named, one with no value, because an omission would leave a retired trait stored.
 	state[wire.TraitColorTemp] = optionalNumber(result.Temp)
 	state[wire.TraitColor] = optionalColor(result.R, result.G, result.B)
 

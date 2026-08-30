@@ -4,24 +4,9 @@ import { XIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { DeviceControls } from "./device-controls";
+import { SHEET_SNAP } from "../constants";
 
-/**
- * Where the phone sheet rests before you drag it.
- *
- * Half the screen, so the device is still visible on the stage above it — the
- * whole point of swapping the room's switch for the device is lost if the sheet
- * covers it. Power and brightness fit in that half; colour and details are the
- * reward for pulling it further. `ROOM_HEIGHT` is the other side of the same
- * number, and the room caps its own height to match.
- */
-export const SHEET_SNAP = [0.52, 0.94];
-export const ROOM_HEIGHT = "h-[48dvh]";
-
-/**
- * Whether the device can currently be reached, and if not, whose fault it is.
- * One value rather than two booleans, because "hub offline but device online"
- * is not a state that exists.
- */
+/** Whether the device can be reached, and whose fault it is: one value, not two booleans. */
 export type Connectivity = "online" | "device-offline" | "hub-offline";
 
 function StatusChip({ connectivity }: { connectivity: Connectivity }) {
@@ -30,8 +15,7 @@ function StatusChip({ connectivity }: { connectivity: Connectivity }) {
   return <Chip tone="warning">{connectivity === "hub-offline" ? "Hub offline" : "Offline"}</Chip>;
 }
 
-/* Keyed on the device so a half-finished slider drag cannot carry over into
-   whichever device is picked next. */
+// Keyed on the device so a half-finished drag cannot carry over into the next one.
 function Controls({
   device,
   connectivity,
@@ -58,14 +42,7 @@ type DeviceSheetProps = {
   onLevelChange?: (level: number | null) => void;
 };
 
-/**
- * One device's controls as a column beside the room, for wide screens.
- *
- * Deliberately not a drawer. It never needs to be dragged away, so it is a
- * panel with a transition rather than a gesture surface — a short wide band
- * across a 1440px screen wastes the width and puts the controls a long way
- * from the pointer.
- */
+/** One device's controls as a column beside the room, for wide screens. */
 export function DevicePanel({ device, connectivity, onClose, onLevelChange }: DeviceSheetProps) {
   return (
     <aside
@@ -105,13 +82,7 @@ export function DevicePanel({ device, connectivity, onClose, onLevelChange }: De
   );
 }
 
-/**
- * One device's controls as a bottom sheet, for phones.
- *
- * `children` is the sheet's handle — the room passes its own device strip, so
- * browsing devices and dismissing the sheet are the same object rather than
- * two things competing for the bottom of the screen.
- */
+/** One device's controls as a bottom sheet for phones, with `children` as its handle. */
 export function DeviceDrawer({
   device,
   connectivity,

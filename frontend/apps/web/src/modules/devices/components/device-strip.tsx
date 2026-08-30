@@ -3,27 +3,10 @@ import type { DeviceDto } from "@ava/contracts";
 import { Link } from "@tanstack/react-router";
 
 import { AddDevices } from "./add-devices";
-import { OnAPlug, deviceColor, deviceKind, deviceLabel, deviceLevel } from "./device-stage";
+import { deviceColor, deviceKind, deviceLabel, deviceLevel } from "../lib/device-view";
+import { OnAPlug } from "./on-a-plug";
 
-/**
- * The room's devices as a carousel you can thumb through.
- *
- * Every card is the same width and shows the device itself, lit at whatever it
- * is actually doing, so the row is scannable at arm's length without reading a
- * word. Names truncate rather than wrap: a card that grows to fit its label
- * breaks the rhythm of the row and lands the next card somewhere different
- * every time.
- *
- * The scrollbar is hidden. A card left half off the edge already says the row
- * scrolls, and that is the only affordance a touch screen was ever going to
- * get.
- *
- * On a phone this row is also the sheet's handle: selecting a device lifts the
- * strip and unfolds the controls beneath it, so browsing devices and dismissing
- * the sheet are the same object. That is why the cards are links rather than
- * buttons — the selection lives in the URL, so the back button closes it and a
- * device stays addressable on its own.
- */
+/** The room's devices as a carousel, and on a phone the sheet's handle as well. */
 export function DeviceStrip({
   devices,
   elsewhere,
@@ -45,14 +28,11 @@ export function DeviceStrip({
   return (
     <div
       aria-label={label}
-      /* Vaul reads a vertical drag anywhere in the sheet as a dismiss. Without
-         this the row cannot be scrolled sideways without the sheet following. */
+      // Vaul reads any vertical drag in the sheet as a dismiss, which this row must opt out of.
       data-vaul-no-drag
       className={cn(
         "no-scrollbar -mx-5 flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-5 pb-1",
-        /* scroll-padding, not padding: opening the sheet scrolls the selected
-           card into view, and without this it lands flush against the edge
-           with the padding scrolled out of sight. */
+        // scroll-padding, not padding, so a card scrolled into view never lands flush.
         "scroll-pl-5 sm:-mx-6 sm:scroll-pl-6 sm:px-6",
         className,
       )}
@@ -66,9 +46,7 @@ export function DeviceStrip({
         />
       ))}
 
-      {/* Last in the row rather than a button in the header: adding a device is
-          the same kind of act as picking one, and it belongs where the room's
-          devices already are. */}
+      {/* Last in the row, because adding a device belongs where the room's devices are. */}
       <AddDevices roomId={roomId} roomName={roomName} candidates={elsewhere} />
     </div>
   );

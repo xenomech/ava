@@ -1,13 +1,4 @@
-/**
- * The three sounds the interface makes, inline as data URIs.
- *
- * From soundcn (https://soundcn.xyz), originally by Kenney (https://kenney.nl)
- * and released under CC0. Inline rather than fetched: each clip is around a
- * kilobyte, and a click that has to wait for a network round trip is worse than
- * no click at all.
- *
- * Generated once and committed. Nothing regenerates this at build time.
- */
+/** The three interface sounds inline as data URIs, from Kenney via soundcn under CC0; generated once, never at build time. */
 export const SOUNDS = {
   /** Click Soft */
   click:

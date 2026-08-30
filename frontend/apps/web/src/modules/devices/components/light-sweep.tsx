@@ -3,27 +3,7 @@ import { useMemo } from "react";
 
 import { hslToRgb, mix, parseColor, rgbToCss, rgbToHsl, type Rgb } from "@/shared/lib/color";
 
-/**
- * The light a room throws when its switch is flicked: it rises on the way up,
- * falls on the way down, and leaves nothing behind either way.
- *
- * This is the shape of the ramp, not its colour. Every stop is a transform of a
- * colour the room actually holds: the hue rotates a little across the sweep,
- * the middle sits at the bulb's own colour, and the two ends fall away into it.
- *
- * `shade` is a move towards black, or towards white when negative. Doing the
- * darkening this way rather than by cutting HSL lightness is what keeps two
- * rooms apart: a 5000K white sits at lightness 0.9 with saturation near 1, so
- * halving its lightness turns it into a vivid red indistinguishable from an
- * actual red bulb. Mixing towards black instead keeps a pale colour pale and a
- * saturated one saturated.
- *
- * An earlier version mixed towards fixed pink/orange/blue anchors. It looked
- * right in one room and like somebody else's palette in every other, because at
- * those mix amounts the anchor, not the bulb, was deciding the colour. Nothing
- * here names a colour, so a red lamp sweeps red and a 2200K filament sweeps
- * amber without either being special-cased.
- */
+// The shape of the sweep, not its colour: every stop is a transform of the room's own light.
 const SHAPE = [
   { hue: -14, shade: 0.46, at: 22 },
   { hue: -5, shade: 0.18, at: 37 },
@@ -35,12 +15,7 @@ const SHAPE = [
 const BLACK: Rgb = [0, 0, 0];
 const WHITE: Rgb = [255, 255, 255];
 
-/**
- * Fades the left and right of the plume so it reads as light rather than as a
- * lit rectangle. The top and bottom are handled in the ramp itself: an element
- * edge that cuts a gradient mid-colour draws a hard line straight across the
- * room, which is exactly the boxiness this is trying to avoid.
- */
+// Fades the sides of the plume so it reads as light rather than as a lit rectangle.
 const MASK =
   "linear-gradient(to right, rgb(0 0 0 / 0) 0%, rgb(0 0 0) 24%, rgb(0 0 0) 76%, rgb(0 0 0 / 0) 100%)";
 
@@ -63,7 +38,7 @@ function buildRamp(colors: string[], direction: "on" | "off"): string | null {
 
   if (palette.length === 0) return null;
 
-  /* Going off, the cool end leads: the warm light is what drains away last. */
+  // Going off, the cool end leads: the warm light is what drains away last.
   const shape = direction === "on" ? SHAPE : [...SHAPE].reverse();
 
   const ramp = shape.flatMap((step, index) => {
@@ -76,7 +51,7 @@ function buildRamp(colors: string[], direction: "on" | "off"): string | null {
     const color = rgbToCss([r, g, b]);
     const at = SHAPE[index]?.at ?? 0;
 
-    /* Both ends run out to zero alpha so the element's own edge never shows. */
+    // Both ends run out to zero alpha so the element's own edge never shows.
     if (index === 0) return [`rgb(${r} ${g} ${b} / 0) 0%`, `${color} ${at}%`];
     if (index === shape.length - 1) return [`${color} ${at}%`, `rgb(${r} ${g} ${b} / 0) 100%`];
 
@@ -97,8 +72,7 @@ export function LightSweep({
   direction: "on" | "off";
   play: number;
 }) {
-  /* The page re-renders at pointer rate during a drag; the ramp only changes
-     when the room's colours or the flick direction do. */
+  // The page re-renders at pointer rate, but the ramp only changes with colours or direction.
   const ramp = useMemo(() => buildRamp(colors, direction), [colors, direction]);
 
   if (play === 0 || ramp === null) return null;

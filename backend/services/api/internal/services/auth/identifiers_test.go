@@ -19,8 +19,7 @@ func TestIdentifierBase(t *testing.T) {
 	}
 }
 
-// The base must survive truncation as a valid slug — a cut that lands on a
-// hyphen would otherwise produce a trailing separator.
+// The base must survive truncation as a valid slug, with no trailing separator from a cut on a hyphen.
 func TestIdentifierBaseTruncatesToAValidSlug(t *testing.T) {
 	got := identifierBase("aaaaaaaaaaaaaaaaaaaaaaa-bbbbbbb@example.com")
 
@@ -44,8 +43,7 @@ func TestFirstFreeSkipsTakenNames(t *testing.T) {
 	}
 }
 
-// Every candidate being taken must still yield a name: refusing a registration
-// over a cosmetic identifier is the worse failure.
+// Every candidate being taken must still yield a name rather than refusing the registration.
 func TestFirstFreeFallsBackToARandomSuffix(t *testing.T) {
 	got, err := firstFree("gokul", func(string) (bool, error) { return false, nil })
 	if err != nil {

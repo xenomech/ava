@@ -2,14 +2,7 @@ import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react"
 
 const LIVE_INTERVAL_MS = 400;
 
-/**
- * A control that owns its value while it is being moved.
- *
- * Generic in the value, so a two-dimensional pad throttles on exactly the same
- * clock as a slider rather than growing its own copy of this timing. Two
- * versions of "send at most every 400ms, and always on release" would drift
- * apart the first time either was touched.
- */
+/** A control that owns its value while it is moved, generic so a pad shares the slider clock. */
 export function useLiveSlider<T>(
   settled: T,
   preview: (value: T) => void,

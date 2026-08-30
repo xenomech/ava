@@ -1,13 +1,11 @@
 import { cn } from "@ava/ui";
 import { useRef, type ClipboardEvent, type KeyboardEvent } from "react";
 
-// Pairing codes are four characters, a hyphen, then four more. Boxes say that
-// without a hint line: you can see how much is left to type, and a wrong-length
-// paste is obvious instead of silently failing on submit.
+// Boxes show the four-hyphen-four shape, so a wrong-length paste is obvious.
 const GROUP = 4;
 const LENGTH = GROUP * 2;
 
-/* Hoisted: clean runs on every keystroke and render. */
+// Hoisted: clean runs on every keystroke and render.
 const NOT_CODE = /[^A-Z0-9]/g;
 
 const clean = (value: string) => value.toUpperCase().replace(NOT_CODE, "").slice(0, LENGTH);
@@ -52,8 +50,7 @@ export function CodeField({
     const typed = clean(incoming);
     if (!typed) return;
 
-    // Typing over a cell replaces from that point, so overtyping a wrong
-    // character behaves the way it looks like it should.
+    // Typing over a cell replaces from that point, so overtyping behaves as it looks.
     const next = clean(raw.slice(0, index) + typed);
 
     commit(next, index + typed.length);

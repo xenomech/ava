@@ -5,9 +5,7 @@ const COLONS = /:/g;
 export function useMaterials() {
   const raw = useId();
 
-  /* One stable object per component instance: it is passed as a prop to every
-     shape, so a fresh object per render would keep any memoised shape from
-     ever bailing out. */
+  // One stable object per instance, or a memoised shape could never bail out.
   return useMemo(() => {
     const id = raw.replace(COLONS, "");
 

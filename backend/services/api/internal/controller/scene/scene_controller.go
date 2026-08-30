@@ -74,8 +74,7 @@ func (c *Controller) Delete(ctx *fiber.Ctx) error {
 	return response.Send(ctx, fiber.StatusNoContent, nil, "")
 }
 
-// scope reads the two identifiers every route here needs, and answers the
-// request itself if either is missing.
+// scope reads the two identifiers every route here needs, answering the request itself if either is missing.
 func (c *Controller) scope(ctx *fiber.Ctx) (tenantID, roomID uuid.UUID, err error) {
 	tenantID, ok := ctx.Locals("tenantID").(uuid.UUID)
 	if !ok {

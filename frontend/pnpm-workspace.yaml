@@ -6,8 +6,7 @@ allowBuilds:
   esbuild: true
   sharp: true
 
-# Every third-party version lives here and is referenced as "catalog:" from the
-# package that needs it. Grouped by the families that must move together.
+# Every third-party version lives here as "catalog:", grouped by the families that must move together.
 catalog:
   # react
   react: ^19.2.8

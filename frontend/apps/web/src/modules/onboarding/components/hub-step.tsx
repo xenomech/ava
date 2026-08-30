@@ -7,9 +7,7 @@ import { isApiError } from "@/config/http/request";
 import { activateHub, hubQueries } from "@/modules/hub";
 import { CodeField } from "./code-field";
 
-// Pairing runs through the hub activation endpoint the Hubs page already uses.
-// This step pairs on its own; the flow's Continue only asks the server to
-// confirm a hub arrived.
+// This step pairs on its own; Continue only asks the server to confirm a hub arrived.
 export function HubStep({
   code,
   onCodeChange,
@@ -66,8 +64,7 @@ export function HubStep({
           disabled={pair.isPending}
           error={error ?? pairError}
           onChange={onCodeChange}
-          // A complete code pairs itself. Filling eight boxes and then hunting
-          // for a button is a step nobody needs.
+          // A complete code pairs itself; hunting for a button is a step nobody needs.
           onComplete={(value) => pair.mutate(value)}
         />
 
@@ -77,8 +74,7 @@ export function HubStep({
   );
 }
 
-// Rings going out across the network. Three of them, offset, so there is always
-// one mid-flight — it reads as continuous listening rather than a loop.
+// Three offset rings, so one is always mid-flight and it reads as listening.
 const RINGS = [0, 0.93, 1.86];
 
 function Searching({ pairing }: { pairing: boolean }) {

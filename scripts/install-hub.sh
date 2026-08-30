@@ -133,8 +133,7 @@ systemctl restart avahub
 
 say "avahub ${version} is running"
 
-# ── Pairing ──────────────────────────────────────────────────────────────────
-# Surface the pairing code (or already-paired status) from the journal so nobody has to go digging.
+# ── Pairing: surface the code, or already-paired status, from the journal ────
 
 say "Waiting for the hub to report in..."
 

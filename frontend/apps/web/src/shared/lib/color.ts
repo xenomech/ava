@@ -14,18 +14,13 @@ export function mix(from: Rgb, towards: Rgb, amount: number): Rgb {
   ) as Rgb;
 }
 
-/* parseColor sits on the drag path, so its patterns live here rather than
-   being re-created per call. */
+// parseColor sits on the drag path, so its patterns are not re-created per call.
 const HEX_PATTERN = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
 const HSL_PATTERN = /^hsla?\(\s*([\d.]+)(?:deg)?[\s,]+([\d.]+)%[\s,]+([\d.]+)%/i;
 const RGB_PATTERN = /^rgba?\(([^)]+)\)$/i;
 const RGB_SEPARATOR = /[\s,/]+/;
 
-/**
- * Reads the two forms a device colour arrives in: a hex from a bulb that was
- * given an explicit colour, and the `rgb(r g b)` this app writes for anything
- * described by colour temperature.
- */
+/** Reads the two forms a device colour arrives in: a bulb's hex, and this app's `rgb(r g b)`. */
 export function parseColor(value: string): Rgb | null {
   const text = value.trim();
 
@@ -114,9 +109,5 @@ export function hslToRgb({ h, s, l }: Hsl): Rgb {
   ] as Rgb;
 }
 
-/**
- * How warm a colour reads, as a single number. Used only for ordering, so it
- * needs to be monotonic rather than perceptually exact — and unlike hue, it
- * behaves for the near-white colours most bulbs actually sit at.
- */
+/** How warm a colour reads, as a single number. Monotonic for ordering, not exact. */
 export const warmth = ([r, , b]: Rgb) => r - b;

@@ -1,9 +1,6 @@
 import { useCallback, useSyncExternalStore } from "react";
 
-/* One MediaQueryList per query string for the page's lifetime: getSnapshot runs
-   on every render and store check, and window.matchMedia re-parses the query
-   each call. Sharing the list also means subscribe and getSnapshot read the
-   same object. */
+// One MediaQueryList per query: matchMedia re-parses on each call, and getSnapshot runs often.
 const lists = new Map<string, MediaQueryList>();
 
 function listFor(query: string): MediaQueryList {
@@ -17,13 +14,7 @@ function listFor(query: string): MediaQueryList {
   return list;
 }
 
-/**
- * Subscribes to a media query.
- *
- * `useSyncExternalStore` rather than an effect: the first render already knows
- * the answer, so a layout that differs between phone and desktop does not have
- * to mount the wrong one and then correct itself.
- */
+/** Subscribes to a media query, so the first render already knows the answer. */
 export function useMediaQuery(query: string): boolean {
   const subscribe = useCallback(
     (notify: () => void) => {

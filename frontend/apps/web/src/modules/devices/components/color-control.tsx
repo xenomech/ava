@@ -3,29 +3,20 @@ import { MarkerSlider, cn } from "@ava/ui";
 import { parseColor } from "@/shared/lib/color";
 import { kelvinToCss } from "@/shared/lib/kelvin";
 import { ColourPad, tintCss, tintHex, tintOf, type Tint } from "./colour-pad";
-import { useLiveSlider } from "../use-live-slider";
+import { useLiveSlider } from "../hooks/use-live-slider";
 
 const KELVIN_STEP = 50;
 
 /** Where the whites start on a bulb that has only ever shown colour. */
 const DEFAULT_WHITE = 2700;
 
-/**
- * The looks a room is actually set to, as positions on the pad.
- *
- * Written in the pad's own coordinates rather than as hex, so every swatch is
- * somewhere the thumb can land. Hex carries a lightness the pad does not model,
- * and a palette whose own colours its control cannot reproduce is a palette
- * that argues with you: tapping one and then touching the pad used to hand the
- * bulb a different colour than the one you had picked.
- */
+// Written in the pad's own coordinates, not hex, so every swatch is somewhere the thumb lands.
 const WHITES = [2200, 2700, 3500, 4600, 6000].map((kelvin) => ({
   kelvin,
   css: kelvinToCss(kelvin),
 }));
 
-/* The css and its parsed channels are fixed, so they are computed once here
-   rather than per swatch per render while the pad is being dragged. */
+// Fixed values, computed once rather than per swatch per render while the pad is dragged.
 const COLOURS = (
   [
     { hue: 8, whiteness: 0.08, name: "Ember" },
@@ -50,10 +41,7 @@ const KELVIN_RAMP =
 
 const clamp = (value: number, low: number, high: number) => Math.min(Math.max(value, low), high);
 
-/**
- * The warmth track for a bulb that only does tunable white — a pad whose colour
- * half is unreachable would be a lie about the hardware.
- */
+/** The warmth track for a bulb that only does tunable white. */
 export function WhiteControl({
   kelvin,
   kelvinMin,
@@ -92,20 +80,7 @@ export function WhiteControl({
   );
 }
 
-/**
- * Everything a light can be, on one surface.
- *
- * There is no White tab and no Colour tab. A bulb shows a colour or a
- * temperature and never both, and the hub clears whichever one you did not set
- * — so the mode was never really a setting, it was a fact about where the light
- * already was. Every colour bug in this app has come from the seam between two
- * tabs claiming otherwise: a tab that only swapped which slider was on screen
- * left the bulb violet while the panel read 2700K, and a swatch that asked for
- * RGB white left the panel reading Colour while the lamp looked white.
- *
- * The pad has no opinion to be wrong about. The app reads which trait to send
- * from where the thumb is.
- */
+/** Everything a light can be, on one surface: the thumb's position picks the trait to send. */
 export function ColorControl({
   color,
   kelvin,
@@ -131,7 +106,7 @@ export function ColorControl({
   const settled = tintOf(color, kelvin, kelvinMin, kelvinMax);
   const pad = useLiveSlider<Tint>(settled, send, send);
 
-  /* Parsed once per render, compared against each swatch's precomputed rgb. */
+  // Parsed once per render, compared against each swatch's precomputed rgb.
   const currentRgb = kelvin === null ? parseColor(color) : null;
 
   return (
@@ -211,20 +186,13 @@ function Swatch({
   );
 }
 
-/**
- * Whether two colours are the same lamp setting.
- *
- * Compared as numbers, not as strings: the same colour arrives as `#FFB347`
- * from one place and `rgb(255 179 71)` from another, so a string comparison
- * meant a swatch you had just tapped never looked tapped.
- */
+// Whether two colours are the same lamp setting, compared as numbers rather than strings.
 function sameRgb(
   a: readonly number[] | null | undefined,
   b: readonly number[] | null | undefined,
 ): boolean {
   if (!a || !b) return false;
 
-  /* A hair of tolerance, because a bulb rounds what it is given and reports the
-     rounded value back. */
+  // A hair of tolerance, because a bulb rounds what it is given and reports that back.
   return a.every((channel, at) => Math.abs(channel - (b[at] ?? 0)) <= 2);
 }

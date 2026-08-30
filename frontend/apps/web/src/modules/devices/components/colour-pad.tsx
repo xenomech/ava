@@ -4,25 +4,10 @@ import { useRef, type KeyboardEvent, type PointerEvent } from "react";
 import { hslToRgb, rgbToCss, rgbToHsl, parseColor } from "@/shared/lib/color";
 import { kelvinToCss, kelvinToRgb } from "@/shared/lib/kelvin";
 
-/**
- * Where the colour runs out and the whites begin, as a fraction of the pad.
- *
- * The band is not a second control. It is the bottom edge of this one: drag
- * down through the pastels and the colour thins until there is none left, which
- * is exactly where tunable white starts. A light is either showing a colour or
- * a temperature and never both, and the honest way to say that is a place you
- * can see rather than a tab you have to remember.
- */
+// Where the colour runs out and the whites begin: the band is the bottom edge of this pad.
 const WHITE_EDGE = 0.78;
 
-/**
- * How far towards white the bottom of the colour region gets.
- *
- * Matched exactly by the overlay gradient below, because the pad has to be a
- * picture of what it will do. Draining colour at a fixed lightness heads for
- * mid grey instead — a colour no lamp is ever asked for, and a dead end right
- * where the whites need to begin.
- */
+// How far towards white the colour region drains, matched exactly by the overlay gradient.
 const WASH = 0.92;
 
 export type Tint =
@@ -64,19 +49,11 @@ export function tintOf(color: string, kelvin: number | null, min: number, max: n
 
   const { h, s } = rgbToHsl(rgb);
 
-  /* Saturation read back as the distance already travelled towards white, so a
-     colour set here lands the thumb where it was left. */
+  // Saturation read back as distance towards white, so the thumb lands where it was left.
   return { mode: "colour", hue: h, whiteness: clamp((1 - s) / WASH, 0, 1) };
 }
 
-/**
- * One surface for every colour a bulb can make.
- *
- * Hue across, how much of it down, whites along the bottom. There is no mode
- * switch: the app reads which trait to send from where the thumb is, which is
- * the whole point — every colour bug in this app has come from the seam between
- * two tabs, and a seam you can see is one nobody has to hold in their head.
- */
+/** One surface for every colour a bulb can make: hue across, wash down, whites along the base. */
 export function ColourPad({
   tint,
   kelvinMin,
@@ -132,8 +109,7 @@ export function ColourPad({
     onCommit(at(event));
   };
 
-  /* A cancelled gesture — capture lost, a system gesture took over — must not
-     write to the bulb; only a deliberate release commits. */
+  // A cancelled gesture must not write to the bulb; only a deliberate release commits.
   const abort = () => {
     if (!dragging.current) return;
 
@@ -141,8 +117,7 @@ export function ColourPad({
     onCancel?.();
   };
 
-  /* Arrows move by a usable step rather than a pixel: across changes the hue or
-     the temperature, down walks towards white and then into the band. */
+  // Arrows move by a usable step: across changes hue or temperature, down walks into the band.
   const key = (event: KeyboardEvent<HTMLDivElement>) => {
     if (disabled) return;
 
@@ -185,17 +160,11 @@ export function ColourPad({
       : { left: `${(tint.hue / 360) * 100}%`, top: `${tint.whiteness * WHITE_EDGE * 100}%` };
 
   return (
-    /* The rule's list of interactive roles does not include `application`,
-       which is the one role that genuinely means "this widget takes its own
-       keys". There is no element or role for two continuous values on a
-       surface, and the accessible path is the labelled swatch grid below. */
+    // The rule omits `application`, the one role that means this widget takes its own keys.
     // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
     <div
       ref={pad}
-      /* `application`, because this widget handles its own arrow keys and there
-         is no role that means "two continuous values on a surface". Assistive
-         technology is not left with only this: the swatch grid underneath is a
-         complete set of labelled buttons covering every look the pad is for. */
+      // `application`, because no role means two continuous values on a surface.
       role="application"
       aria-roledescription="Colour pad"
       tabIndex={disabled ? -1 : 0}
@@ -214,9 +183,7 @@ export function ColourPad({
         disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer",
       )}
       style={{
-        /* The wash is the same maths `tintCss` applies, expressed as a gradient
-           — white at `WASH` alpha by `WHITE_EDGE` — so the thumb always sits on
-           the colour it is about to send. */
+        // The wash mirrors tintCss as a gradient, so the thumb sits on the colour it will send.
         backgroundImage: PAD_BACKGROUND,
       }}
     >
@@ -231,8 +198,7 @@ export function ColourPad({
 
       <span
         aria-hidden
-        /* Right-hand side: the thumb spends most of its life at the warm end of
-           the band, which is where this used to sit. */
+        // Right-hand side, because the thumb spends most of its life at the warm end.
         className="pointer-events-none absolute font-mono text-[9px] uppercase tracking-caps text-black/45"
         style={{ right: 9, bottom: 5 }}
       >
@@ -269,11 +235,7 @@ function hueRamp(steps = 48): string {
   return `linear-gradient(to right, ${stops.join(",")})`;
 }
 
-/* The pad re-renders on every pointer move while a drag is live, and neither
-   gradient depends on anything that changes mid-drag — so both are built once.
-   The wash is the same maths `tintCss` applies, expressed as a gradient —
-   white at `WASH` alpha by `WHITE_EDGE` — so the thumb always sits on the
-   colour it is about to send. */
+// Built once: neither gradient depends on anything that changes while a drag is live.
 const PAD_BACKGROUND = [
   `linear-gradient(to bottom, rgb(255 255 255 / 0) 0%, rgb(255 255 255 / ${WASH}) ${WHITE_EDGE * 100}%)`,
   hueRamp(),

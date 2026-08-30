@@ -1,9 +1,7 @@
 import { cn } from "@ava/ui";
 import { useId, type ComponentProps } from "react";
 
-// A boxed input would read as a form. At this size the text is the interface,
-// so the only chrome is a rule underneath that lights up when focused — in the
-// room's own colour, like everything else here.
+// The text is the interface, so the only chrome is a rule that lights on focus.
 export function BigField({
   label,
   error,

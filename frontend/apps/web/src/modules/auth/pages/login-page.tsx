@@ -7,7 +7,7 @@ import { isApiError } from "@/config/http/request";
 import { login } from "../api";
 import { AuthCard } from "../components/auth-card";
 import { FormError } from "../components/form-error";
-import { deviceName } from "../device";
+import { deviceName } from "../lib/device-name";
 import { SESSION_QUERY_KEY } from "../queries";
 
 export function LoginPage() {

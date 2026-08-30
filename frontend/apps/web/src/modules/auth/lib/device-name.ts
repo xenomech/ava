@@ -1,7 +1,6 @@
 import { detect } from "detect-browser";
 
-/* The user agent cannot change for the life of the page, so it is parsed at
-   most once however many login attempts there are. */
+// The user agent cannot change for the life of the page, so parse it once.
 let name: string | null = null;
 
 export function deviceName(): string {

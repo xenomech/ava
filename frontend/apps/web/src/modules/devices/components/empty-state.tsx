@@ -17,11 +17,7 @@ export function Missing({ title, detail }: { title: string; detail: string }) {
   );
 }
 
-/**
- * Rooms are the whole navigation now, so an account with none has nowhere for
- * `/` to land. Any devices already discovered are listed rather than hidden:
- * without this they would be reachable only by guessing a URL.
- */
+/** Where `/` lands with no rooms, listing loose devices that would otherwise be unreachable. */
 export function NoRooms({ devices }: { devices: { id: string; name: string }[] }) {
   return (
     <div className="grid min-h-full place-items-center p-6">

@@ -46,11 +46,7 @@ func Migrate(database *gorm.DB) error {
 		return err
 	}
 
-	/* Uniqueness has to mean "among the rows that still exist". A plain unique
-	   index counts soft deleted rows too, so a room you deleted went on owning
-	   its name for ever: recreating "Kitchen" came back as room_name_taken while
-	   no such room was visible anywhere. The same held for a membership you
-	   revoked, which could never be granted again. */
+	// Uniqueness has to mean "among the rows that still exist", so soft deleted rows must not hold a name.
 	for _, index := range []partialIndex{
 		{table: "rooms", name: "idx_room_tenant_name", columns: "tenant_id, name"},
 		{table: "tenant_memberships", name: "idx_membership_tenant_user", columns: "tenant_id, user_id"},
@@ -150,12 +146,7 @@ type partialIndex struct {
 	columns string
 }
 
-// onlyLiveRows makes a unique index ignore soft deleted rows.
-//
-// Rewritten rather than created alongside, because the whole point is that the
-// unconditional one has to stop existing. Checked first so a boot that has
-// nothing to do does nothing: dropping and recreating an index on every start
-// would take a lock on the table for no reason.
+// onlyLiveRows rewrites a unique index to ignore soft deleted rows, checking first to avoid a needless lock.
 func onlyLiveRows(database *gorm.DB, index partialIndex) error {
 	var definition string
 

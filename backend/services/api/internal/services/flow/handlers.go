@@ -58,10 +58,7 @@ func (h *homeStepHandler) Execute(ctx context.Context, tenantID, userID uuid.UUI
 	return err
 }
 
-// hubStepHandler does not pair anything. The client pairs through the hub
-// activation endpoint and then submits this step, so all that is left is to
-// confirm a hub actually arrived. Someone whose hardware has not shipped yet
-// skips the step instead.
+// hubStepHandler pairs nothing; the client pairs elsewhere, so this only confirms that a hub arrived.
 type hubStepHandler struct {
 	hubRepo hubrepo.Repository
 }

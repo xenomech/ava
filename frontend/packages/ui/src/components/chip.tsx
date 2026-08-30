@@ -28,8 +28,7 @@ const chip = cva(
   },
 );
 
-/* `selectable` is ChipToggle's half of the cva — exposing it here would let it
-   leak onto the <span> as an unknown DOM attribute. */
+// `selectable` is ChipToggle's half of the cva; exposing it would leak onto the span.
 export type ChipProps = ComponentProps<"span"> &
   Omit<VariantProps<typeof chip>, "selectable"> & { asChild?: boolean };
 

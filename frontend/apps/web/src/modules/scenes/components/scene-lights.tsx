@@ -1,18 +1,8 @@
 import { cn } from "@ava/ui";
 
-import { sceneColor, type ScenePreview } from "../capture";
+import { sceneColor, type ScenePreview } from "../lib/capture";
 
-/**
- * A scene drawn as the light it makes: one lamp per fixture, sized by
- * brightness, coloured by what that fixture will be, a bare ring for whatever
- * the scene leaves off.
- *
- * `live` means the room is doing this right now, and it is shown by lighting
- * the pane rather than by a badge. A scene that is running has its light on, so
- * the panel behind the lamps glows the way the room does behind the switch — no
- * legend, no coloured dot standing in for a sentence, and the same language the
- * plate already speaks two inches above it.
- */
+/** A scene drawn as the light it makes; `live` lights the pane rather than a badge. */
 export function SceneLights({
   preview,
   live,
@@ -31,11 +21,7 @@ export function SceneLights({
         "transition-[background-image] duration-500 ease-out",
         className,
       )}
-      /* `color-mix` rather than a hex alpha suffix. A scene's colour arrives as
-         `rgb(255 216 168)` from the warmth ramp and as `#rrggbb` from a colour
-         picker, and appending `2e` to the first produced invalid CSS — which
-         browsers drop silently, so the pane simply never lit and nothing said
-         why. */
+      // `color-mix`, not a hex alpha suffix: colours arrive as `rgb()` too.
       style={
         live && color !== "transparent"
           ? {
@@ -58,8 +44,7 @@ function Lamp({ entry }: { entry: ScenePreview }) {
     return <span aria-hidden className="size-2 rounded-full border border-off/70" />;
   }
 
-  /* Floored well above nothing, so a dim lamp still reads as a lamp rather than
-     as dust on the screen. */
+  // Floored well above nothing, so a dim lamp still reads as a lamp.
   const size = 6 + Math.round((Math.min(Math.max(entry.level, 0), 100) / 100) * 4);
 
   return (
@@ -70,7 +55,7 @@ function Lamp({ entry }: { entry: ScenePreview }) {
         width: size,
         height: size,
         background: entry.color,
-        /* Tight. A wide glow turns three lamps into one smudge at this size. */
+        // Tight. A wide glow turns three lamps into one smudge at this size.
         boxShadow: `0 0 5px -1px ${entry.color}`,
       }}
     />

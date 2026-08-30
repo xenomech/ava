@@ -87,10 +87,7 @@ func stateOf(t *testing.T, database *gorm.DB, externalID string) map[string]any 
 	return state
 }
 
-// A sweep describes a device as it was when discovery read it, and discovery
-// takes several seconds. If that reading is written over the stored one, a
-// stale snapshot undoes a change made in the meantime — the bulb ends up
-// holding the new colour while the app shows the old white.
+// A sweep carries a reading seconds old, so writing it over stored state would undo a newer change.
 func TestASweepDoesNotOverwriteWhatADeviceIsAlreadyDoing(t *testing.T) {
 	database := connect(t)
 	tenantID, hubID := scaffold(t, database)
@@ -124,8 +121,7 @@ func TestASweepDoesNotOverwriteWhatADeviceIsAlreadyDoing(t *testing.T) {
 	}
 }
 
-// The other half: a device nobody has seen before has nothing to protect, so
-// its first reading has to land.
+// A device nobody has seen before has nothing to protect, so its first reading has to land.
 func TestADeviceSeenForTheFirstTimeKeepsItsReading(t *testing.T) {
 	database := connect(t)
 	tenantID, hubID := scaffold(t, database)

@@ -93,10 +93,7 @@ func (s *deviceService) ApplyReportedState(
 	externalID string,
 	state wire.State,
 ) error {
-	/* A trait reported as null is a retraction, not a value. Storing it verbatim
-	   left `"color": null` sitting in the device's state, which is not something
-	   a trait can be — the web client validates every device in one request, so
-	   that single null made the whole house come back empty. */
+	// A trait reported as null is a retraction, not a value, so it must never be stored verbatim.
 	set, cleared := state.Settled()
 
 	patch, err := json.Marshal(set)

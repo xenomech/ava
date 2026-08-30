@@ -10,7 +10,7 @@ import {
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
-import { useDevices } from "@/modules/devices";
+import { useDevices } from "../hooks/use-devices";
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);

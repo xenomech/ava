@@ -11,8 +11,7 @@ type FieldContextValue = {
   invalid: boolean;
 };
 
-/* Controls rendered inside a Field pick up their id, description, and validity
-   from here — Input reads it directly, anything else goes through FieldControl. */
+// Controls inside a Field pick up their id, description, and validity from here.
 const FieldContext = createContext<FieldContextValue | null>(null);
 
 function useField() {
@@ -35,8 +34,7 @@ function Field({ label, error, hint, action, className, children }: FieldProps) 
   const id = useId();
   const errorId = `${id}-error`;
   const hintId = `${id}-hint`;
-  /* The hint paragraph is replaced by the error, so only ever point at the one
-     that is actually in the document. */
+  // The error replaces the hint, so only point at the one actually in the document.
   const describedBy = error ? errorId : hint ? hintId : undefined;
   const invalid = Boolean(error);
 
@@ -72,8 +70,7 @@ function Field({ label, error, hint, action, className, children }: FieldProps) 
   );
 }
 
-/** Marks its child as the field's control — for elements that don't read
-    FieldContext themselves, like a Radix SelectTrigger. */
+/** Marks its child as the field's control, for elements that don't read FieldContext. */
 function FieldControl({ children }: { children: ReactNode }) {
   const { id, describedBy, invalid } = useField();
   return (

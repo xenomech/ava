@@ -86,17 +86,7 @@ func (s *deviceService) MarkHubOffline(ctx context.Context, tenantID, hubID uuid
 	return nil
 }
 
-// announceList tells every client what a hub now holds, when that has changed.
-//
-// A hub sweeps every thirty seconds whether or not anything happened, and this
-// list replaces a client's whole view of that hub. Sending it unconditionally
-// meant twice a minute every open browser threw away its devices and rebuilt
-// them from the wire — including any change the person was in the middle of
-// making, which reverted under their hand.
-//
-// Sweeps are almost always identical, so comparing costs nothing and the
-// broadcast usually does not happen at all. Anything that did change still
-// arrives, and per-device state still flows through its own event.
+// announceList tells clients what a hub holds only when it changed, so identical sweeps do not reset them.
 func (s *deviceService) announceList(tenantID, hubID uuid.UUID, devices []*dto.DeviceResponse) {
 	if s.events == nil {
 		return

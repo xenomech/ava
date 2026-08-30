@@ -1,3 +1,7 @@
+export { CommandPalette } from "./components/command-palette";
+export { BESIDE, ROOM_HEIGHT, SHEET_SNAP } from "./constants";
+export { useDeviceEvents } from "./hooks/use-device-events";
+export { useApplyTargets, useDeviceControl, useDevices, useRoomPower } from "./hooks/use-devices";
+export { deviceColor, deviceKind, deviceLabel, deviceLevel } from "./lib/device-view";
 export { deviceQueries } from "./queries";
-export { reconcile, reconcileAll, release } from "./optimistic";
-export { useApplyTargets, useDeviceControl, useDevices, useRoomPower } from "./use-devices";
+export { NoDevices, NoRooms } from "./components/empty-state";

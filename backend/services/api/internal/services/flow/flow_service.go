@@ -26,11 +26,7 @@ func (s *flowService) GetFlow(ctx context.Context, tenantID, userID uuid.UUID, f
 		return nil, err
 	}
 
-	// Steps are copied into the database when the flow is created, so changing a
-	// definition leaves anyone mid-flow holding steps the app can no longer
-	// render. Re-cut those steps against the current definition. A finished flow
-	// is left exactly as it is — the record that this person completed onboarding
-	// is the point of keeping it.
+	// Stored steps go stale when a definition changes, so re-cut them; a finished flow is left as the record.
 	if flow.Status != model.FlowStatusCompleted && !matchesDefinition(flow, flowType) {
 		return s.rebuildFlow(ctx, tenantID, flow, flowType)
 	}
@@ -38,8 +34,7 @@ func (s *flowService) GetFlow(ctx context.Context, tenantID, userID uuid.UUID, f
 	return toFlowStateResponse(flow), nil
 }
 
-// rebuildFlow re-cuts an unfinished flow against the current definition, keeping
-// the flow row and losing only the answers to steps that no longer exist.
+// rebuildFlow re-cuts an unfinished flow against the current definition, keeping the flow row itself.
 func (s *flowService) rebuildFlow(ctx context.Context, tenantID uuid.UUID, flow *model.Flow, flowType string) (*dto.FlowStateResponse, error) {
 	def, err := GetDefinition(flowType)
 	if err != nil || len(def.Steps) == 0 {
@@ -69,8 +64,7 @@ func (s *flowService) rebuildFlow(ctx context.Context, tenantID uuid.UUID, flow 
 	return toFlowStateResponse(flow), nil
 }
 
-// matchesDefinition reports whether a stored flow still has exactly the steps
-// the registry describes, in the same order.
+// matchesDefinition reports whether a stored flow still has exactly the registry's steps, in the same order.
 func matchesDefinition(flow *model.Flow, flowType string) bool {
 	def, err := GetDefinition(flowType)
 	if err != nil {

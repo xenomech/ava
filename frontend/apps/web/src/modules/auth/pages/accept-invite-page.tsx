@@ -13,9 +13,7 @@ export function AcceptInvitePage() {
   const attempt = useMutation({ mutationFn: (value: string) => acceptInvite(value) });
   const { mutate } = attempt;
 
-  /* The token is single-use, so it must be sent exactly once — an effect alone
-     fires twice under StrictMode, and the second attempt turns an accepted
-     invite into an "already used" error screen. */
+  // The token is single-use, and an effect alone fires twice under StrictMode.
   const consumed = useRef<string | null>(null);
 
   useEffect(() => {

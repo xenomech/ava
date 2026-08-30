@@ -246,13 +246,7 @@ func (s State) Get(trait Trait) (Value, bool) {
 	return value, ok && value.IsSet()
 }
 
-// Settled separates what the device is reporting a value for from what it is
-// reporting as no longer applicable.
-//
-// A null trait is not a value — it is the device saying the trait has stopped
-// meaning anything, which is what a bulb does to color_temp the moment it is
-// given a colour. Both halves matter: storing the null keeps a key that is not
-// a value, and ignoring it keeps the stale reading it was sent to retire.
+// Settled splits traits the device reports a value for from ones it reports as no longer applicable.
 func (s State) Settled() (set State, cleared []Trait) {
 	set = make(State, len(s))
 

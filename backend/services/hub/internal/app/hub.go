@@ -22,8 +22,7 @@ const departTimeout = 2 * time.Second
 type App struct {
 	cfg    *config.Config
 	client *api.Client
-	// stateMu guards state, which the token loop replaces and the broker client
-	// reads from its own goroutine every time it dials.
+	// stateMu guards state, which the token loop replaces while the broker client reads it when dialling.
 	stateMu  sync.RWMutex
 	state    *state.State
 	devices  *registry
@@ -32,14 +31,7 @@ type App struct {
 	topics   wire.Topics
 }
 
-// brokerCredentials is what the hub currently believes its broker login to be.
-//
-// Handed to the client as a function rather than a value so a rotation picked
-// up by the token loop reaches the next connection attempt. The API issues a
-// fresh broker password every time it refreshes the hub's token, and for as
-// long as this was read once at startup the hub spent the rest of its life
-// presenting the password it was born with: online over HTTP, refused by the
-// broker, and silent about both.
+// brokerCredentials is read on each dial so a rotation picked up by the token loop reaches the broker.
 func (a *App) brokerCredentials() (username, password string) {
 	a.stateMu.RLock()
 	defer a.stateMu.RUnlock()
@@ -230,9 +222,7 @@ func (a *App) persist(tokens *api.HubTokens) error {
 
 	a.stateMu.Unlock()
 
-	/* Worth a line of its own. A rotation is the moment the broker stops
-	   accepting the connection the hub is holding, so it is the first thing to
-	   look for when commands stop arriving. */
+	// Worth a line of its own: a rotation is the first thing to look for when commands stop arriving.
 	if rotated {
 		logger.Info("BROKER_CREDENTIALS_ROTATED", logger.String("username", next.BrokerUsername))
 	}
@@ -253,12 +243,7 @@ func (a *App) heartbeatLoop(ctx context.Context, tokens *api.HubTokens) error {
 			logger.Warn("HEARTBEAT_FAILED", logger.String("error", err.Error()))
 		}
 
-		/* Said out loud on every beat, because the hub is perfectly capable of
-		   looking healthy while being deaf. Heartbeats and device syncs are
-		   HTTP and keep succeeding; commands arrive over the broker and do not.
-		   Nothing else in the system notices the difference — the library is
-		   silent about a refused reconnect, and the API's publish succeeds
-		   whether or not anyone is subscribed. */
+		// Said on every beat, because HTTP staying up says nothing about the broker and nothing else notices.
 		if a.mqtt != nil && !connected {
 			logger.Warn("COMMAND_CHANNEL_DOWN",
 				logger.String("broker", a.cfg.MQTTBrokerURL),

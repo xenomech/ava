@@ -5,9 +5,9 @@ import { toast } from "sonner";
 
 import { isApiError } from "@/config/http/request";
 import { useApplyTargets } from "@/modules/devices";
-import { createScene, deleteScene } from "./api";
-import { armScene, armedScene } from "./armed";
-import { sceneQueries } from "./queries";
+import { createScene, deleteScene } from "../api";
+import { armScene, armedScene } from "../lib/armed";
+import { sceneQueries } from "../queries";
 
 function reason(error: unknown, fallback: string) {
   return isApiError(error) ? error.message : fallback;
@@ -19,13 +19,7 @@ export function useScenes(roomId: string) {
   return { scenes: query.data ?? [], isPending: query.isPending };
 }
 
-/**
- * Which scene the room's switch is pointed at, and how to change it.
- *
- * The stored id is checked against the scenes that still exist rather than
- * trusted, so a scene deleted on another device leaves the switch back at "all
- * on" instead of pointed at nothing.
- */
+/** Which scene the switch is pointed at; a deleted id falls back to "all on". */
 export function useArmedScene(roomId: string, scenes: SceneDto[]) {
   const [chosen, setChosen] = useState(() => armedScene(roomId));
 
@@ -77,13 +71,7 @@ export function useSceneActions(roomId: string) {
   return { save, remove };
 }
 
-/**
- * Play a scene back.
- *
- * The saved targets go straight through the ordinary batch apply, so a scene
- * behaves exactly like flicking the switch — same optimistic update, same
- * report of anything the hub refused.
- */
+/** Play a scene back through the ordinary batch apply, like flicking the switch. */
 export function useApplyScene() {
   const apply = useApplyTargets();
 

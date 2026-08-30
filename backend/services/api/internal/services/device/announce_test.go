@@ -8,9 +8,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// A hub sweeps every thirty seconds whether or not anything happened, and this
-// list replaces a client's whole view of that hub. Repeating an identical one
-// is pure interference.
+// A sweep replaces a client's whole view of a hub, so repeating an identical one is pure interference.
 func TestAnUnchangedSweepIsNotBroadcast(t *testing.T) {
 	service := &deviceService{}
 	hub := uuid.New()
