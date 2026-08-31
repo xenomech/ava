@@ -2,6 +2,7 @@ package scene
 
 import (
 	"context"
+	"errors"
 
 	"ava/api/internal/model"
 
@@ -19,6 +20,28 @@ func (r *sceneRepository) ListByRoom(ctx context.Context, tenantID, roomID uuid.
 		Find(&scenes).Error
 
 	return scenes, err
+}
+
+// GetByID loads one scene with its targets, scoped to the tenant and room that own it.
+func (r *sceneRepository) GetByID(
+	ctx context.Context,
+	tenantID, roomID, sceneID uuid.UUID,
+) (*model.Scene, error) {
+	var scene model.Scene
+
+	err := r.db.WithContext(ctx).
+		Preload("Targets").
+		Where("tenant_id = ? AND room_id = ? AND id = ?", tenantID, roomID, sceneID).
+		First(&scene).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrSceneNotFound
+		}
+
+		return nil, err
+	}
+
+	return &scene, nil
 }
 
 // Create writes the scene and its targets together, so a scene never exists with half of the room in it.

@@ -2,6 +2,7 @@ package scene
 
 import (
 	"ava/api/internal/dto"
+	devicesvc "ava/api/internal/services/device"
 	scenesvc "ava/api/internal/services/scene"
 	"ava/api/pkg/response"
 	"ava/api/pkg/serrors"
@@ -74,6 +75,26 @@ func (c *Controller) Delete(ctx *fiber.Ctx) error {
 	return response.Send(ctx, fiber.StatusNoContent, nil, "")
 }
 
+// Apply replays a saved scene, so a client can name a scene instead of rebuilding its writes.
+func (c *Controller) Apply(ctx *fiber.Ctx) error {
+	tenantID, roomID, err := c.scope(ctx)
+	if err != nil {
+		return err
+	}
+
+	sceneID, parseErr := uuid.Parse(ctx.Params("sceneID"))
+	if parseErr != nil {
+		return response.Send(ctx, fiber.StatusBadRequest, nil, "Invalid scene id")
+	}
+
+	applied, err := c.sceneService.Apply(ctx.Context(), tenantID, roomID, sceneID)
+	if err != nil {
+		return c.fail(ctx, err, "Failed to apply the scene")
+	}
+
+	return response.Send(ctx, fiber.StatusOK, applied, "")
+}
+
 // scope reads the two identifiers every route here needs, answering the request itself if either is missing.
 func (c *Controller) scope(ctx *fiber.Ctx) (tenantID, roomID uuid.UUID, err error) {
 	tenantID, ok := ctx.Locals("tenantID").(uuid.UUID)
@@ -95,8 +116,14 @@ func (c *Controller) fail(ctx *fiber.Ctx, err error, fallback string) error {
 		return response.SendError(ctx, fiber.StatusNotFound, err)
 	case serrors.Is(err, scenesvc.ErrNameTaken):
 		return response.SendError(ctx, fiber.StatusConflict, err)
-	case serrors.Is(err, scenesvc.ErrNameRequired), serrors.Is(err, scenesvc.ErrNothingToSave):
+	case serrors.Is(err, scenesvc.ErrNameRequired),
+		serrors.Is(err, scenesvc.ErrNothingToSave),
+		serrors.Is(err, scenesvc.ErrNothingToApply),
+		serrors.Is(err, devicesvc.ErrNothingToApply):
 		return response.SendError(ctx, fiber.StatusUnprocessableEntity, err)
+	// Applying goes through the device layer, so its failures must survive rather than become a 500.
+	case serrors.Is(err, devicesvc.ErrCommandChannelUnavailable):
+		return response.SendError(ctx, fiber.StatusServiceUnavailable, err)
 	default:
 		return response.Send(ctx, fiber.StatusInternalServerError, nil, fallback)
 	}

@@ -42,7 +42,7 @@ func NewService(repo *repository.Repository, commander devicesvc.Commander, prov
 		Tenant:   tenantService,
 		Flow:     flowsvc.NewService(repo.Flow, tenantService, repo.Membership, repo.Hub),
 		Room:     roomsvc.NewService(repo.Room),
-		Scene:    scenesvc.NewService(repo.Scene, repo.Room),
+		Scene:    scenesvc.NewService(repo.Scene, repo.Room, deviceService),
 		Hub:      hubsvc.NewService(repo.Hub, repo.Tenant, eventService, deviceService, provisioner),
 		Device:   deviceService,
 		Event:    eventService,
