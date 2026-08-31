@@ -1,6 +1,7 @@
 package controller
 
 import (
+	apitokenctrl "ava/api/internal/controller/apitoken"
 	authctrl "ava/api/internal/controller/auth"
 	devicectrl "ava/api/internal/controller/device"
 	flowctrl "ava/api/internal/controller/flow"
@@ -14,27 +15,29 @@ import (
 )
 
 type Controller struct {
-	Auth   *authctrl.Controller
-	Tenant *tenantctrl.Controller
-	Flow   *flowctrl.Controller
-	Room   *roomctrl.Controller
-	Scene  *scenectrl.Controller
-	Hub    *hubctrl.Controller
-	Device *devicectrl.Controller
-	Socket *socketctrl.Controller
-	Health *healthctrl.Controller
+	APIToken *apitokenctrl.Controller
+	Auth     *authctrl.Controller
+	Tenant   *tenantctrl.Controller
+	Flow     *flowctrl.Controller
+	Room     *roomctrl.Controller
+	Scene    *scenectrl.Controller
+	Hub      *hubctrl.Controller
+	Device   *devicectrl.Controller
+	Socket   *socketctrl.Controller
+	Health   *healthctrl.Controller
 }
 
 func NewController(service *services.Service) *Controller {
 	return &Controller{
-		Auth:   authctrl.NewController(service.Auth),
-		Tenant: tenantctrl.NewController(service.Tenant),
-		Flow:   flowctrl.NewController(service.Flow),
-		Room:   roomctrl.NewController(service.Room),
-		Scene:  scenectrl.NewController(service.Scene),
-		Hub:    hubctrl.NewController(service.Hub),
-		Device: devicectrl.NewController(service.Device),
-		Socket: socketctrl.NewController(service.Event, service.Device),
-		Health: healthctrl.NewController(service.Health),
+		APIToken: apitokenctrl.NewController(service.APIToken),
+		Auth:     authctrl.NewController(service.Auth),
+		Tenant:   tenantctrl.NewController(service.Tenant),
+		Flow:     flowctrl.NewController(service.Flow),
+		Room:     roomctrl.NewController(service.Room),
+		Scene:    scenectrl.NewController(service.Scene),
+		Hub:      hubctrl.NewController(service.Hub),
+		Device:   devicectrl.NewController(service.Device),
+		Socket:   socketctrl.NewController(service.Event, service.Device),
+		Health:   healthctrl.NewController(service.Health),
 	}
 }

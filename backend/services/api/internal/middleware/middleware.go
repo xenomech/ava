@@ -13,13 +13,19 @@ import (
 type Middleware struct {
 	ValidateAccessToken fiber.Handler
 	ValidateHubToken    fiber.Handler
-	RequestTrace        fiber.Handler
+	// Authenticated accepts a session or a personal access token; prefer it on tenant routes.
+	Authenticated fiber.Handler
+	RequestTrace  fiber.Handler
 }
 
 func NewMiddleware(service *services.Service) *Middleware {
+	sessions := ValidateAccessToken(service.Auth)
+	tokens := ValidateAPIToken(service.APIToken)
+
 	return &Middleware{
-		ValidateAccessToken: ValidateAccessToken(service.Auth),
+		ValidateAccessToken: sessions,
 		ValidateHubToken:    ValidateHubToken(service.Hub),
+		Authenticated:       Authenticated(sessions, tokens),
 		RequestTrace:        requestTrace(),
 	}
 }
