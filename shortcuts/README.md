@@ -1,54 +1,64 @@
 # Ava shortcuts
 
-Apple Shortcuts that drive Ava from Siri. Each is a single HTTP request authenticated by a
-personal access token, so there is no login step and no password on your phone.
+Eight shortcuts that drive Ava from Siri, one per action. Each is plain HTTP requests
+authenticated by a personal access token, so there is no login step and no password on
+your phone.
 
-## Getting a token
+| Shortcut | What it does |
+| --- | --- |
+| Ava · List devices | Prints your devices, so you can copy their ids. Run this first. |
+| Ava · List scenes | Prints a room's scenes and the targets they hold. |
+| Ava · Light on | Powers one device on. |
+| Ava · Light off | Powers one device off. |
+| Ava · Brightness 50 | Sets one device to 50%. Duplicate it for other levels. |
+| Ava · Room on | Powers three devices on, one request each. |
+| Ava · Room off | Powers three devices off. |
+| Ava · Scene | Sets warmth and brightness across two devices. |
 
-Creating a token needs a signed-in session, which is deliberate: a token cannot mint another
-token, so revoking the one you know about is enough.
+## Setting up
 
-From a terminal, sign in and keep the session cookie, then create the token with it:
+**1. Make a token.** In the app, Settings → Tokens. Give it `Devices · view` and
+`Devices · change`; add `Scenes · view` if you want *List scenes* to work. Copy the value
+— it is shown once.
 
-```sh
-curl -c ava.cookies -X POST https://api-stage-df53.up.railway.app/api/v1/auth/login \
-  -H 'Content-Type: application/json' \
-  -d '{"email":"you@example.com","password":"..."}'
+**2. Import the signed files** from `signed/`. They are signed with Apple's own tool, so
+they import normally, with no untrusted-shortcuts toggle.
 
-curl -b ava.cookies -X POST https://api-stage-df53.up.railway.app/api/v1/tokens \
-  -H 'Content-Type: application/json' \
-  -d '{"name":"Siri","scopes":["devices:read","devices:write"]}'
-```
+**3. Fill in the blanks.** Every shortcut has placeholders to replace:
 
-The response carries `value` — the only time the token is ever shown. Delete `ava.cookies`
-afterwards. Give the token the narrowest scopes that work: `devices:read` and `devices:write` are
-enough for lights and scenes. `GET /api/v1/tokens/scopes` lists them all.
+- `ava_pat_PASTE_YOUR_TOKEN_HERE` in the Authorization header
+- `PASTE_DEVICE_UUID`, or `PASTE_DEVICE_1_UUID` and friends, in the URL
+- `PASTE_ROOM_UUID` in *List scenes*
 
-Add `"expires_in_days": 90` to have it expire on its own. Revoke with
-`POST /api/v1/tokens/{id}/revoke`, which keeps the record, or `DELETE /api/v1/tokens/{id}` to
-remove it entirely.
+Run *Ava · List devices* first: it prints the ids everything else needs. Set up one
+shortcut fully, then duplicate it for the others so the token is pasted once.
 
-## Using these files
+**4. Put them in a folder.** Shortcuts folders are not part of the file, so make one
+called Ava in the app and drag them in. The `Ava · ` prefix keeps them together in lists
+either way.
 
-The signed files in `signed/` import without enabling untrusted shortcuts. After importing, edit
-the one action and replace:
+Rename each shortcut to whatever you want to say. Siri uses the name, so "Kitchen on"
+beats "Ava · Light on".
 
-- `ava_pat_PASTE_YOUR_TOKEN_HERE` with your token
-- `PASTE_DEVICE_UUID` with a device id from `GET /api/v1/devices`
+## Notes
 
-Rename the shortcut to whatever you want to say, and Siri picks it up.
+**A room is several requests, not one.** There is a batch endpoint, `/devices/apply`,
+but its `targets` field is an array, and a Shortcuts JSON body field sends text as a
+string — which the API rejects. One request per device avoids the problem entirely and
+keeps every action the same simple shape.
 
-## Building one by hand
+**A scene is written out, not referenced.** These shortcuts set the traits directly
+rather than reading a saved scene, because reading one means fetching a list and picking
+from it. If you edit the scene in the app, update the shortcut to match — or use
+*List scenes* to see the current targets.
 
-One **Get Contents of URL** action is the whole shortcut:
+**Types matter.** `power` is a Boolean, `brightness` and `color_temp` are Numbers. If you
+add a field by hand, set the type in the JSON body editor rather than leaving it as text.
 
-- URL: `https://api-stage-df53.up.railway.app/api/v1/devices/<device id>/command`
-- Method: **POST**
+**Building one by hand** is a single action, if you would rather not import anything:
+
+- **Get Contents of URL**
+- URL `https://api-stage-df53.up.railway.app/api/v1/devices/<device id>/command`
+- Method **POST**
 - Headers: `Authorization` = `Bearer ava_pat_...`
-- Request Body: **JSON**, `trait` (Text) = `power`, `value` (**Boolean**) = true or false
-
-`value` must be a Boolean, not the text "true" — the API's trait validation rejects a string.
-
-For a scene, GET `/api/v1/rooms/<room id>/scenes`, take the scene's `targets`, and POST them as
-`{"targets": [...]}` to `/api/v1/devices/apply`. A scene describes a room that is on; to turn a
-room off, apply `power: false` targets instead.
+- Request Body **JSON**: `trait` (Text) = `power`, `value` (**Boolean**) = true
