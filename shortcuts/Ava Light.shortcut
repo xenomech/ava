@@ -13,7 +13,7 @@
 			<dict>
 				<key>WFCommentActionText</key>
 				<string>SET THESE THREE, then delete this comment.
-1. API - your Ava base URL, no trailing slash, e.g. https://web-stage-8e5b.up.railway.app
+1. API - your Ava base URL, no trailing slash, e.g. https://api-stage-df53.up.railway.app
 2. RefreshToken - see the README section 'Getting a refresh token'
 3. Further down, the Room ID / Device ID.</string>
 			</dict>
@@ -24,7 +24,7 @@
 			<key>WFWorkflowActionParameters</key>
 			<dict>
 				<key>WFTextActionText</key>
-				<string>https://web-stage-8e5b.up.railway.app</string>
+				<string>https://api-stage-df53.up.railway.app</string>
 			</dict>
 		</dict>
 		<dict>
@@ -69,7 +69,7 @@
 			<key>WFWorkflowActionParameters</key>
 			<dict>
 				<key>UUID</key>
-				<string>30A22877-370D-44A3-85DF-B98F89D4CB78</string>
+				<string>3F897F58-211C-4360-B7E2-0A4E42B4EAA9</string>
 				<key>WFHTTPBodyType</key>
 				<string>JSON</string>
 				<key>WFHTTPHeaders</key>
@@ -188,7 +188,7 @@
 			<key>WFWorkflowActionParameters</key>
 			<dict>
 				<key>UUID</key>
-				<string>31FF2621-E98D-40D5-9850-46AC64CB2214</string>
+				<string>F9007636-7B81-423B-AC18-C840E07FDA3B</string>
 				<key>WFDictionaryKey</key>
 				<string>data.access_token</string>
 				<key>WFInput</key>
@@ -198,7 +198,7 @@
 						<key>OutputName</key>
 						<string>Contents of URL</string>
 						<key>OutputUUID</key>
-						<string>30A22877-370D-44A3-85DF-B98F89D4CB78</string>
+						<string>3F897F58-211C-4360-B7E2-0A4E42B4EAA9</string>
 						<key>Type</key>
 						<string>ActionOutput</string>
 					</dict>
