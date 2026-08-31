@@ -62,7 +62,7 @@
 									<key>Value</key>
 									<dict>
 										<key>string</key>
-										<string>trait</string>
+										<string>targets</string>
 									</dict>
 									<key>WFSerializationType</key>
 									<string>WFTextTokenString</string>
@@ -72,27 +72,11 @@
 									<key>Value</key>
 									<dict>
 										<key>string</key>
-										<string>power</string>
+										<string>[{"device_id":"PASTE_DEVICE_UUID","trait":"power","value":true}]</string>
 									</dict>
 									<key>WFSerializationType</key>
 									<string>WFTextTokenString</string>
 								</dict>
-							</dict>
-							<dict>
-								<key>WFItemType</key>
-								<integer>4</integer>
-								<key>WFKey</key>
-								<dict>
-									<key>Value</key>
-									<dict>
-										<key>string</key>
-										<string>value</string>
-									</dict>
-									<key>WFSerializationType</key>
-									<string>WFTextTokenString</string>
-								</dict>
-								<key>WFValue</key>
-								<true/>
 							</dict>
 						</array>
 					</dict>
@@ -104,7 +88,7 @@
 					<key>Value</key>
 					<dict>
 						<key>string</key>
-						<string>https://api-stage-df53.up.railway.app/api/v1/devices/PASTE_DEVICE_UUID/command</string>
+						<string>https://api-stage-df53.up.railway.app/api/v1/devices/apply</string>
 					</dict>
 					<key>WFSerializationType</key>
 					<string>WFTextTokenString</string>
