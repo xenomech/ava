@@ -64,11 +64,6 @@ func (c *Controller) Login(ctx *fiber.Ctx) error {
 		return response.Send(ctx, fiber.StatusInternalServerError, nil, "Failed to login")
 	}
 
-	// Credentials were just proved, so a client that asked to hold its own tokens may have them.
-	if wantsBodyTokens(ctx) {
-		return response.Send(ctx, fiber.StatusOK, authResponse, "")
-	}
-
 	setSessionCookies(ctx, authResponse.Tokens)
 
 	authResponse.Tokens = redactTokens(authResponse.Tokens)
@@ -81,9 +76,6 @@ func (c *Controller) RefreshToken(ctx *fiber.Ctx) error {
 	_ = ctx.BodyParser(&req)
 
 	refreshToken := ctx.Cookies(RefreshCookie)
-	// Whether the caller proved it already holds the token rather than riding the cookie.
-	holdsToken := refreshToken == "" && req.RefreshToken != ""
-
 	if refreshToken == "" {
 		refreshToken = req.RefreshToken
 	}
@@ -106,12 +98,6 @@ func (c *Controller) RefreshToken(ctx *fiber.Ctx) error {
 		clearSessionCookies(ctx)
 
 		return response.Send(ctx, fiber.StatusInternalServerError, nil, "Failed to refresh token")
-	}
-
-	// Only for a caller holding the token already: an XSS riding the cookie must not be able to
-	// trade it for a readable refresh token.
-	if holdsToken && wantsBodyTokens(ctx) {
-		return response.Send(ctx, fiber.StatusOK, tokens, "")
 	}
 
 	setSessionCookies(ctx, tokens)

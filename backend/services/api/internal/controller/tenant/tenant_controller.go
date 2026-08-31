@@ -2,6 +2,7 @@ package tenant
 
 import (
 	"ava/api/internal/dto"
+	"ava/api/internal/middleware"
 	tenantsvc "ava/api/internal/services/tenant"
 	"ava/api/pkg/response"
 	"ava/api/pkg/serrors"
@@ -12,7 +13,7 @@ import (
 )
 
 func (c *Controller) Create(ctx *fiber.Ctx) error {
-	_, userID, ok := actor(ctx)
+	_, userID, ok := middleware.Actor(ctx)
 	if !ok {
 		return response.Send(ctx, fiber.StatusUnauthorized, nil, "Unauthorized")
 	}
@@ -42,7 +43,7 @@ func (c *Controller) Create(ctx *fiber.Ctx) error {
 }
 
 func (c *Controller) ListMine(ctx *fiber.Ctx) error {
-	_, userID, ok := actor(ctx)
+	_, userID, ok := middleware.Actor(ctx)
 	if !ok {
 		return response.Send(ctx, fiber.StatusUnauthorized, nil, "Unauthorized")
 	}
@@ -56,7 +57,7 @@ func (c *Controller) ListMine(ctx *fiber.Ctx) error {
 }
 
 func (c *Controller) Get(ctx *fiber.Ctx) error {
-	tenantID, _, ok := actor(ctx)
+	tenantID, _, ok := middleware.Actor(ctx)
 	if !ok {
 		return response.Send(ctx, fiber.StatusUnauthorized, nil, "Unauthorized")
 	}
@@ -74,7 +75,7 @@ func (c *Controller) Get(ctx *fiber.Ctx) error {
 }
 
 func (c *Controller) Update(ctx *fiber.Ctx) error {
-	tenantID, _, ok := actor(ctx)
+	tenantID, _, ok := middleware.Actor(ctx)
 	if !ok {
 		return response.Send(ctx, fiber.StatusUnauthorized, nil, "Unauthorized")
 	}
@@ -101,7 +102,7 @@ func (c *Controller) Update(ctx *fiber.Ctx) error {
 }
 
 func (c *Controller) ListMembers(ctx *fiber.Ctx) error {
-	tenantID, _, ok := actor(ctx)
+	tenantID, _, ok := middleware.Actor(ctx)
 	if !ok {
 		return response.Send(ctx, fiber.StatusUnauthorized, nil, "Unauthorized")
 	}
@@ -115,7 +116,7 @@ func (c *Controller) ListMembers(ctx *fiber.Ctx) error {
 }
 
 func (c *Controller) UpdateMemberRole(ctx *fiber.Ctx) error {
-	tenantID, _, ok := actor(ctx)
+	tenantID, _, ok := middleware.Actor(ctx)
 	if !ok {
 		return response.Send(ctx, fiber.StatusUnauthorized, nil, "Unauthorized")
 	}
@@ -151,7 +152,7 @@ func (c *Controller) UpdateMemberRole(ctx *fiber.Ctx) error {
 }
 
 func (c *Controller) RemoveMember(ctx *fiber.Ctx) error {
-	tenantID, _, ok := actor(ctx)
+	tenantID, _, ok := middleware.Actor(ctx)
 	if !ok {
 		return response.Send(ctx, fiber.StatusUnauthorized, nil, "Unauthorized")
 	}
@@ -176,7 +177,7 @@ func (c *Controller) RemoveMember(ctx *fiber.Ctx) error {
 }
 
 func (c *Controller) Invite(ctx *fiber.Ctx) error {
-	tenantID, userID, ok := actor(ctx)
+	tenantID, userID, ok := middleware.Actor(ctx)
 	if !ok {
 		return response.Send(ctx, fiber.StatusUnauthorized, nil, "Unauthorized")
 	}
