@@ -16,6 +16,14 @@ func sceneRoutes(router fiber.Router, controller *scenectrl.Controller, mw *midd
 		middleware.RequireScope(model.ScopeScenesWrite),
 		controller.Create,
 	)
+	// Applying reads the scene and writes the devices, so it needs a scope for each.
+	router.Post(
+		"/:sceneID/apply",
+		mw.Authenticated,
+		middleware.RequireScope(model.ScopeScenesRead),
+		middleware.RequireScope(model.ScopeDevicesWrite),
+		controller.Apply,
+	)
 	router.Delete(
 		"/:sceneID",
 		mw.Authenticated,
