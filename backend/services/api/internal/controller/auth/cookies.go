@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"strings"
 	"time"
 
 	"ava/api/config"
@@ -16,7 +17,16 @@ const (
 
 	accessCookiePath  = "/api/v1"
 	refreshCookiePath = "/api/v1/auth"
+
+	// Sent by clients that are not browsers and hold their own tokens, e.g. Apple Shortcuts.
+	TokenDeliveryHeader = "X-Token-Delivery"
+	tokenDeliveryBody   = "body"
 )
+
+// wantsBodyTokens reports whether the caller asked to be handed its tokens rather than cookies.
+func wantsBodyTokens(ctx *fiber.Ctx) bool {
+	return strings.EqualFold(ctx.Get(TokenDeliveryHeader), tokenDeliveryBody)
+}
 
 func setSessionCookies(ctx *fiber.Ctx, tokens *dto.TokenResponse) {
 	if tokens == nil {
