@@ -7,12 +7,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-/*
-Token management is session-only on purpose.
-
-A token that could mint another token would make revocation meaningless: revoke the one you know
-about and the token it quietly created still works.
-*/
+// Session-only: a token that could mint another token would make revocation meaningless.
 func apiTokenRoutes(
 	router fiber.Router,
 	controller *apitokenctrl.Controller,

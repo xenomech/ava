@@ -95,12 +95,7 @@ func (s *apiTokenService) Delete(ctx context.Context, tenantID, userID, tokenID 
 	return err
 }
 
-/*
-Authenticate resolves a presented token.
-
-Every failure returns the same error to the caller. Telling a probe whether the lookup existed,
-whether the secret was wrong, or whether the token was merely revoked would map out valid tokens.
-*/
+// Authenticate resolves a token; every failure returns one error so a probe cannot map valid tokens.
 func (s *apiTokenService) Authenticate(ctx context.Context, presented string) (*Authenticated, error) {
 	lookup, secret, ok := model.SplitToken(presented)
 	if !ok {

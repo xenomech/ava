@@ -4,11 +4,8 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/subtle"
-	"database/sql/driver"
 	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
-	"errors"
 	"strings"
 	"time"
 
@@ -19,80 +16,7 @@ import (
 // TokenPrefix marks a personal access token so the middleware can tell one from a session JWT.
 const TokenPrefix = "ava_pat_"
 
-// Scope is one permission a token may carry; a session always behaves as if it held every scope.
-type Scope string
-
-const (
-	ScopeDevicesRead  Scope = "devices:read"
-	ScopeDevicesWrite Scope = "devices:write"
-	ScopeRoomsRead    Scope = "rooms:read"
-	ScopeRoomsWrite   Scope = "rooms:write"
-	ScopeScenesRead   Scope = "scenes:read"
-	ScopeScenesWrite  Scope = "scenes:write"
-	ScopeHubsRead     Scope = "hubs:read"
-	ScopeHubsWrite    Scope = "hubs:write"
-)
-
-// AllScopes is every scope a token may be granted, in the order they are shown.
-var AllScopes = []Scope{
-	ScopeDevicesRead,
-	ScopeDevicesWrite,
-	ScopeRoomsRead,
-	ScopeRoomsWrite,
-	ScopeScenesRead,
-	ScopeScenesWrite,
-	ScopeHubsRead,
-	ScopeHubsWrite,
-}
-
-// Scopes is the granted set, stored as jsonb so it needs no array driver.
-type Scopes []string
-
-func (scopes *Scopes) Scan(value any) error {
-	if value == nil {
-		*scopes = nil
-
-		return nil
-	}
-
-	switch raw := value.(type) {
-	case []byte:
-		return json.Unmarshal(raw, scopes)
-	case string:
-		return json.Unmarshal([]byte(raw), scopes)
-	default:
-		return errors.New("scopes: unsupported database value")
-	}
-}
-
-func (scopes Scopes) Value() (driver.Value, error) {
-	if scopes == nil {
-		return "[]", nil
-	}
-
-	encoded, err := json.Marshal([]string(scopes))
-
-	return string(encoded), err
-}
-
-// ValidScope reports whether the string names a scope this server knows.
-func ValidScope(candidate string) bool {
-	for _, scope := range AllScopes {
-		if string(scope) == candidate {
-			return true
-		}
-	}
-
-	return false
-}
-
-/*
-APIToken is a long-lived credential for a machine client: a Shortcut, a script, a home panel.
-
-Deliberately not a session. Sessions rotate their refresh token on every use, which is right for a
-browser and useless for a client that cannot store the new one. A token here is created once,
-carries only the scopes it was given, and is revoked rather than rotated.
-*/
+// APIToken is a machine client's credential: issued once, scoped, and revoked rather than rotated.
 type APIToken struct {
 	BaseModel
 	TenantID uuid.UUID `gorm:"type:uuid;not null;index:idx_api_token_tenant_user" json:"tenant_id"`
@@ -127,13 +51,7 @@ func (token *APIToken) Active() bool {
 
 // HasScope reports whether the token was granted this permission.
 func (token *APIToken) HasScope(wanted Scope) bool {
-	for _, held := range token.Scopes {
-		if held == string(wanted) {
-			return true
-		}
-	}
-
-	return false
+	return token.Scopes.Has(wanted)
 }
 
 // MatchesSecret compares in constant time, so a wrong guess cannot be timed against a right one.
@@ -151,8 +69,7 @@ func NewAPIToken(
 	scopes []Scope,
 	expiresAt *time.Time,
 ) (*APIToken, string, error) {
-	// Hex, not base64: the underscore separating the halves is in the base64url alphabet, so a
-	// base64 lookup would sometimes contain the delimiter and split in the wrong place.
+	// Hex, not base64url, whose alphabet contains the "_" that separates the two halves.
 	lookup, err := randomHex(8)
 	if err != nil {
 		return nil, "", err

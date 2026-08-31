@@ -66,12 +66,7 @@ func TestTwoTokensNeverShareALookup(t *testing.T) {
 	}
 }
 
-/*
-Every issued token must split back into the exact halves it was built from.
-
-One sample is not enough: the delimiter is "_", and an encoding whose alphabet contains "_" only
-fails for the fraction of tokens that happen to include one. That shipped once already.
-*/
+// Many samples, not one: an encoding containing the "_" delimiter only fails for some tokens.
 func TestEveryIssuedTokenSplitsBackIntoItsOwnHalves(t *testing.T) {
 	for range 500 {
 		token, plaintext := mint(t, []model.Scope{model.ScopeDevicesRead}, nil)

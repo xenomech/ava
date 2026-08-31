@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"ava/api/internal/dto"
+	"ava/api/internal/middleware"
 	"ava/api/internal/model"
 	apitokensvc "ava/api/internal/services/apitoken"
 	"ava/api/pkg/response"
@@ -14,14 +15,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 )
-
-type Controller struct {
-	service apitokensvc.Service
-}
-
-func NewController(service apitokensvc.Service) *Controller {
-	return &Controller{service: service}
-}
 
 // Scopes lists every scope this server understands, so a client need not hardcode them.
 func (c *Controller) Scopes(ctx *fiber.Ctx) error {
@@ -43,7 +36,7 @@ func (c *Controller) Create(ctx *fiber.Ctx) error {
 		return response.SendValidation(ctx, validator.FirstError(err), validator.FieldErrors(err))
 	}
 
-	tenantID, userID, ok := actor(ctx)
+	tenantID, userID, ok := middleware.Actor(ctx)
 	if !ok {
 		return response.Send(ctx, fiber.StatusUnauthorized, nil, "Not authenticated")
 	}
@@ -54,7 +47,7 @@ func (c *Controller) Create(ctx *fiber.Ctx) error {
 		expiresAt = &at
 	}
 
-	token, plaintext, err := c.service.Create(
+	token, plaintext, err := c.apiTokenService.Create(
 		ctx.Context(), tenantID, userID, req.Name, req.Scopes, expiresAt,
 	)
 	if err != nil {
@@ -75,12 +68,12 @@ func (c *Controller) Create(ctx *fiber.Ctx) error {
 }
 
 func (c *Controller) List(ctx *fiber.Ctx) error {
-	tenantID, userID, ok := actor(ctx)
+	tenantID, userID, ok := middleware.Actor(ctx)
 	if !ok {
 		return response.Send(ctx, fiber.StatusUnauthorized, nil, "Not authenticated")
 	}
 
-	tokens, err := c.service.List(ctx.Context(), tenantID, userID)
+	tokens, err := c.apiTokenService.List(ctx.Context(), tenantID, userID)
 	if err != nil {
 		return response.Send(ctx, fiber.StatusInternalServerError, nil, "Failed to list tokens")
 	}
@@ -94,11 +87,11 @@ func (c *Controller) List(ctx *fiber.Ctx) error {
 }
 
 func (c *Controller) Revoke(ctx *fiber.Ctx) error {
-	return c.mutate(ctx, c.service.Revoke, "Failed to revoke token")
+	return c.mutate(ctx, c.apiTokenService.Revoke, "Failed to revoke token")
 }
 
 func (c *Controller) Delete(ctx *fiber.Ctx) error {
-	return c.mutate(ctx, c.service.Delete, "Failed to delete token")
+	return c.mutate(ctx, c.apiTokenService.Delete, "Failed to delete token")
 }
 
 func (c *Controller) mutate(
@@ -106,7 +99,7 @@ func (c *Controller) mutate(
 	apply func(reqCtx context.Context, tenantID, userID, tokenID uuid.UUID) error,
 	failure string,
 ) error {
-	tenantID, userID, ok := actor(ctx)
+	tenantID, userID, ok := middleware.Actor(ctx)
 	if !ok {
 		return response.Send(ctx, fiber.StatusUnauthorized, nil, "Not authenticated")
 	}
@@ -125,11 +118,4 @@ func (c *Controller) mutate(
 	}
 
 	return response.Send(ctx, fiber.StatusOK, nil, "")
-}
-
-func actor(ctx *fiber.Ctx) (tenantID, userID uuid.UUID, ok bool) {
-	tenantID, tenantOK := ctx.Locals("tenantID").(uuid.UUID)
-	userID, userOK := ctx.Locals("userID").(uuid.UUID)
-
-	return tenantID, userID, tenantOK && userOK
 }

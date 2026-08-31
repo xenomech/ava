@@ -11,14 +11,7 @@ import (
 // scopesLocal holds the scopes of the token behind this request; absent for a session.
 const scopesLocal = "scopes"
 
-/*
-ValidateAPIToken authenticates a personal access token and leaves the request looking like any
-other: same locals, same tenant, same role. Downstream handlers cannot tell the difference, which
-is the point — a token is a way in, not a second kind of caller.
-
-It sets `scopes` so RequireScope can narrow what this particular token may do. A session sets no
-scopes at all and is therefore unrestricted.
-*/
+// ValidateAPIToken authenticates a token and leaves the request looking like any other, plus its scopes.
 func ValidateAPIToken(service apitokensvc.Service) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		authenticated, err := service.Authenticate(c.Context(), extractBearer(c))
@@ -36,12 +29,7 @@ func ValidateAPIToken(service apitokensvc.Service) fiber.Handler {
 	}
 }
 
-/*
-Authenticated accepts either a session or a personal access token.
-
-Which one is decided by the shape of the presented credential, not by trying each in turn: a token
-carries a recognisable prefix, so a malformed session JWT is never retried as a token.
-*/
+// Authenticated picks session or token by the shape of the credential, never by trying each in turn.
 func Authenticated(
 	sessions fiber.Handler,
 	tokens fiber.Handler,
@@ -55,12 +43,7 @@ func Authenticated(
 	}
 }
 
-/*
-RequireScope refuses a token that was not granted this permission.
-
-A session holds no scopes and passes untouched — the browser is already limited by the member's
-role, and re-stating that here would mean two systems disagreeing about the same question.
-*/
+// RequireScope refuses a token lacking the permission; a session holds no scopes and passes untouched.
 func RequireScope(required model.Scope) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		held, isToken := c.Locals(scopesLocal).(model.Scopes)
