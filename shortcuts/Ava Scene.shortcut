@@ -13,7 +13,7 @@
 			<dict>
 				<key>WFCommentActionText</key>
 				<string>SET THESE THREE, then delete this comment.
-1. API - your Ava base URL, no trailing slash, e.g. https://api.example.com
+1. API - your Ava base URL, no trailing slash, e.g. https://web-stage-8e5b.up.railway.app
 2. RefreshToken - see the README section 'Getting a refresh token'
 3. Further down, the Room ID / Device ID.</string>
 			</dict>
@@ -24,7 +24,7 @@
 			<key>WFWorkflowActionParameters</key>
 			<dict>
 				<key>WFTextActionText</key>
-				<string>https://api.example.com</string>
+				<string>https://web-stage-8e5b.up.railway.app</string>
 			</dict>
 		</dict>
 		<dict>
@@ -69,7 +69,7 @@
 			<key>WFWorkflowActionParameters</key>
 			<dict>
 				<key>UUID</key>
-				<string>3141AAF1-B936-4ECF-A641-77444B2258FC</string>
+				<string>4C553FA9-C5B3-41AD-AD6F-3B7F0C17C4F9</string>
 				<key>WFHTTPBodyType</key>
 				<string>JSON</string>
 				<key>WFHTTPHeaders</key>
@@ -188,7 +188,7 @@
 			<key>WFWorkflowActionParameters</key>
 			<dict>
 				<key>UUID</key>
-				<string>5A141D88-D4FF-44B0-9C9C-B4EEFA5E1DAA</string>
+				<string>3A156F4E-9A24-48AE-8649-2941EBAD3DEA</string>
 				<key>WFDictionaryKey</key>
 				<string>data.access_token</string>
 				<key>WFInput</key>
@@ -198,7 +198,7 @@
 						<key>OutputName</key>
 						<string>Contents of URL</string>
 						<key>OutputUUID</key>
-						<string>3141AAF1-B936-4ECF-A641-77444B2258FC</string>
+						<string>4C553FA9-C5B3-41AD-AD6F-3B7F0C17C4F9</string>
 						<key>Type</key>
 						<string>ActionOutput</string>
 					</dict>
@@ -276,7 +276,7 @@
 			<key>WFWorkflowActionParameters</key>
 			<dict>
 				<key>UUID</key>
-				<string>14A84E58-4FBA-4B66-A46C-C7833B3D2BB0</string>
+				<string>7F6F6EDB-5938-418D-B5B4-98E0689D4754</string>
 				<key>WFHTTPHeaders</key>
 				<dict>
 					<key>Value</key>
@@ -361,7 +361,7 @@
 			<key>WFWorkflowActionParameters</key>
 			<dict>
 				<key>UUID</key>
-				<string>D4064EBE-81EA-43B8-8CC1-CBFD2B11A427</string>
+				<string>8B6DA1C8-504D-401E-8224-347B09942A9B</string>
 				<key>WFDictionaryKey</key>
 				<string>data</string>
 				<key>WFInput</key>
@@ -371,7 +371,7 @@
 						<key>OutputName</key>
 						<string>Contents of URL</string>
 						<key>OutputUUID</key>
-						<string>14A84E58-4FBA-4B66-A46C-C7833B3D2BB0</string>
+						<string>7F6F6EDB-5938-418D-B5B4-98E0689D4754</string>
 						<key>Type</key>
 						<string>ActionOutput</string>
 					</dict>
@@ -401,7 +401,7 @@
 						<key>OutputName</key>
 						<string>Dictionary Value</string>
 						<key>OutputUUID</key>
-						<string>D4064EBE-81EA-43B8-8CC1-CBFD2B11A427</string>
+						<string>8B6DA1C8-504D-401E-8224-347B09942A9B</string>
 						<key>Type</key>
 						<string>ActionOutput</string>
 					</dict>
