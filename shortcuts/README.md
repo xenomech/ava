@@ -13,12 +13,12 @@ your phone.
 | Ava · Brightness 50 | Sets one device to 50%. Duplicate it for other levels. |
 | Ava · Room on | Powers three devices on, one request each. |
 | Ava · Room off | Powers three devices off. |
-| Ava · Scene | Sets warmth and brightness across two devices. |
+| Ava · Scene | Plays a saved scene. One call — the server reads it and writes the devices. |
 
 ## Setting up
 
 **1. Make a token.** In the app, Settings → Tokens. Give it `Devices · view` and
-`Devices · change`; add `Scenes · view` if you want *List scenes* to work. Copy the value
+`Devices · change`; add `Scenes · view` for *List scenes* and *Scene*. Copy the value
 — it is shown once.
 
 **2. Import the signed files** from `signed/`. They are signed with Apple's own tool, so
@@ -28,7 +28,7 @@ they import normally, with no untrusted-shortcuts toggle.
 
 - `ava_pat_PASTE_YOUR_TOKEN_HERE` in the Authorization header
 - `PASTE_DEVICE_UUID`, or `PASTE_DEVICE_1_UUID` and friends, in the URL
-- `PASTE_ROOM_UUID` in *List scenes*
+- `PASTE_ROOM_UUID` and `PASTE_SCENE_UUID` in *List scenes* and *Scene*
 
 Run *Ava · List devices* first: it prints the ids everything else needs. Set up one
 shortcut fully, then duplicate it for the others so the token is pasted once.
@@ -47,10 +47,10 @@ but its `targets` field is an array, and a Shortcuts JSON body field sends text 
 string — which the API rejects. One request per device avoids the problem entirely and
 keeps every action the same simple shape.
 
-**A scene is written out, not referenced.** These shortcuts set the traits directly
-rather than reading a saved scene, because reading one means fetching a list and picking
-from it. If you edit the scene in the app, update the shortcut to match — or use
-*List scenes* to see the current targets.
+**A scene is played by name, not copied.** `POST /rooms/{room}/scenes/{scene}/apply` takes
+no body: the server reads the saved scene and writes the devices, so editing the scene in
+the app changes what the shortcut does. Run *List scenes* to find the scene id. That call
+needs `Scenes · view` as well as `Devices · change`.
 
 **Types matter.** `power` is a Boolean, `brightness` and `color_temp` are Numbers. If you
 add a field by hand, set the type in the JSON body editor rather than leaving it as text.
