@@ -17,6 +17,7 @@ var (
 
 type Repository interface {
 	ListByRoom(ctx context.Context, tenantID, roomID uuid.UUID) ([]*model.Scene, error)
+	GetByID(ctx context.Context, tenantID, roomID, sceneID uuid.UUID) (*model.Scene, error)
 	Create(ctx context.Context, scene *model.Scene) error
 	Delete(ctx context.Context, tenantID, roomID, sceneID uuid.UUID) error
 	NextPosition(ctx context.Context, tenantID, roomID uuid.UUID) (int, error)

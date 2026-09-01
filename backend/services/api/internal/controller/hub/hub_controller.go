@@ -2,6 +2,7 @@ package hub
 
 import (
 	"ava/api/internal/dto"
+	"ava/api/internal/middleware"
 	hubsvc "ava/api/internal/services/hub"
 	"ava/api/pkg/response"
 	"ava/api/pkg/serrors"
@@ -84,7 +85,7 @@ func (c *Controller) Refresh(ctx *fiber.Ctx) error {
 }
 
 func (c *Controller) Activate(ctx *fiber.Ctx) error {
-	tenantID, userID, ok := actor(ctx)
+	tenantID, userID, ok := middleware.Actor(ctx)
 	if !ok {
 		return response.Send(ctx, fiber.StatusUnauthorized, nil, "Unauthorized")
 	}
@@ -114,7 +115,7 @@ func (c *Controller) Activate(ctx *fiber.Ctx) error {
 }
 
 func (c *Controller) List(ctx *fiber.Ctx) error {
-	tenantID, _, ok := actor(ctx)
+	tenantID, _, ok := middleware.Actor(ctx)
 	if !ok {
 		return response.Send(ctx, fiber.StatusUnauthorized, nil, "Unauthorized")
 	}
@@ -128,7 +129,7 @@ func (c *Controller) List(ctx *fiber.Ctx) error {
 }
 
 func (c *Controller) Revoke(ctx *fiber.Ctx) error {
-	tenantID, _, ok := actor(ctx)
+	tenantID, _, ok := middleware.Actor(ctx)
 	if !ok {
 		return response.Send(ctx, fiber.StatusUnauthorized, nil, "Unauthorized")
 	}
