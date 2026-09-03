@@ -31,7 +31,6 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   errorComponent: RouteErrorBoundary,
   head: () => ({
     meta: [{ title: "Ava" }, { name: "description", content: "Ava - multi-tenant hub control" }],
-    links: [{ rel: "icon", href: "/favicon.ico" }],
   }),
 });
 
