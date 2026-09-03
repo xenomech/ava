@@ -37,6 +37,10 @@ type Options struct {
 	Will        []byte
 	Durable     bool
 	OnConnect   func(client *Client)
+	// CAFile trusts a private certificate authority; empty verifies against the system trust store.
+	CAFile string
+	// AllowInsecure permits plaintext to a public broker, which otherwise refuses to connect at all.
+	AllowInsecure bool
 }
 
 type Client struct {
@@ -48,6 +52,15 @@ type Client struct {
 func Connect(ctx context.Context, opts *Options) (*Client, error) {
 	if opts == nil || opts.BrokerURL == "" {
 		return nil, ErrNoBroker
+	}
+
+	if err := guardTransport(opts.BrokerURL, opts.AllowInsecure); err != nil {
+		return nil, err
+	}
+
+	tlsConfig, err := tlsConfigFor(opts.CAFile)
+	if err != nil {
+		return nil, err
 	}
 
 	client := &Client{subs: make(map[string]Handler)}
@@ -74,6 +87,10 @@ func Connect(ctx context.Context, opts *Options) (*Client, error) {
 				opts.OnConnect(client)
 			}
 		})
+
+	if tlsConfig != nil {
+		config = config.SetTLSConfig(tlsConfig)
+	}
 
 	switch {
 	case opts.Credentials != nil:

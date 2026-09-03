@@ -39,9 +39,11 @@ type Config struct {
 	CookieDomain string
 	LogLevel     string
 
-	MQTTBrokerURL string
-	MQTTUsername  string
-	MQTTPassword  string
+	MQTTBrokerURL     string
+	MQTTUsername      string
+	MQTTPassword      string
+	MQTTCAFile        string
+	MQTTAllowInsecure bool
 
 	CORSAllowedOrigins string
 	CORSAllowedMethods string
@@ -110,9 +112,11 @@ func load() *Config {
 		CookieDomain: v.GetString("COOKIE_DOMAIN"),
 		LogLevel:     v.GetString("LOG_LEVEL"),
 
-		MQTTBrokerURL: v.GetString("MQTT_BROKER_URL"),
-		MQTTUsername:  v.GetString("MQTT_USERNAME"),
-		MQTTPassword:  v.GetString("MQTT_PASSWORD"),
+		MQTTBrokerURL:     v.GetString("MQTT_BROKER_URL"),
+		MQTTUsername:      v.GetString("MQTT_USERNAME"),
+		MQTTPassword:      v.GetString("MQTT_PASSWORD"),
+		MQTTCAFile:        v.GetString("MQTT_CA_FILE"),
+		MQTTAllowInsecure: v.GetBool("MQTT_ALLOW_INSECURE"),
 
 		CORSAllowedOrigins: v.GetString("CORS_ALLOWED_ORIGINS"),
 		CORSAllowedMethods: v.GetString("CORS_ALLOWED_METHODS"),

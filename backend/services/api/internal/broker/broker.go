@@ -16,6 +16,10 @@ type Config struct {
 	ClientID string
 	Username string
 	Password string
+	// CAFile trusts a private certificate authority; empty verifies against the system trust store.
+	CAFile string
+	// AllowInsecure permits plaintext to a public broker, which otherwise refuses to connect at all.
+	AllowInsecure bool
 }
 
 type Broker struct {
@@ -29,10 +33,12 @@ func Connect(ctx context.Context, cfg Config) (*Broker, error) {
 	}
 
 	client, err := mqtt.Connect(ctx, &mqtt.Options{
-		BrokerURL: cfg.URL,
-		ClientID:  clientID,
-		Username:  cfg.Username,
-		Password:  cfg.Password,
+		BrokerURL:     cfg.URL,
+		ClientID:      clientID,
+		Username:      cfg.Username,
+		Password:      cfg.Password,
+		CAFile:        cfg.CAFile,
+		AllowInsecure: cfg.AllowInsecure,
 	})
 	if err != nil {
 		return nil, err
