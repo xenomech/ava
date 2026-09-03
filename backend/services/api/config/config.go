@@ -6,10 +6,19 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/spf13/viper"
+)
+
+// minJWTSecretLength matches the HS256 output size, below which the key carries less entropy than the signature.
+const minJWTSecretLength = 32
+
+// ErrMissingJWTSecret is fatal because an empty key still signs and verifies, so every session becomes forgeable.
+var ErrMissingJWTSecret = errors.New(
+	"JWT_SECRET is required: an empty key signs and verifies happily, which would let anyone mint a token for any tenant",
 )
 
 var (
@@ -62,6 +71,23 @@ func GetConfig() *Config {
 	})
 
 	return instance
+}
+
+// Validate refuses to boot on configuration that would leave the API running but unauthenticated.
+func (c *Config) Validate() error {
+	if strings.TrimSpace(c.JwtSecretKey) == "" {
+		return ErrMissingJWTSecret
+	}
+
+	// Local keeps the short throwaway secrets that the compose file and the docs hand out.
+	if c.ServerEnv != "local" && len(c.JwtSecretKey) < minJWTSecretLength {
+		return fmt.Errorf(
+			"JWT_SECRET must be at least %d characters outside local, got %d: generate one with `openssl rand -hex 32`",
+			minJWTSecretLength, len(c.JwtSecretKey),
+		)
+	}
+
+	return nil
 }
 
 func (c *Config) DBSSLMode() string {

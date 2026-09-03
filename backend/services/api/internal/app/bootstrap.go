@@ -39,6 +39,11 @@ func Bootstrap(ctx context.Context) (*App, error) {
 
 	logger.Init(cfg.ServerEnv, cfg.LogLevel)
 
+	// Before anything opens a socket: a bad secret here is not a degraded mode, it is an open door.
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+
 	database, err := db.Connect(&db.PostgresConfig{
 		Host:     cfg.DBHost,
 		Port:     cfg.DBPort,
