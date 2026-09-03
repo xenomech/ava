@@ -62,6 +62,8 @@ export default defineConfig({
         skipWaiting: false,
         cleanupOutdatedCaches: true,
         globPatterns: ["**/*.{js,css,html,ico,png,svg,webmanifest}"],
+        // logo.png is the artwork the icons are generated from, not something the app ever loads.
+        globIgnores: ["**/logo.png"],
         navigateFallbackDenylist: [/^\/api\//],
       },
       devOptions: { enabled: false },
