@@ -54,8 +54,22 @@ a very long changelog. Pass an explicit starting point to trim it:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/xenomech/ava/main/scripts/install-hub.sh \
-  | sudo bash -s -- --api https://api.example.com --broker tcp://broker.example.com:1883
+  | sudo bash -s -- --api https://api.example.com --broker wss://broker.example.com:443
 ```
+
+The broker URL must be encrypted. The hub authenticates with a password, so a
+plaintext `tcp://` link to a public host hands that password to anyone on the
+path — the hub refuses to connect over one. Two ways to encrypt it:
+
+| Scheme | When |
+|---|---|
+| `wss://host:443` | A proxy in front of the broker terminates TLS. This is the Railway path, using its managed certificate — nothing to provision. |
+| `ssl://host:8883` | The broker holds the certificate itself. Set `MQTT_TLS_CERTFILE` and `MQTT_TLS_KEYFILE` on the broker to open the listener. |
+
+For a private certificate authority, point the hub at it with
+`MQTT_CA_FILE=/etc/avahub/broker-ca.pem`. `tcp://` remains fine for a broker on
+the same private network — the API reaches it that way over Railway's internal
+network.
 
 Re-running it with no flags upgrades the binary in place; configuration and the
 pairing state survive, so the hub does not need re-pairing. `--name` overrides
@@ -95,7 +109,7 @@ Wants=network-online.target
 ExecStart=/usr/local/bin/avahub
 WorkingDirectory=/var/lib/avahub
 Environment=API_BASE_URL=https://api.example.com/api/v1
-Environment=MQTT_BROKER_URL=tcp://broker.example.com:1883
+Environment=MQTT_BROKER_URL=wss://broker.example.com:443
 Restart=on-failure
 RestartSec=5
 User=avahub
@@ -136,6 +150,19 @@ The broker refuses anonymous connections. Set `MQTT_USERNAME` and `MQTT_PASSWORD
 on both the broker and the API — the broker bootstraps that account on first start
 and the API authenticates with it.
 
+### Broker environment
+
+The broker opens port 1883 in plaintext for the private network. Hubs connect
+from outside it, so give them an encrypted listener as well:
+
+| Variable | Notes |
+| --- | --- |
+| `MQTT_WEBSOCKET_PORT` | Set to `9001` and expose it as the service's HTTP port. Railway terminates TLS with its own certificate, so hubs use `wss://<broker-domain>:443` and there is nothing to provision. |
+| `MQTT_TLS_CERTFILE` `MQTT_TLS_KEYFILE` | Open a native TLS listener instead, for a broker exposed directly. `MQTT_TLS_PORT` defaults to 8883 and `MQTT_TLS_CAFILE` adds a client-certificate authority. |
+
+Never publish port 1883 itself. The credentials the hub sends over it are the
+only thing standing between a stranger and someone's lights.
+
 ### `ava-api` environment
 
 Required — the API will not work without these:
@@ -143,9 +170,9 @@ Required — the API will not work without these:
 | Variable | Notes |
 | --- | --- |
 | `SERVER_ENV` | Use `production`. `local` selects `sslmode=disable`, which Railway Postgres refuses. |
-| `JWT_SECRET` | No default. Generate with `openssl rand -base64 48`. |
+| `JWT_SECRET` | No default, and the API refuses to start without it. At least 32 characters outside `local`: `openssl rand -hex 32`. |
 | `DB_HOST` `DB_PORT` `DB_USER` `DB_PASSWORD` `DB_DATABASE` | Reference the Postgres service's variables. |
-| `MQTT_BROKER_URL` | e.g. `tcp://mosquitto.railway.internal:1883` |
+| `MQTT_BROKER_URL` | e.g. `tcp://mosquitto.railway.internal:1883`. Plaintext is allowed here only because the internal network never leaves Railway; a public host needs `wss://` or `ssl://`. |
 | `APP_URL` | Public URL of the web service. Used in verification and invite emails. |
 | `CORS_ALLOWED_ORIGINS` | The web service's public origin. The default is localhost, which blocks the deployed UI. |
 | `COOKIE_DOMAIN` | Parent domain shared by web and API, so the auth cookies are sent. |
@@ -159,7 +186,7 @@ docker run --network ava-course_ava-network \
   -e SERVER_ENV=production -e DB_SSL_MODE=disable \
   -e DB_HOST=postgres -e DB_PORT=5432 -e DB_USER=ava \
   -e DB_PASSWORD=ava_password -e DB_DATABASE=ava_db \
-  -e MQTT_BROKER_URL=tcp://mosquitto:1883 -e JWT_SECRET=dev \
+  -e MQTT_BROKER_URL=tcp://mosquitto:1883 -e JWT_SECRET=$(openssl rand -hex 32) \
   -p 8097:8000 ava-api:test
 ```
 

@@ -6,6 +6,7 @@ COPY docker/mosquitto/entrypoint.sh /entrypoint.sh
 
 RUN chmod +x /entrypoint.sh
 
-EXPOSE 1883
+# 1883 plaintext for a private network, 8883 native TLS, 9001 websockets behind a TLS-terminating edge.
+EXPOSE 1883 8883 9001
 
 ENTRYPOINT ["/entrypoint.sh"]

@@ -15,6 +15,8 @@ type Config struct {
 	HubName           string
 	APIBaseURL        string
 	MQTTBrokerURL     string
+	MQTTCAFile        string
+	MQTTAllowInsecure bool
 	StateFile         string
 	HeartbeatInterval time.Duration
 	SyncInterval      time.Duration
@@ -36,6 +38,8 @@ func load() *Config {
 		HubName:           env("HUB_NAME", defaultHubName()),
 		APIBaseURL:        env("API_BASE_URL", "http://localhost:8000/api/v1"),
 		MQTTBrokerURL:     env("MQTT_BROKER_URL", "tcp://localhost:1883"),
+		MQTTCAFile:        env("MQTT_CA_FILE", ""),
+		MQTTAllowInsecure: env("MQTT_ALLOW_INSECURE", "") == "true",
 		StateFile:         env("STATE_FILE", "avahub-state.json"),
 		HeartbeatInterval: duration(env("HEARTBEAT_INTERVAL", "60s"), time.Minute),
 		SyncInterval:      duration(env("SYNC_INTERVAL", "60s"), time.Minute),
