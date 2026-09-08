@@ -1,4 +1,10 @@
-import { sceneDto, type CreateSceneRequest, type SceneDto } from "@ava/contracts";
+import {
+  applyResponse,
+  sceneDto,
+  type ApplyResponse,
+  type CreateSceneRequest,
+  type SceneDto,
+} from "@ava/contracts";
 import { z } from "zod";
 
 import { request } from "@/config/http/request";
@@ -13,4 +19,13 @@ export function createScene(roomID: string, body: CreateSceneRequest): Promise<S
 
 export function deleteScene(roomID: string, sceneID: string): Promise<void> {
   return request({ url: `/rooms/${roomID}/scenes/${sceneID}`, method: "delete" });
+}
+
+// The server expands the scene and writes the devices, so the client sends no targets at all.
+export function applyScene(roomID: string, sceneID: string): Promise<ApplyResponse> {
+  return request({
+    url: `/rooms/${roomID}/scenes/${sceneID}/apply`,
+    method: "post",
+    schema: applyResponse,
+  });
 }

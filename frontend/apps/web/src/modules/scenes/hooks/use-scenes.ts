@@ -4,8 +4,8 @@ import { useCallback, useState } from "react";
 import { toast } from "sonner";
 
 import { isApiError } from "@/config/http/request";
-import { useApplyTargets } from "@/modules/devices";
-import { createScene, deleteScene } from "../api";
+import { useOptimisticSend } from "@/modules/devices";
+import { applyScene, createScene, deleteScene } from "../api";
 import { armScene, armedScene } from "../lib/armed";
 import { sceneQueries } from "../queries";
 
@@ -72,8 +72,12 @@ export function useSceneActions(roomId: string) {
 }
 
 /** Play a scene back through the ordinary batch apply, like flicking the switch. */
+// Painted from the scene's own targets, but written by the server, so both halves stay in step.
 export function useApplyScene() {
-  const apply = useApplyTargets();
+  const optimistic = useOptimisticSend();
 
-  return useCallback((scene: SceneDto) => apply(scene.targets), [apply]);
+  return useCallback(
+    (scene: SceneDto) => optimistic(scene.targets, () => applyScene(scene.room_id, scene.id)),
+    [optimistic],
+  );
 }

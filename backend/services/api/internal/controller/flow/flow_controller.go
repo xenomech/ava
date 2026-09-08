@@ -2,6 +2,7 @@ package flow
 
 import (
 	"ava/api/internal/dto"
+	"ava/api/internal/middleware"
 	flowsvc "ava/api/internal/services/flow"
 	"ava/api/pkg/response"
 	"ava/api/pkg/serrors"
@@ -11,7 +12,7 @@ import (
 )
 
 func (c *Controller) Get(ctx *fiber.Ctx) error {
-	tenantID, userID, ok := actor(ctx)
+	tenantID, userID, ok := middleware.Actor(ctx)
 	if !ok {
 		return response.Send(ctx, fiber.StatusUnauthorized, nil, "Unauthorized")
 	}
@@ -29,7 +30,7 @@ func (c *Controller) Get(ctx *fiber.Ctx) error {
 }
 
 func (c *Controller) SubmitStep(ctx *fiber.Ctx) error {
-	tenantID, userID, ok := actor(ctx)
+	tenantID, userID, ok := middleware.Actor(ctx)
 	if !ok {
 		return response.Send(ctx, fiber.StatusUnauthorized, nil, "Unauthorized")
 	}
@@ -65,7 +66,7 @@ func (c *Controller) SubmitStep(ctx *fiber.Ctx) error {
 }
 
 func (c *Controller) GoBack(ctx *fiber.Ctx) error {
-	tenantID, userID, ok := actor(ctx)
+	tenantID, userID, ok := middleware.Actor(ctx)
 	if !ok {
 		return response.Send(ctx, fiber.StatusUnauthorized, nil, "Unauthorized")
 	}
@@ -86,7 +87,7 @@ func (c *Controller) GoBack(ctx *fiber.Ctx) error {
 }
 
 func (c *Controller) SkipStep(ctx *fiber.Ctx) error {
-	tenantID, userID, ok := actor(ctx)
+	tenantID, userID, ok := middleware.Actor(ctx)
 	if !ok {
 		return response.Send(ctx, fiber.StatusUnauthorized, nil, "Unauthorized")
 	}

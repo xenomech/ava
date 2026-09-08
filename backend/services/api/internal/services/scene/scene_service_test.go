@@ -29,6 +29,18 @@ func (f *fakeScenes) ListByRoom(_ context.Context, _, _ uuid.UUID) ([]*model.Sce
 	return f.scenes, f.fail
 }
 
+func (f *fakeScenes) GetByID(_ context.Context, _, _, _ uuid.UUID) (*model.Scene, error) {
+	if f.fail != nil {
+		return nil, f.fail
+	}
+
+	if len(f.scenes) == 0 {
+		return nil, scenerepo.ErrSceneNotFound
+	}
+
+	return f.scenes[0], nil
+}
+
 func (f *fakeScenes) Create(_ context.Context, scene *model.Scene) error {
 	if f.fail != nil {
 		return f.fail
@@ -59,6 +71,26 @@ func (f *fakeScenes) NameExists(_ context.Context, _, _ uuid.UUID, _ string) (bo
 
 func (f *fakeScenes) DeviceIDsInRoom(_ context.Context, _, _ uuid.UUID) ([]uuid.UUID, error) {
 	return f.inRoom, nil
+}
+
+// fakeApplier records what a scene handed to the batch write.
+type fakeApplier struct {
+	got  []dto.ApplyTargetRequest
+	fail error
+}
+
+func (f *fakeApplier) Apply(
+	_ context.Context,
+	_ uuid.UUID,
+	req *dto.ApplyRequest,
+) (*dto.ApplyResponse, error) {
+	if f.fail != nil {
+		return nil, f.fail
+	}
+
+	f.got = req.Targets
+
+	return &dto.ApplyResponse{}, nil
 }
 
 type fakeRooms struct {
@@ -98,7 +130,7 @@ func target(device uuid.UUID, trait wire.Trait, value wire.Value) dto.SceneTarge
 func save(t *testing.T, repo *fakeScenes, req *dto.CreateSceneRequest) error {
 	t.Helper()
 
-	_, err := NewService(repo, &fakeRooms{}).
+	_, err := NewService(repo, &fakeRooms{}, &fakeApplier{}).
 		Create(context.Background(), uuid.New(), uuid.New(), req)
 
 	return err
@@ -220,7 +252,7 @@ func TestANewSceneGoesToTheEndOfTheRow(t *testing.T) {
 
 func TestSavingIntoARoomThatIsGoneIsNotFound(t *testing.T) {
 	lamp := uuid.New()
-	service := NewService(&fakeScenes{inRoom: []uuid.UUID{lamp}}, &fakeRooms{missing: true})
+	service := NewService(&fakeScenes{inRoom: []uuid.UUID{lamp}}, &fakeRooms{missing: true}, &fakeApplier{})
 
 	_, err := service.Create(context.Background(), uuid.New(), uuid.New(),
 		request("Evening", target(lamp, wire.TraitPower, wire.Bool(true))))
@@ -230,7 +262,7 @@ func TestSavingIntoARoomThatIsGoneIsNotFound(t *testing.T) {
 }
 
 func TestDeletingASceneThatIsNotThereIsReportedAsNotFound(t *testing.T) {
-	service := NewService(&fakeScenes{fail: scenerepo.ErrSceneNotFound}, &fakeRooms{})
+	service := NewService(&fakeScenes{fail: scenerepo.ErrSceneNotFound}, &fakeRooms{}, &fakeApplier{})
 
 	err := service.Delete(context.Background(), uuid.New(), uuid.New(), uuid.New())
 	if !serrors.Is(err, ErrSceneNotFound) {
@@ -248,7 +280,7 @@ func TestATargetWhoseValueCannotBeReadIsLeftOutOfTheResponse(t *testing.T) {
 		},
 	}}}
 
-	scenes, err := NewService(repo, &fakeRooms{}).ListByRoom(context.Background(), uuid.New(), uuid.New())
+	scenes, err := NewService(repo, &fakeRooms{}, &fakeApplier{}).ListByRoom(context.Background(), uuid.New(), uuid.New())
 	if err != nil {
 		t.Fatalf("ListByRoom: %v", err)
 	}
@@ -259,5 +291,80 @@ func TestATargetWhoseValueCannotBeReadIsLeftOutOfTheResponse(t *testing.T) {
 
 	if scenes[0].Targets[0].Trait != wire.TraitPower {
 		t.Errorf("kept %q", scenes[0].Targets[0].Trait)
+	}
+}
+
+func sceneWith(targets ...model.SceneTarget) *model.Scene {
+	scene := model.NewScene(uuid.New(), uuid.New(), "Evening", 0)
+	scene.Targets = targets
+
+	return scene
+}
+
+func savedTarget(device uuid.UUID, trait, raw string) model.SceneTarget {
+	return model.SceneTarget{DeviceID: device, Trait: trait, Value: []byte(raw)}
+}
+
+func TestApplyingASceneSendsItsTargetsToTheBatchWrite(t *testing.T) {
+	lamp := uuid.New()
+	repo := &fakeScenes{scenes: []*model.Scene{sceneWith(
+		savedTarget(lamp, "brightness", "40"),
+		savedTarget(lamp, "power", "true"),
+	)}}
+	applier := &fakeApplier{}
+
+	if _, err := NewService(repo, &fakeRooms{}, applier).
+		Apply(context.Background(), uuid.New(), uuid.New(), uuid.New()); err != nil {
+		t.Fatalf("apply failed: %v", err)
+	}
+
+	if len(applier.got) != 2 {
+		t.Fatalf("sent %d targets, wanted 2", len(applier.got))
+	}
+
+	if applier.got[0].Trait != "brightness" || applier.got[1].Trait != "power" {
+		t.Fatalf("targets arrived as %v", applier.got)
+	}
+}
+
+func TestApplyingAMissingSceneIsNotFound(t *testing.T) {
+	service := NewService(&fakeScenes{}, &fakeRooms{}, &fakeApplier{})
+
+	_, err := service.Apply(context.Background(), uuid.New(), uuid.New(), uuid.New())
+	if !serrors.Is(err, ErrSceneNotFound) {
+		t.Fatalf("got %v, wanted ErrSceneNotFound", err)
+	}
+}
+
+func TestApplyingAnEmptySceneSendsNothing(t *testing.T) {
+	applier := &fakeApplier{}
+	service := NewService(&fakeScenes{scenes: []*model.Scene{sceneWith()}}, &fakeRooms{}, applier)
+
+	_, err := service.Apply(context.Background(), uuid.New(), uuid.New(), uuid.New())
+	if !serrors.Is(err, ErrNothingToApply) {
+		t.Fatalf("got %v, wanted ErrNothingToApply", err)
+	}
+
+	if applier.got != nil {
+		t.Fatal("an empty scene still reached the batch write")
+	}
+}
+
+// A target written by an older version must not take the whole scene down with it.
+func TestASceneWithOneUnreadableTargetStillAppliesTheRest(t *testing.T) {
+	lamp := uuid.New()
+	repo := &fakeScenes{scenes: []*model.Scene{sceneWith(
+		savedTarget(lamp, "brightness", "not json"),
+		savedTarget(lamp, "power", "true"),
+	)}}
+	applier := &fakeApplier{}
+
+	if _, err := NewService(repo, &fakeRooms{}, applier).
+		Apply(context.Background(), uuid.New(), uuid.New(), uuid.New()); err != nil {
+		t.Fatalf("apply failed: %v", err)
+	}
+
+	if len(applier.got) != 1 || applier.got[0].Trait != "power" {
+		t.Fatalf("expected only the readable target, got %v", applier.got)
 	}
 }

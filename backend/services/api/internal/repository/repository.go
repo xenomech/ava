@@ -1,6 +1,7 @@
 package repository
 
 import (
+	apitokenrepo "ava/api/internal/repository/apitoken"
 	devicerepo "ava/api/internal/repository/device"
 	flowrepo "ava/api/internal/repository/flow"
 	hubrepo "ava/api/internal/repository/hub"
@@ -16,6 +17,7 @@ import (
 )
 
 type Repository struct {
+	APIToken   apitokenrepo.Repository
 	User       userrepo.Repository
 	Tenant     tenantrepo.Repository
 	Membership membershiprepo.Repository
@@ -30,6 +32,7 @@ type Repository struct {
 
 func NewRepository(db *gorm.DB) *Repository {
 	return &Repository{
+		APIToken:   apitokenrepo.NewRepository(db),
 		User:       userrepo.NewRepository(db),
 		Tenant:     tenantrepo.NewRepository(db),
 		Membership: membershiprepo.NewRepository(db),

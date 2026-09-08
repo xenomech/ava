@@ -8,6 +8,7 @@ const TABS = [
   { to: "/settings/hubs", label: "Hubs", exact: false },
   { to: "/settings/appearance", label: "Appearance", exact: false },
   { to: "/settings/account", label: "Account", exact: false },
+  { to: "/settings/tokens", label: "Tokens", exact: false },
 ] as const;
 
 function SettingsLayout() {

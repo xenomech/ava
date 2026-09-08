@@ -31,6 +31,7 @@ func Migrate(database *gorm.DB) error {
 		&model.Tenant{},
 		&model.TenantMembership{},
 		&model.Session{},
+		&model.APIToken{},
 		&model.Token{},
 		&model.Room{},
 		&model.Hub{},

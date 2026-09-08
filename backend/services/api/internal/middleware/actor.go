@@ -1,11 +1,12 @@
-package flow
+package middleware
 
 import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 )
 
-func actor(ctx *fiber.Ctx) (tenantID, userID uuid.UUID, ok bool) {
+// Actor reads the caller the auth middleware established; it lives here because the same package writes them.
+func Actor(ctx *fiber.Ctx) (tenantID, userID uuid.UUID, ok bool) {
 	tenantID, ok = ctx.Locals("tenantID").(uuid.UUID)
 	if !ok {
 		return uuid.Nil, uuid.Nil, false

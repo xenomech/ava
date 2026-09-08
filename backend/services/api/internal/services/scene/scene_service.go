@@ -17,11 +17,12 @@ import (
 )
 
 var (
-	ErrSceneNotFound = scenerepo.ErrSceneNotFound
-	ErrNameTaken     = scenerepo.ErrNameTaken
-	ErrRoomNotFound  = roomrepo.ErrRoomNotFound
-	ErrNameRequired  = serrors.NewCoded("scene_name_required", "a scene needs a name")
-	ErrNothingToSave = serrors.NewCoded("scene_empty", "a scene needs at least one device in this room")
+	ErrSceneNotFound  = scenerepo.ErrSceneNotFound
+	ErrNameTaken      = scenerepo.ErrNameTaken
+	ErrRoomNotFound   = roomrepo.ErrRoomNotFound
+	ErrNameRequired   = serrors.NewCoded("scene_name_required", "a scene needs a name")
+	ErrNothingToSave  = serrors.NewCoded("scene_empty", "a scene needs at least one device in this room")
+	ErrNothingToApply = serrors.NewCoded("scene_has_nothing_to_apply", "this scene has nothing to apply")
 )
 
 func (s *sceneService) ListByRoom(
@@ -118,6 +119,53 @@ func (s *sceneService) Delete(ctx context.Context, tenantID, roomID, sceneID uui
 	}
 
 	return nil
+}
+
+// Apply replays a saved scene through the ordinary batch write, so it takes the same path a manual change does.
+func (s *sceneService) Apply(
+	ctx context.Context,
+	tenantID, roomID, sceneID uuid.UUID,
+) (*dto.ApplyResponse, error) {
+	scene, err := s.sceneRepo.GetByID(ctx, tenantID, roomID, sceneID)
+	if err != nil {
+		if serrors.Is(err, scenerepo.ErrSceneNotFound) {
+			return nil, ErrSceneNotFound
+		}
+
+		logger.Error("scene.Apply", logger.Err(err))
+
+		return nil, err
+	}
+
+	if len(scene.Targets) == 0 {
+		return nil, ErrNothingToApply
+	}
+
+	targets := make([]dto.ApplyTargetRequest, 0, len(scene.Targets))
+
+	for at := range scene.Targets {
+		target := &scene.Targets[at]
+
+		var value wire.Value
+		if err := json.Unmarshal(target.Value, &value); err != nil {
+			logger.Error("scene.Apply: unreadable target", logger.Err(err))
+
+			continue
+		}
+
+		targets = append(targets, dto.ApplyTargetRequest{
+			DeviceID: target.DeviceID,
+			Trait:    wire.Trait(target.Trait),
+			Value:    value,
+		})
+	}
+
+	// Every target was unreadable, so there is nothing to send rather than a partial scene.
+	if len(targets) == 0 {
+		return nil, ErrNothingToApply
+	}
+
+	return s.applier.Apply(ctx, tenantID, &dto.ApplyRequest{Targets: targets})
 }
 
 // plan turns requested targets into rows, dropping devices outside the room and keeping a trait's last value.

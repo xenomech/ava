@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Install or upgrade the Ava hub on a Raspberry Pi; re-running with no flags upgrades in place without re-pairing.
-# Usage: curl -fsSL https://raw.githubusercontent.com/xenomech/ava/main/scripts/install-hub.sh | sudo bash -s -- --api <url> --broker <url> [--name <name>] [--version vX.Y.Z]
+# Usage: curl -fsSL https://raw.githubusercontent.com/xenomech/ava/main/scripts/install-hub.sh | sudo bash -s -- --api <url> --broker wss://host:443 [--name <name>] [--version vX.Y.Z]
 
 set -euo pipefail
 
@@ -91,6 +91,15 @@ if [ -n "$api_url" ] || [ -n "$broker_url" ] || [ ! -f "$ENV_FILE" ]; then
     */api/v1) ;;
     */) api_url="${api_url}api/v1" ;;
     *)  api_url="${api_url}/api/v1" ;;
+  esac
+
+  # The hub authenticates to the broker with a password, so refuse a scheme that would send it in the clear.
+  case "$broker_url" in
+    ssl://* | tls://* | mqtts://* | wss://*) ;;
+    tcp://localhost:* | tcp://127.0.0.1:* | ws://localhost:* | ws://127.0.0.1:*) ;;
+    *)
+      fail "broker URL '$broker_url' is not encrypted; use wss://host:443 behind a TLS-terminating proxy, or ssl://host:8883 against a broker holding certificates"
+      ;;
   esac
 
   {

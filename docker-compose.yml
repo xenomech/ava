@@ -29,6 +29,8 @@ services:
     environment:
       MQTT_ADMIN_USERNAME: ${MQTT_USERNAME:-ava-api}
       MQTT_ADMIN_PASSWORD: ${MQTT_PASSWORD:?MQTT_PASSWORD is required}
+      # Matches the deployed broker, where a proxy terminates TLS in front of this port.
+      MQTT_WEBSOCKET_PORT: 9001
     entrypoint: ["/entrypoint.sh"]
     volumes:
       - ./docker/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
@@ -37,6 +39,7 @@ services:
       - mosquitto_data:/mosquitto/data
     ports:
       - "${MQTT_PORT:-1883}:1883"
+      - "${MQTT_WEBSOCKET_PORT:-9001}:9001"
     healthcheck:
       test: ["CMD-SHELL", "mosquitto_sub -t '$$SYS/#' -C 1 -W 3 -q 1 -u $$MQTT_ADMIN_USERNAME -P $$MQTT_ADMIN_PASSWORD >/dev/null 2>&1 || exit 1"]
       interval: 10s

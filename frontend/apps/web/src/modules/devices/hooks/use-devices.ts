@@ -1,6 +1,7 @@
 import {
   TRAIT_POWER,
   supports,
+  type ApplyResponse,
   type ApplyTargetRequest,
   type DeviceDto,
   type TraitValue,
@@ -63,11 +64,17 @@ export function useDeviceControl() {
 }
 
 /** Push a batch of trait writes, shown locally before the hub answers. */
-export function useApplyTargets() {
+/**
+ * Paint a batch of writes locally, then send them however the caller says.
+ *
+ * The optimistic half is the same whether the writes came from a slider or from a saved scene;
+ * only the request differs, so the sender is passed in rather than assumed.
+ */
+function useOptimisticApply() {
   const queryClient = useQueryClient();
 
   return useCallback(
-    async (targets: ApplyTargetRequest[]) => {
+    async (targets: ApplyTargetRequest[], send: () => Promise<ApplyResponse>) => {
       if (targets.length === 0) {
         toast.error("Nothing here can be switched");
 
@@ -90,7 +97,7 @@ export function useApplyTargets() {
       );
 
       try {
-        const result = await applyTargets({ targets });
+        const result = await send();
 
         if (result.skipped.length > 0) {
           toast.warning(`${result.applied.length} changed, ${result.skipped.length} skipped`);
@@ -104,6 +111,25 @@ export function useApplyTargets() {
     },
     [queryClient],
   );
+}
+
+/**
+ * Push a batch of trait writes, showing them locally before the hub answers.
+ *
+ * Shared by the room switch and by anything else that changes several devices at once.
+ */
+export function useApplyTargets() {
+  const optimistic = useOptimisticApply();
+
+  return useCallback(
+    (targets: ApplyTargetRequest[]) => optimistic(targets, () => applyTargets({ targets })),
+    [optimistic],
+  );
+}
+
+/** The same optimistic paint, for a write the server composes rather than the client. */
+export function useOptimisticSend() {
+  return useOptimisticApply();
 }
 
 export function useRoomPower() {
